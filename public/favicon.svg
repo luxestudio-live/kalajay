@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="kjGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F2E6D0" />
+      <stop offset="50%" stop-color="#C5A880" />
+      <stop offset="100%" stop-color="#9E7E52" />
+    </linearGradient>
+    <linearGradient id="kjBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1D1C1B" />
+      <stop offset="100%" stop-color="#141312" />
+    </linearGradient>
+  </defs>
+  <!-- Background Badge -->
+  <rect width="64" height="64" rx="16" fill="url(#kjBg)" stroke="#C5A880" stroke-width="1.5" stroke-opacity="0.4" />
+  
+  <!-- Faceted Crystal Diamond Bead -->
+  <g id="crystal-gem">
+    <!-- Outer perimeter -->
+    <polygon points="32,12 50,25 32,52 14,25" fill="none" stroke="url(#kjGold)" stroke-width="2.5" stroke-linejoin="round" />
+    <!-- Table facet (top triangle) -->
+    <polygon points="23,25 41,25 32,12" fill="url(#kjGold)" fill-opacity="0.35" stroke="url(#kjGold)" stroke-width="1.5" stroke-linejoin="round" />
+    <!-- Left crown facet -->
+    <polygon points="14,25 23,25 32,12" fill="url(#kjGold)" fill-opacity="0.15" stroke="url(#kjGold)" stroke-width="1.5" stroke-linejoin="round" />
+    <!-- Right crown facet -->
+    <polygon points="41,25 50,25 32,12" fill="url(#kjGold)" fill-opacity="0.25" stroke="url(#kjGold)" stroke-width="1.5" stroke-linejoin="round" />
+    <!-- Center pavilion facet -->
+    <polygon points="23,25 41,25 32,52" fill="url(#kjGold)" fill-opacity="0.3" stroke="url(#kjGold)" stroke-width="1.5" stroke-linejoin="round" />
+    <!-- Left pavilion facet -->
+    <polygon points="14,25 23,25 32,52" fill="url(#kjGold)" fill-opacity="0.18" stroke="url(#kjGold)" stroke-width="1.5" stroke-linejoin="round" />
+    <!-- Right pavilion facet -->
+    <polygon points="41,25 50,25 32,52" fill="url(#kjGold)" fill-opacity="0.45" stroke="url(#kjGold)" stroke-width="1.5" stroke-linejoin="round" />
+    <!-- Spark of light at top-center facet -->
+    <circle cx="32" cy="25" r="1.8" fill="#FFFFFF" opacity="0.95" />
+  </g>
+</svg>
+
