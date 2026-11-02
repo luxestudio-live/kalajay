@@ -161,13 +161,13 @@ export default function LoginClient() {
   };
 
   return (
-    <div className="bg-canvas min-h-screen py-8 sm:py-16 selection:bg-champagne selection:text-ink relative overflow-hidden">
+    <div className="bg-canvas min-h-screen py-4 sm:py-10 lg:py-16 px-3 sm:px-6 lg:px-8 selection:bg-champagne selection:text-ink relative overflow-hidden flex flex-col justify-center">
       {/* Ambient background atmosphere glow */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-champagne/10 rounded-full blur-3xl pointer-events-none -z-10" />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl w-full mx-auto">
         {/* Main Creative Container */}
-        <div className="bg-canvas-subtle rounded-3xl border border-border-gold shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[700px] relative">
+        <div className="bg-canvas-subtle rounded-2xl sm:rounded-3xl border border-border-gold shadow-xl sm:shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-0 lg:min-h-[700px] relative">
           
           {/* Left Column: Atmospheric Atelier World & Editorial Showcase (Desktop) */}
           <div className="hidden lg:flex lg:col-span-5 relative bg-[#141312] text-canvas p-10 lg:p-12 flex-col justify-between overflow-hidden">
@@ -274,44 +274,50 @@ export default function LoginClient() {
           </div>
 
           {/* Right Column: Creative Interactive Auth Portal */}
-          <div className="lg:col-span-7 bg-canvas p-6 sm:p-10 lg:p-12 flex flex-col justify-between">
+          <div className="lg:col-span-7 bg-canvas p-5 sm:p-8 lg:p-12 flex flex-col justify-between">
             <div>
               {/* Header with Monogram and Mode Switcher */}
-              <div className="flex items-center justify-between pb-5 border-b border-border-subtle">
+              <div className="flex items-center justify-between pb-4 sm:pb-5 border-b border-border-subtle">
                 <div className="space-y-1">
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-canvas-subtle border border-gold/30 text-[10px] uppercase tracking-monumental text-gold-dark font-semibold">
                     <Gem className="w-3 h-3 text-gold" />
                     <span>Patron Access</span>
                   </div>
-                  <h1 className="font-serif text-3xl sm:text-4xl text-ink font-normal tracking-tight">
+                  <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-ink font-normal tracking-tight">
                     Enter the Circle
                   </h1>
                 </div>
 
                 <Link
                   href="/"
-                  className="font-serif text-2xl tracking-[0.2em] text-ink hover:text-gold-dark transition-colors hidden sm:block"
+                  className="font-serif text-xl sm:text-2xl tracking-[0.2em] text-ink hover:text-gold-dark transition-colors hidden sm:block"
                 >
                   KALAJAY
                 </Link>
               </div>
 
+              {/* Mobile Patron Honour Pill (Visible on mobile only) */}
+              <div className="mt-3.5 p-2.5 bg-blush/30 border border-gold/30 rounded-xl flex items-center gap-2 text-[11px] text-plum lg:hidden">
+                <Crown className="w-3.5 h-3.5 text-gold shrink-0" />
+                <span className="font-medium">Circle Honour: ₹300 welcome gift on first order</span>
+              </div>
+
               {/* Creative Pill Switcher: Instant Mobile OTP vs Email & Password */}
-              <div className="grid grid-cols-2 gap-2 p-1.5 bg-canvas-subtle border border-border-subtle rounded-2xl mt-6 shadow-2xs">
+              <div className="grid grid-cols-2 gap-1.5 p-1 bg-canvas-subtle border border-border-subtle rounded-xl sm:rounded-2xl mt-4 sm:mt-6 shadow-2xs">
                 <button
                   type="button"
                   onClick={() => {
                     setAuthMethod('otp');
                     setErrorMsg('');
                   }}
-                  className={`py-2.5 px-3 rounded-xl text-xs font-medium transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  className={`py-2.5 px-2.5 sm:px-3 rounded-lg sm:rounded-xl text-xs font-medium transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
                     authMethod === 'otp'
                       ? 'bg-ink text-canvas shadow-xs font-semibold'
                       : 'text-ink-muted hover:text-ink'
                   }`}
                 >
-                  <Smartphone className="w-3.5 h-3.5 text-gold" />
-                  <span>Instant Mobile OTP</span>
+                  <Smartphone className="w-3.5 h-3.5 text-gold shrink-0" />
+                  <span className="whitespace-nowrap">Instant Mobile OTP</span>
                 </button>
 
                 <button
@@ -320,14 +326,14 @@ export default function LoginClient() {
                     setAuthMethod('email');
                     setErrorMsg('');
                   }}
-                  className={`py-2.5 px-3 rounded-xl text-xs font-medium transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  className={`py-2.5 px-2.5 sm:px-3 rounded-lg sm:rounded-xl text-xs font-medium transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
                     authMethod === 'email'
                       ? 'bg-ink text-canvas shadow-xs font-semibold'
                       : 'text-ink-muted hover:text-ink'
                   }`}
                 >
-                  <Mail className="w-3.5 h-3.5" />
-                  <span>Email & Password</span>
+                  <Mail className="w-3.5 h-3.5 shrink-0" />
+                  <span className="whitespace-nowrap">Email & Password</span>
                 </button>
               </div>
 
@@ -341,30 +347,32 @@ export default function LoginClient() {
 
               {/* --- 1. INSTANT MOBILE OTP LOGIN FLOW --- */}
               {authMethod === 'otp' && (
-                <div className="mt-6">
+                <div className="mt-5 sm:mt-6">
                   {otpStep === 'phone' ? (
-                    <form onSubmit={handleSendOtp} className="space-y-5">
+                    <form onSubmit={handleSendOtp} className="space-y-4 sm:space-y-5">
                       <div>
                         <label className="text-xs uppercase tracking-refined font-semibold text-ink block mb-2">
                           Your Mobile Number
                         </label>
-                        <div className="flex items-center rounded-2xl border border-border-medium bg-canvas focus-within:border-gold focus-within:ring-2 focus-within:ring-gold/20 transition-all overflow-hidden shadow-2xs">
-                          <div className="px-4 py-3.5 bg-canvas-subtle border-r border-border-subtle flex items-center gap-2 text-xs font-semibold text-ink">
+                        <div className="flex items-center rounded-xl sm:rounded-2xl border border-border-medium bg-canvas focus-within:border-gold focus-within:ring-2 focus-within:ring-gold/20 transition-all overflow-hidden shadow-2xs">
+                          <div className="px-3.5 sm:px-4 py-3 sm:py-3.5 bg-canvas-subtle border-r border-border-subtle flex items-center gap-1.5 sm:gap-2 text-xs font-semibold text-ink shrink-0">
                             <span>🇮🇳</span>
                             <span>+91</span>
                           </div>
                           <input
                             type="tel"
+                            inputMode="numeric"
+                            autoComplete="tel-national"
                             maxLength={10}
-                            placeholder="Enter 10-digit mobile number"
+                            placeholder="10-digit mobile number"
                             value={phoneNumber}
                             onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
-                            className="w-full px-4 py-3.5 bg-transparent text-sm text-ink placeholder:text-ink-faint focus:outline-none"
+                            className="w-full px-3.5 sm:px-4 py-3 sm:py-3.5 bg-transparent text-sm text-ink placeholder:text-ink-faint focus:outline-none"
                             autoFocus
                           />
                         </div>
-                        <p className="mt-2 text-[11px] text-ink-muted flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-gold shrink-0" />
+                        <p className="mt-2 text-[11px] text-ink-muted flex items-start gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-gold shrink-0 mt-1" />
                           <span>We will transmit an instant 6-digit passcode to verify your phone.</span>
                         </p>
                       </div>
@@ -389,8 +397,8 @@ export default function LoginClient() {
                     </form>
                   ) : (
                     /* OTP Verification Screen with Bead Pedestals */
-                    <div className="space-y-6 animate-fade-in">
-                      <div className="bg-canvas-subtle p-4 rounded-2xl border border-border-subtle flex items-center justify-between">
+                    <div className="space-y-5 sm:space-y-6 animate-fade-in">
+                      <div className="bg-canvas-subtle p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border border-border-subtle flex items-center justify-between">
                         <div>
                           <span className="text-[11px] text-ink-muted block">Code sent to phone:</span>
                           <span className="text-sm font-semibold text-ink font-mono tracking-wide">
@@ -402,7 +410,7 @@ export default function LoginClient() {
                           onClick={() => setOtpStep('phone')}
                           className="text-xs text-gold-dark hover:underline font-semibold cursor-pointer"
                         >
-                          Change Number
+                          Change
                         </button>
                       </div>
 
@@ -410,17 +418,17 @@ export default function LoginClient() {
                       <button
                         type="button"
                         onClick={autoFillDemoOtp}
-                        className="w-full py-2.5 px-4 bg-gradient-to-r from-canvas-subtle via-champagne/15 to-canvas-subtle border border-gold/40 hover:border-gold rounded-xl flex items-center justify-between text-xs transition-all shadow-2xs group cursor-pointer"
+                        className="w-full py-2.5 px-3.5 sm:px-4 bg-gradient-to-r from-canvas-subtle via-champagne/15 to-canvas-subtle border border-gold/40 hover:border-gold rounded-xl flex items-center justify-between text-xs transition-all shadow-2xs group cursor-pointer"
                       >
                         <div className="flex items-center gap-2 text-ink">
                           <div className="w-5 h-5 rounded-full bg-ink flex items-center justify-center text-gold shadow-2xs">
                             <Gem className="w-3 h-3" />
                           </div>
-                          <span className="font-sans">
+                          <span className="font-sans text-left">
                             Atelier Passcode: <strong className="font-mono font-bold tracking-widest text-ink">{demoCode}</strong>
                           </span>
                         </div>
-                        <span className="text-[11px] font-semibold text-gold-dark group-hover:text-ink flex items-center gap-1 transition-colors">
+                        <span className="text-[11px] font-semibold text-gold-dark group-hover:text-ink flex items-center gap-1 transition-colors shrink-0">
                           <span>One-Tap Fill</span>
                           <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                         </span>
@@ -431,14 +439,14 @@ export default function LoginClient() {
                         <label className="text-xs uppercase tracking-refined font-semibold text-ink block mb-3 text-center">
                           Enter 6-Digit Passcode
                         </label>
-                        <div className="flex items-center justify-center gap-2 sm:gap-3.5">
+                        <div className="flex items-center justify-center gap-1.5 sm:gap-3.5">
                           {otpDigits.map((digit, idx) => (
-                            <div key={idx} className="flex flex-col items-center gap-2">
+                            <div key={idx} className="flex flex-col items-center gap-1.5 sm:gap-2">
                               {/* Bead status orb */}
                               <span
-                                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                                className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-all duration-300 ${
                                   digit
-                                    ? 'bg-gold ring-4 ring-gold/25 scale-125 shadow-xs'
+                                    ? 'bg-gold ring-2 sm:ring-4 ring-gold/25 scale-125 shadow-xs'
                                     : 'bg-border-medium'
                                 }`}
                               />
@@ -452,7 +460,7 @@ export default function LoginClient() {
                                 value={digit}
                                 onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
                                 onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                                className={`w-11 h-14 sm:w-13 sm:h-16 text-center font-serif text-xl sm:text-2xl text-ink font-semibold rounded-2xl border transition-all shadow-xs ${
+                                className={`w-10 h-13 sm:w-13 sm:h-16 text-center font-serif text-lg sm:text-2xl text-ink font-semibold rounded-xl sm:rounded-2xl border transition-all shadow-xs ${
                                   digit
                                     ? 'border-gold bg-canvas-subtle ring-2 ring-gold/25'
                                     : 'border-border-medium bg-canvas hover:border-border-strong focus:border-gold focus:ring-2 focus:ring-gold/30'
@@ -463,7 +471,7 @@ export default function LoginClient() {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between text-xs pt-2">
+                      <div className="flex items-center justify-between text-xs pt-1">
                         <span className="text-ink-muted">
                           {resendTimer > 0 ? (
                             <span>Resend in {resendTimer}s</span>
@@ -482,7 +490,7 @@ export default function LoginClient() {
                           type="button"
                           onClick={() => verifyOtpCode()}
                           disabled={isSubmitting}
-                          className="px-6 py-2.5 bg-ink text-canvas hover:bg-gold hover:text-ink rounded-full uppercase tracking-refined font-semibold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                          className="px-5 sm:px-6 py-2.5 bg-ink text-canvas hover:bg-gold hover:text-ink rounded-full uppercase tracking-refined font-semibold text-xs transition-all shadow-xs cursor-pointer disabled:opacity-50"
                         >
                           Verify & Enter
                         </button>
@@ -494,7 +502,7 @@ export default function LoginClient() {
 
               {/* --- 2. EMAIL & PASSWORD FLOW --- */}
               {authMethod === 'email' && (
-                <form onSubmit={handleEmailLogin} className="mt-6 space-y-4">
+                <form onSubmit={handleEmailLogin} className="mt-5 sm:mt-6 space-y-4">
                   <div>
                     <label className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
                       Email Address
@@ -504,6 +512,8 @@ export default function LoginClient() {
                       <input
                         type="email"
                         required
+                        inputMode="email"
+                        autoComplete="email"
                         placeholder="you@example.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -530,6 +540,7 @@ export default function LoginClient() {
                       <input
                         type={showPassword ? 'text' : 'password'}
                         required
+                        autoComplete="current-password"
                         placeholder="••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -566,12 +577,14 @@ export default function LoginClient() {
               )}
 
               {/* 1-Click Demo Evaluation Shortcut */}
-              <div className="mt-6 pt-5 border-t border-border-subtle flex items-center justify-between gap-3 text-xs">
-                <span className="text-ink-muted">Reviewing the flagship?</span>
+              <div className="mt-5 sm:mt-6 pt-4 border-t border-border-subtle flex flex-col sm:flex-row items-center sm:justify-between gap-2.5 text-xs">
+                <span className="text-ink-muted text-center sm:text-left text-[11px] sm:text-xs">
+                  Reviewing the flagship?
+                </span>
                 <button
                   type="button"
                   onClick={handleQuickDemo}
-                  className="px-3.5 py-1.5 rounded-full bg-canvas-subtle hover:bg-border-medium border border-border-subtle text-ink font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+                  className="w-full sm:w-auto px-4 py-2 rounded-full bg-canvas-subtle hover:bg-border-medium border border-border-subtle text-ink font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs text-xs"
                 >
                   <Gem className="w-3.5 h-3.5 text-gold" />
                   <span>1-Click Demo Sign In</span>
@@ -580,11 +593,11 @@ export default function LoginClient() {
             </div>
 
             {/* Bottom Register Callout */}
-            <div className="mt-8 pt-5 border-t border-border-subtle text-center text-xs text-ink-muted">
+            <div className="mt-6 sm:mt-8 pt-4 border-t border-border-subtle text-center text-xs text-ink-muted">
               <span>New to Kalajay Atelier? </span>
               <Link
                 href={`/signup?redirect=${encodeURIComponent(redirectTo)}`}
-                className="font-semibold text-ink hover:text-gold-dark transition-colors underline"
+                className="font-semibold text-rosewood hover:text-ink transition-colors underline"
               >
                 Join the Circle & Claim ₹300 Welcome Gift →
               </Link>
