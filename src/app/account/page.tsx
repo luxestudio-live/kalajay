@@ -3,14 +3,14 @@ import { Suspense } from 'react';
 import AccountClient from './AccountClient';
 
 export const metadata: Metadata = {
-  title: 'My Atelier Portfolio · Orders, Provenance & Addresses | Kalajay',
+  title: 'My Craft House Portfolio · Orders, Provenance & Addresses | Kalajay',
   description:
     'Manage your Kalajay Patron profile, track live hand-strung bead milestones from our looms to wax-sealed dispatch, review heirloom tax invoices, and manage saved delivery addresses.',
   alternates: {
     canonical: '/account',
   },
   openGraph: {
-    title: 'Patron Account & Order Chronicle | Kalajay Atelier',
+    title: 'Patron Account & Order Chronicle | Kalajay Craft House',
     description: 'Track orders, artisan provenance signatures, and saved destinations.',
     url: 'https://www.kalajay.in/account',
   },

@@ -16,7 +16,7 @@ export default function SocialAndReviews() {
     {
       src: 'https://www.kalajay.in/v2/p3-2.jpg',
       alt: 'Pearl vanity box on dressing table',
-      tag: '#kalajayatelier',
+      tag: '#kalajaycrafthouse',
     },
     {
       src: 'https://www.kalajay.in/media/products/b57e3efd6e2f7c2f0bcac6be9aaf5e1b506ff561e72739f1c3041d6fbf4afe8b.webp',
@@ -82,7 +82,7 @@ export default function SocialAndReviews() {
         <div className="text-center max-w-2xl mx-auto mb-14">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-blush/60 rounded-full border border-blush text-rosewood text-[11px] font-sans uppercase tracking-refined font-semibold mb-3">
             <Instagram className="w-3.5 h-3.5" />
-            <span>Chapter 08 · Atelier Glimpses & Affection</span>
+            <span>Chapter 08 · Craft House Glimpses & Affection</span>
           </div>
           <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-plum font-normal tracking-tight">
             Little Wonders in the Wild. <br />

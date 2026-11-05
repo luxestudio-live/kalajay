@@ -32,7 +32,7 @@ export default function ProcessStepScroll() {
       num: '02',
       title: 'String Bead by Bead',
       subtitle: 'Human Craft & Hand-Strung Presence',
-      copy: 'In our Bihar atelier, 21 master women artisans sit together with trays of sorted beads. Each bead is manually hand-threaded with exact finger tension so that the final box stands structurally rigid without buckling.',
+      copy: 'In our Bihar Craft House, 21 master women artisans sit together with trays of sorted beads. Each bead is manually hand-threaded with exact finger tension so that the final box stands structurally rigid without buckling.',
       image: 'https://www.kalajay.in/v2/p3-2.jpg',
       highlight: '14+ Hours Per Piece',
       time: '14+ Hours of Pure Hands',
@@ -233,13 +233,13 @@ export default function ProcessStepScroll() {
                   })}
                 </div>
 
-                {/* Tour the Atelier CTA Button */}
+                {/* Tour the Craft House CTA Button */}
                 <div className="pt-1.5 pl-6">
                   <Link
                     href="/atelier"
                     className="inline-flex items-center gap-2 px-5 py-2.5 bg-gold hover:bg-gold-dark text-ink text-xs uppercase tracking-refined font-semibold rounded-full shadow-md transition-colors cursor-pointer"
                   >
-                    <span>Tour the Atelier</span>
+                    <span>Tour the Craft House</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>

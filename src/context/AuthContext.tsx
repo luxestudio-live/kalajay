@@ -57,7 +57,7 @@ export interface User {
   email: string;
   phone: string;
   memberSince: string;
-  tier: 'Kalajay Circle' | 'Atelier Patron';
+  tier: 'Kalajay Circle' | 'Craft House Patron';
   rewardPoints: number;
   addresses: Address[];
   orders: Order[];
@@ -105,7 +105,7 @@ const DEFAULT_ORDERS: Order[] = [
     paymentMethod: 'UPI (Google Pay)',
     deliveryAddress: DEFAULT_ADDRESSES[0],
     artisanName: 'Sunita Devi',
-    artisanLocation: 'Kalajay Atelier Studio',
+    artisanLocation: 'Kalajay Craft House Studio',
     artisanNote: 'Hand-strung with tensioned 8-cord crystal fiber. Inspected in morning natural light.',
     awbNumber: 'BD-8849201948',
     items: [
@@ -147,7 +147,7 @@ const DEFAULT_ORDERS: Order[] = [
       },
       {
         title: 'Quality Check & Wax-Sealed',
-        location: 'Atelier Finishing Studio',
+        location: 'Craft House Finishing Studio',
         date: '02 Nov, 07:45 PM',
         completed: true,
         current: true,
@@ -196,7 +196,7 @@ const DEFAULT_ORDERS: Order[] = [
     trackingSteps: [
       {
         title: 'Order Placed',
-        location: 'Kalajay Atelier',
+        location: 'Kalajay Craft House',
         date: '14 Oct',
         completed: true,
       },
@@ -248,7 +248,7 @@ const DEFAULT_ORDERS: Order[] = [
     trackingSteps: [
       {
         title: 'Order Placed',
-        location: 'Kalajay Atelier',
+        location: 'Kalajay Craft House',
         date: '28 Aug',
         completed: true,
       },

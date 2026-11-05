@@ -4,7 +4,7 @@ import { ShieldCheck, Lock, Eye, Bell, Database, Mail } from 'lucide-react';
 import { BRAND_CONFIG } from '@/data/catalogue';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy & Data Safeguards | Kalajay Atelier',
+  title: 'Privacy Policy & Data Safeguards | Kalajay Craft House',
   description:
     'Our commitment to patron privacy, encrypted payment handling, transactional WhatsApp updates, and responsible data custody.',
 };
@@ -85,7 +85,7 @@ export default function PrivacyPage() {
             <li>Wax-sealed packaging verification and BlueDart / Delhivery tracking link upon dispatch.</li>
           </ul>
           <p className="text-[11px] text-ink-light">
-            You may opt out of WhatsApp dispatch alerts at any time by replying &quot;STOP&quot; to our atelier line.
+            You may opt out of WhatsApp dispatch alerts at any time by replying &quot;STOP&quot; to our craft house line.
           </p>
         </section>
 
@@ -110,7 +110,7 @@ export default function PrivacyPage() {
             In compliance with the Digital Personal Data Protection (DPDP) Act of India and Information Technology Rules, you retain full rights over your data. You may request an export of your order history or petition for account deletion by writing to our concierge team at:
           </p>
           <div className="p-4 bg-canvas-subtle rounded-sm border border-border-subtle font-mono text-xs text-plum space-y-1">
-            <div>Data Grievance Officer: Concierge Custodian, Kalajay Atelier</div>
+            <div>Data Grievance Officer: Concierge Custodian, Kalajay Craft House</div>
             <div>Email: <a href={`mailto:${BRAND_CONFIG.contact.email}`} className="text-rosewood underline">{BRAND_CONFIG.contact.email}</a></div>
             <div>Registered GSTIN: {BRAND_CONFIG.contact.gst}</div>
             <div>Response SLA: Within 24 business hours</div>

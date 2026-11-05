@@ -41,7 +41,7 @@ export default function AtelierPage() {
 
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <span className="text-[11px] uppercase tracking-refined text-champagne font-sans font-semibold block mb-3">
-            Atelier Dispatches · The Making
+            The Craft House · The Making
           </span>
           <h1 className="font-serif text-4xl sm:text-6xl lg:text-7xl text-canvas font-normal tracking-tight leading-[1.05]">
             Geometry & Patience. <br />
@@ -54,12 +54,12 @@ export default function AtelierPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 space-y-20">
-        {/* Section 1: The Two Atelier Geography */}
+        {/* Section 1: The Two Craft House Geography */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="p-8 bg-canvas-subtle rounded-sm border border-border-medium space-y-4">
             <div className="flex items-center gap-2 text-rosewood">
               <MapPin className="w-5 h-5" />
-              <span className="text-xs uppercase tracking-monumental font-bold">Atelier I · Bihar</span>
+              <span className="text-xs uppercase tracking-monumental font-bold">Craft House I · Bihar</span>
             </div>
             <h3 className="font-serif text-2xl text-plum">
               Loom Weaving & Hand-Stringing
@@ -77,7 +77,7 @@ export default function AtelierPage() {
           <div className="p-8 bg-canvas-subtle rounded-sm border border-border-medium space-y-4">
             <div className="flex items-center gap-2 text-rosewood">
               <MapPin className="w-5 h-5" />
-              <span className="text-xs uppercase tracking-monumental font-bold">Atelier II · Mumbai</span>
+              <span className="text-xs uppercase tracking-monumental font-bold">Craft House II · Mumbai</span>
             </div>
             <h3 className="font-serif text-2xl text-plum">
               Curation, Finishing & Dispatch

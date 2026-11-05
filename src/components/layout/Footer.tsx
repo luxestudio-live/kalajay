@@ -46,7 +46,7 @@ export default function Footer() {
                 The Kalajay Gazette
               </span>
               <p className="text-sm text-canvas/80 font-light mb-4">
-                Receive intimate studio previews, seasonal bead drops, and private atelier dispatches.
+                Receive intimate previews, seasonal bead drops, and private Craft House dispatches.
               </p>
               {subscribed ? (
                 <div className="flex items-center gap-2 p-3 bg-white/5 border border-champagne/30 text-champagne text-xs rounded-sm">
@@ -100,10 +100,10 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Col 2: The Studio */}
+          {/* Col 2: The Craft House */}
           <div>
             <h4 className="text-xs uppercase tracking-monumental text-champagne font-medium mb-4">
-              The Studio
+              The Craft House
             </h4>
             <ul className="space-y-2.5">
               <li>
@@ -113,7 +113,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link href="/atelier" className="hover:text-canvas transition-colors">
-                  The Kalajay Artisans
+                  The Craft House & Artisans
                 </Link>
               </li>
               <li>
@@ -177,16 +177,16 @@ export default function Footer() {
               </li>
               <li>
                 <Link href="/contact" className="hover:text-canvas transition-colors">
-                  Atelier Enquiries & Visits
+                  Craft House Inquiries & Visits
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Col 4: Atelier Locations */}
+          {/* Col 4: Craft House Locations */}
           <div className="col-span-2 md:col-span-1 lg:col-span-2 space-y-4">
             <h4 className="text-xs uppercase tracking-monumental text-champagne font-medium mb-4">
-              Ateliers & Coordinates
+              Craft Houses & Coordinates
             </h4>
             <div className="space-y-3 text-xs leading-relaxed">
               <div className="flex items-start gap-2.5">

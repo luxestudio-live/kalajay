@@ -51,7 +51,7 @@ export default function LoginClient() {
     const hour = new Date().getHours();
     if (hour < 12) setGreeting('Good morning · Patron of the Arts');
     else if (hour < 18) setGreeting('Good afternoon · Collector of Wonders');
-    else setGreeting('Good evening · Atelier Patron');
+    else setGreeting('Good evening · Craft House Patron');
   }, []);
 
   const otpInputsRef = useRef<(HTMLInputElement | null)[]>([]);
@@ -198,7 +198,7 @@ export default function LoginClient() {
                     Kalajay Digital Flagship
                   </span>
                   <span className="font-serif text-lg tracking-[0.18em] text-canvas font-normal">
-                    ATELIER SANCTUM
+                    THE CRAFT HOUSE
                   </span>
                 </div>
               </div>
@@ -268,7 +268,7 @@ export default function LoginClient() {
             <div className="relative z-10 pt-5 border-t border-canvas/15 text-xs text-canvas/70 italic font-serif">
               “Every bead placed is a heartbeat of patience.”
               <span className="block not-italic font-sans text-[10px] tracking-refined uppercase text-champagne font-semibold mt-1">
-                Kalajay Atelier · 100% Handcrafted
+                Kalajay Craft House · 100% Handcrafted
               </span>
             </div>
           </div>
@@ -425,7 +425,7 @@ export default function LoginClient() {
                             <Gem className="w-3 h-3" />
                           </div>
                           <span className="font-sans text-left">
-                            Atelier Passcode: <strong className="font-mono font-bold tracking-widest text-ink">{demoCode}</strong>
+                            Craft House Passcode: <strong className="font-mono font-bold tracking-widest text-ink">{demoCode}</strong>
                           </span>
                         </div>
                         <span className="text-[11px] font-semibold text-gold-dark group-hover:text-ink flex items-center gap-1 transition-colors shrink-0">
@@ -564,7 +564,7 @@ export default function LoginClient() {
                     {isSubmitting ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin text-gold" />
-                        <span>Entering Atelier...</span>
+                        <span>Entering Craft House...</span>
                       </>
                     ) : (
                       <>
@@ -594,7 +594,7 @@ export default function LoginClient() {
 
             {/* Bottom Register Callout */}
             <div className="mt-6 sm:mt-8 pt-4 border-t border-border-subtle text-center text-xs text-ink-muted">
-              <span>New to Kalajay Atelier? </span>
+              <span>New to Kalajay Craft House? </span>
               <Link
                 href={`/signup?redirect=${encodeURIComponent(redirectTo)}`}
                 className="font-semibold text-rosewood hover:text-ink transition-colors underline"

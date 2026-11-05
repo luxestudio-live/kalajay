@@ -134,7 +134,7 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                   pathname === '/atelier' ? 'text-ink font-semibold border-b border-ink' : ''
                 }`}
               >
-                Atelier
+                The Craft House
               </Link>
             </nav>
 
@@ -360,7 +360,7 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                     Our Story & Artisans
                   </Link>
                   <Link href="/atelier" className="block hover:text-gold-dark py-1">
-                    The Kalajay Atelier
+                    The Craft House
                   </Link>
                   <Link href="/track" className="block hover:text-gold-dark py-1 text-gold-dark font-medium">
                     Track Your Order
@@ -369,7 +369,7 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                     Saved Pieces (Wishlist)
                   </Link>
                   <Link href="/contact" className="block hover:text-gold-dark py-1">
-                    Contact & Atelier Visits
+                    Contact & Craft House Visits
                   </Link>
                 </div>
               </nav>

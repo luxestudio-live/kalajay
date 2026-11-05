@@ -91,7 +91,7 @@ export default function CustomisePage() {
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-canvas rounded-full border border-gold/40 text-ink text-[11px] font-sans uppercase tracking-refined font-semibold mb-3">
               <Gem className="w-3 h-3 text-gold" />
-              <span>Bespoke Atelier Studio</span>
+              <span>Bespoke Craft House Studio</span>
             </div>
             <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl text-ink font-normal tracking-tight">
               Create Your Own Heirloom
@@ -171,7 +171,7 @@ export default function CustomisePage() {
                     >
                       <div>
                         <span className={`text-[11px] uppercase tracking-refined block mb-1 font-bold ${selectedSilhouette === key ? 'text-champagne' : 'text-rosewood'}`}>
-                          Atelier Standard
+                          Craft House Standard
                         </span>
                         <h4 className="font-serif text-lg font-normal leading-snug">
                           {val.productType}
@@ -279,7 +279,7 @@ export default function CustomisePage() {
                 {/* Additional Charms */}
                 <div className="space-y-3 pt-2">
                   <label className="text-xs uppercase tracking-editorial text-plum font-bold block">
-                    C · Atelier Charms & Embellishments (+₹99 each)
+                    C · Craft House Charms & Embellishments (+₹99 each)
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {activeConfig.charmOptions.map((charm) => (
@@ -374,7 +374,7 @@ export default function CustomisePage() {
                 {/* Artisan Notes */}
                 <div className="space-y-2">
                   <label className="text-xs uppercase tracking-editorial text-plum font-bold block">
-                    Notes for the Atelier Weaver
+                    Notes for the Craft House Weaver
                   </label>
                   <textarea
                     rows={4}
@@ -513,13 +513,13 @@ export default function CustomisePage() {
             <div className="sticky top-28 bg-canvas-subtle p-6 sm:p-8 rounded-sm border border-border-medium shadow-xl space-y-6">
               <div className="border-b border-border-subtle pb-4">
                 <span className="text-[10px] uppercase tracking-monumental text-rosewood font-sans font-bold block mb-1">
-                  Atelier Work Ticket
+                  Craft House Work Ticket
                 </span>
                 <h3 className="font-serif text-2xl text-plum">
                   {activeConfig.productType}
                 </h3>
                 <p className="text-xs text-ink-light mt-0.5">
-                  Hand-woven to order in Kalajay Atelier
+                  Hand-woven to order in Kalajay Craft House
                 </p>
               </div>
 

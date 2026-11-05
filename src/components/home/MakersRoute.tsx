@@ -115,7 +115,7 @@ export default function MakersRoute() {
               </span>
             </span>
             <span className="text-[11px] uppercase tracking-refined text-rosewood font-sans font-semibold mt-1 block">
-              Atelier Coordinates
+              Craft House Coordinates
             </span>
             <span className="text-xs text-ink-muted font-light mt-0.5 block">Dedicated Studios</span>
           </div>
@@ -154,7 +154,7 @@ export default function MakersRoute() {
             <div className="md:col-span-5 space-y-3">
               <span className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-refined bg-canvas/15 px-3 py-1 rounded-full text-champagne font-semibold font-sans">
                 <MapPin className="w-3.5 h-3.5 text-rosewood" />
-                <span>Origin 01 · Bihar Atelier</span>
+                <span>Origin 01 · Bihar Craft House</span>
               </span>
               <h3 className="font-serif text-2xl sm:text-3xl text-canvas">
                 Design & Loom Beadwork
@@ -226,7 +226,7 @@ export default function MakersRoute() {
                   <Heart className="w-3.5 h-3.5 text-rosewood fill-rosewood" />
                   <span>Master Bead Weaver</span>
                 </span>
-                <span className="font-serif italic text-rosewood font-medium">Kalajay Atelier</span>
+                <span className="font-serif italic text-rosewood font-medium">Kalajay Craft House</span>
               </div>
             </div>
           ))}

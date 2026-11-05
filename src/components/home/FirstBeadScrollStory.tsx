@@ -20,7 +20,7 @@ export default function FirstBeadScrollStory() {
       num: '02',
       phase: 'The Maker’s Tension',
       subtitle: 'Human Craft & Hand-Strung Presence',
-      copy: 'In our Bihar atelier, 21 women artisans sit together with trays of sorted beads. Each bead is manually picked and hand-threaded with exact micro-tension. Too tight, and the piece buckles; too loose, and the box loses its architectural stance.',
+      copy: 'In our Bihar Craft House, 21 women artisans sit together with trays of sorted beads. Each bead is manually picked and hand-threaded with exact micro-tension. Too tight, and the piece buckles; too loose, and the box loses its architectural stance.',
       image: 'https://www.kalajay.in/v2/p3-2.jpg',
       metrics: ['14+ Hours Per Piece', '21 Women Artisans', 'Exact Finger Calibration']
     },
@@ -143,7 +143,7 @@ export default function FirstBeadScrollStory() {
                   href="/atelier"
                   className="inline-flex items-center gap-2 px-5 py-2.5 bg-rosewood hover:bg-rosewood-dark text-canvas text-xs uppercase tracking-editorial font-medium rounded-sm transition-colors"
                 >
-                  <span>Tour the Atelier</span>
+                  <span>Tour the Craft House</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
                 {activeStep < 3 && (

@@ -116,7 +116,7 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
               />
               {product.isBestSeller && (
                 <span className="absolute top-4 left-4 bg-plum text-canvas text-[11px] uppercase tracking-refined px-3 py-1 rounded-full font-sans font-medium">
-                  Atelier Icon
+                  Craft House Signature
                 </span>
               )}
             </div>
@@ -323,7 +323,7 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
                       <strong>Artisan Lead Time:</strong> {product.craftHours}.
                     </p>
                     <p>
-                      <strong>Atelier Origin:</strong> Hand-crafted loom stringing; studio curation & dispatch.
+                      <strong>Craft House Origin:</strong> Hand-crafted loom stringing; studio curation & dispatch.
                     </p>
                   </div>
                 )}
@@ -396,7 +396,7 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
           <div className="flex items-center justify-between mb-8">
             <div>
               <span className="text-[11px] uppercase tracking-refined text-rosewood font-sans font-semibold block">
-                Atelier Harmony
+                Craft House Harmony
               </span>
               <h2 className="font-serif text-2xl sm:text-3xl text-plum">
                 Pairs Well With
@@ -487,3 +487,4 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
     </div>
   );
 }
+

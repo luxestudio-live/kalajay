@@ -15,7 +15,7 @@ export default function StoryPage() {
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/70 backdrop-blur border border-gold/30 rounded-full text-[11px] uppercase tracking-monumental text-rosewood font-sans font-semibold">
             <Gem className="w-3 h-3 text-gold" />
-            <span>Atelier Chronicle · The Kalajay Story</span>
+            <span>Craft House Chronicle · The Kalajay Story</span>
           </div>
 
           <h1 className="font-serif text-4xl sm:text-6xl md:text-7xl lg:text-8xl text-plum font-normal tracking-tight leading-[1.03]">
@@ -127,7 +127,7 @@ export default function StoryPage() {
                 Kalajay was born from a very personal yearning: the objects we touch everyday—our keys, our jewellery boxes, our evening clutches—deserve to have a soul. When you run your fingers across a hand-strung vanity box, you feel the tension calibrated by an artisan who sat with it for 14 hours.
               </p>
               <p>
-                There is no conveyor belt in our atelier. Every single piece begins with loose spools of stainless monofilament wire and thousands of faceted crystal beads, woven one intersection at a time until a strong architectural form emerges.
+                There is no conveyor belt in our craft house. Every single piece begins with loose spools of stainless monofilament wire and thousands of faceted crystal beads, woven one intersection at a time until a strong architectural form emerges.
               </p>
             </div>
 
@@ -151,11 +151,11 @@ export default function StoryPage() {
             </span>
 
             <h2 className="font-serif text-3xl sm:text-5xl text-plum leading-[1.12]">
-              21 women. Two ateliers. One shared journey of financial dignity and pride.
+              21 women. Two craft houses. One shared journey of financial dignity and pride.
             </h2>
 
             <p className="text-sm sm:text-base text-ink-muted font-light leading-relaxed">
-              Kalajay is built almost entirely by women. In regional India, skilled craftsmanship has historically been relegated to unorganized cottage work without fair valuation. We restructured this paradigm: our makers receive fair above-market living wages, flexible home atelier hours, and direct attribution for the masterpieces they create.
+              Kalajay is built almost entirely by women. In regional India, skilled craftsmanship has historically been relegated to unorganized cottage work without fair valuation. We restructured this paradigm: our makers receive fair above-market living wages, flexible home craft hours, and direct attribution for the masterpieces they create.
             </p>
 
             {/* Artisan Spotlight Card */}
@@ -171,7 +171,7 @@ export default function StoryPage() {
                   </div>
                   <div>
                     <h4 className="font-serif text-lg text-plum font-medium">Reena Devi</h4>
-                    <p className="text-xs text-rosewood">Master Loom Weaver · Bihar Atelier</p>
+                    <p className="text-xs text-rosewood">Master Loom Weaver · Bihar Craft House</p>
                   </div>
                 </div>
                 <blockquote className="text-xs sm:text-sm text-ink-muted italic font-light leading-relaxed">
@@ -220,7 +220,7 @@ export default function StoryPage() {
                 <div className="space-y-3">
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-blush/60 rounded-full text-xs font-semibold text-rosewood">
                     <MapPin className="w-3.5 h-3.5" />
-                    <span>01 · Bihar Atelier</span>
+                    <span>01 · Bihar Craft House</span>
                   </div>
                   <h3 className="font-serif text-2xl text-plum">Origin: Loom Weaving &amp; Structural Tension</h3>
                   <p className="text-xs sm:text-sm text-ink-muted leading-relaxed font-light">

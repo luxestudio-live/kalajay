@@ -80,7 +80,7 @@ export default function CorporateGiftingPage() {
               </li>
               <li className="flex items-center gap-2">
                 <Check className="w-3.5 h-3.5 text-rosewood" />
-                <span>Dedicated atelier manager and pre-production sample approval</span>
+                <span>Dedicated craft house manager and pre-production sample approval</span>
               </li>
             </ul>
           </div>
@@ -93,7 +93,7 @@ export default function CorporateGiftingPage() {
               Tiered Volume Structures
             </span>
             <h3 className="font-serif text-3xl text-plum">
-              Order Quantities & Atelier Timeline
+              Order Quantities & Craft House Timeline
             </h3>
           </div>
 
@@ -104,7 +104,7 @@ export default function CorporateGiftingPage() {
               <p className="text-xs text-ink-light">Boutique weddings, VIP client hampers, bridal party gifts.</p>
               <div className="text-xs text-ink space-y-1 pt-2 border-t border-border-subtle">
                 <p>• Lead Time: 2 weeks</p>
-                <p>• 10% Volume atelier advantage</p>
+                <p>• 10% Volume Craft House advantage</p>
                 <p>• Free wax-seal gift packaging</p>
               </div>
             </div>
@@ -115,7 +115,7 @@ export default function CorporateGiftingPage() {
               <p className="text-xs text-ink-light">Grand wedding celebrations, annual corporate milestones.</p>
               <div className="text-xs text-ink space-y-1 pt-2 border-t border-border-subtle">
                 <p>• Lead Time: 3 to 4 weeks</p>
-                <p>• 15% Volume atelier advantage</p>
+                <p>• 15% Volume Craft House advantage</p>
                 <p>• Complimentary physical sample</p>
               </div>
             </div>
@@ -155,7 +155,7 @@ export default function CorporateGiftingPage() {
               href="/contact"
               className="px-8 py-3.5 bg-canvas/10 hover:bg-canvas/20 text-canvas border border-canvas/20 text-xs uppercase tracking-editorial font-medium rounded-sm transition-colors"
             >
-              <span>Email the Atelier</span>
+              <span>Email the Craft House</span>
             </Link>
           </div>
         </section>

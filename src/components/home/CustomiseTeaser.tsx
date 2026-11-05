@@ -27,7 +27,7 @@ export default function CustomiseTeaser() {
           </div>
           <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-plum font-normal tracking-tight">
             Designed by You. <br />
-            <span className="italic font-light text-rosewood">Woven by Our Atelier.</span>
+            <span className="italic font-light text-rosewood">Woven by Our Craft House.</span>
           </h2>
           <p className="text-xs sm:text-sm text-ink-muted font-light mt-4 leading-relaxed">
             Have a specific colourway for an upcoming wedding or bridal party? Test our interactive customisation studio to choose beads, hardware accents, and personal monogram tags.
@@ -138,7 +138,7 @@ export default function CustomiseTeaser() {
                   {config.productType}
                 </h3>
                 <p className="text-xs text-ink-muted mt-1">
-                  Handmade to order in our craft atelier
+                  Handmade to order in our craft house
                 </p>
               </div>
 

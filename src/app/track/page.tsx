@@ -96,7 +96,7 @@ const KNOWN_ORDERS: Record<string, SimulatedOrder> = {
     customerName: 'Rohan Mehra',
     city: 'Bengaluru, Karnataka',
     artisanNote: 'Currently on the artisan loom. 420 faceted glass beads threaded and tensioned.',
-    awbNumber: 'Pending Atelier Dispatch',
+    awbNumber: 'Pending Craft House Dispatch',
     courier: 'Scheduled via BlueDart',
   },
 };
@@ -122,7 +122,7 @@ export default function TrackOrderPage() {
         status: 'transit',
         items: [
           {
-            name: 'Handcrafted Atelier Piece',
+            name: 'Handcrafted Craft House Piece',
             variant: 'Custom Artisan Selection',
             price: 1299,
             image: 'https://www.kalajay.in/v2/p3-2.jpg',
@@ -287,7 +287,7 @@ export default function TrackOrderPage() {
                     )}
                     <span className="text-[10px] uppercase tracking-refined font-bold font-mono">Stage 02</span>
                   </div>
-                  <h4 className="font-serif text-base text-plum font-normal">Atelier Wax-Sealing</h4>
+                  <h4 className="font-serif text-base text-plum font-normal">Craft House Wax-Sealing</h4>
                   <p className="text-[11px] text-ink-muted leading-relaxed mt-1 font-light">
                     12-point inspection, wrapped in archival tissue, enclosed in dust bags, and sealed with antique gold wax.
                   </p>
@@ -366,7 +366,7 @@ export default function TrackOrderPage() {
                 className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-canvas rounded-sm text-[11px] font-sans font-semibold uppercase tracking-refined transition-colors shrink-0"
               >
                 <MessageCircle className="w-3.5 h-3.5" />
-                <span>WhatsApp Atelier Concierge</span>
+                <span>WhatsApp Craft House Concierge</span>
               </a>
             </div>
           </div>

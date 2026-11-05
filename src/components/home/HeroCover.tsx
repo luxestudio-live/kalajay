@@ -306,7 +306,7 @@ export default function HeroCover() {
             <div className="hidden sm:flex items-center gap-6">
               <span>21 WOMEN ARTISANS</span>
               <span className="opacity-40">·</span>
-              <span>LIMITED ATELIER RUN</span>
+              <span>LIMITED CRAFT HOUSE RUN</span>
             </div>
             <div className="text-ink font-medium">
               100% HAND-STRUNG
@@ -383,7 +383,7 @@ export default function HeroCover() {
               
               <div className="relative p-2 sm:p-3 flex justify-between items-start gap-1">
                 <span className="inline-block text-[11px] uppercase tracking-refined bg-ink/90 backdrop-blur-md px-2 sm:px-2.5 py-0.5 rounded-full text-champagne font-sans border border-champagne/30 font-medium shadow-sm">
-                  Atelier Heirloom
+                  Craft House Heirloom
                 </span>
                 <span className="font-serif text-xs sm:text-sm font-semibold text-champagne bg-ink/90 backdrop-blur-md px-2 py-0.5 rounded-full border border-champagne/30">
                   ₹1,449

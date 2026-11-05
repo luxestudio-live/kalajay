@@ -98,7 +98,7 @@ export default function AccountClient() {
           <div className="w-12 h-12 mx-auto rounded-full bg-ink flex items-center justify-center animate-pulse">
             <Gem className="w-6 h-6 text-gold" />
           </div>
-          <p className="font-serif text-lg text-ink">Opening Your Atelier Portfolio...</p>
+          <p className="font-serif text-lg text-ink">Opening Your Craft House Portfolio...</p>
         </div>
       </div>
     );
@@ -268,7 +268,7 @@ export default function AccountClient() {
 
               <div className="bg-canvas-subtle p-5 rounded-2xl border border-border-gold shadow-2xs">
                 <span className="text-[11px] uppercase tracking-refined text-ink-muted font-sans font-medium block">
-                  Atelier Points
+                  Craft House Points
                 </span>
                 <div className="font-serif text-3xl text-rosewood font-semibold mt-1">
                   ₹{user.rewardPoints}
@@ -285,7 +285,7 @@ export default function AccountClient() {
                 </div>
                 <span className="text-[11px] text-emerald-700 font-medium mt-1 block flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-                  <span>Wax-Sealed in Atelier</span>
+                  <span>Wax-Sealed in Craft House</span>
                 </span>
               </div>
 
@@ -351,7 +351,7 @@ export default function AccountClient() {
                       </div>
                       <div className="flex justify-between text-[10px] text-ink-muted mt-1.5">
                         <span>Hand-Strung & Tensioned</span>
-                        <span className="font-semibold text-gold-dark">Atelier Wax-Sealed</span>
+                        <span className="font-semibold text-gold-dark">Craft House Wax-Sealed</span>
                         <span>Doorstep Delivery</span>
                       </div>
                     </div>
@@ -544,7 +544,7 @@ export default function AccountClient() {
                           </div>
                           <div className="text-xs space-y-1">
                             <strong className="text-ink font-semibold block">
-                              Atelier Hand-Crafting Provenance
+                              Craft House Provenance
                             </strong>
                             <p className="text-ink-muted italic font-serif leading-relaxed">
                               &ldquo;{order.artisanNote}&rdquo;
@@ -708,7 +708,7 @@ export default function AccountClient() {
           <div className="pt-8 max-w-2xl space-y-8 animate-fade-in">
             <div className="flex items-center justify-between pb-4 border-b border-border-subtle">
               <div>
-                <h2 className="font-serif text-2xl text-ink font-normal">Patron Profile & Atelier Preferences</h2>
+                <h2 className="font-serif text-2xl text-ink font-normal">Patron Profile & Craft House Preferences</h2>
                 <p className="text-xs text-ink-muted">
                   Update your contact coordinates and bespoke bead colorway preferences.
                 </p>
@@ -728,7 +728,7 @@ export default function AccountClient() {
             {profileSavedNotice && (
               <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2 animate-fade-in">
                 <Check className="w-4 h-4 text-emerald-600" />
-                <span>Your atelier profile and preferences were updated successfully.</span>
+                <span>Your profile and preferences were updated successfully.</span>
               </div>
             )}
 

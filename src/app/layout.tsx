@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://www.kalajay.in'),
   title: {
     default: 'KALAJAY — A World of Little Wonders | Handcrafted Luxury Accessories',
-    template: '%s | Kalajay Atelier',
+    template: '%s | Kalajay Craft House',
   },
   description:
     'Handcrafted beaded jewellery boxes, clutches, slings, AirPod jewel cases, and curated table pieces. Hand-strung one bead at a time with patience and love by 21 master women artisans in India.',
@@ -24,9 +24,9 @@ export const metadata: Metadata = {
     'artisanal beadwork India',
     'heirloom jewellery box',
   ],
-  authors: [{ name: 'Kalajay Atelier', url: 'https://www.kalajay.in' }],
-  creator: 'Kalajay Atelier',
-  publisher: 'Kalajay Atelier',
+  authors: [{ name: 'Kalajay Craft House', url: 'https://www.kalajay.in' }],
+  creator: 'Kalajay Craft House',
+  publisher: 'Kalajay Craft House',
   formatDetection: {
     email: false,
     address: false,
@@ -57,7 +57,7 @@ export const metadata: Metadata = {
     description:
       'Small wonders. Patiently made. Hand-strung beaded jewellery boxes, luminous evening clutches, and tactile daily charms by 21 master women artisans in India.',
     url: 'https://www.kalajay.in',
-    siteName: 'Kalajay Atelier',
+    siteName: 'Kalajay Craft House',
     locale: 'en_IN',
     type: 'website',
     images: [

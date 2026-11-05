@@ -33,7 +33,7 @@ export default function HumanHandsAtelier() {
             >
               <div>
                 <span className="text-[11px] uppercase tracking-refined text-rosewood font-sans font-semibold block mb-2">
-                  Atelier Artisan 0{idx + 1}
+                  Craft House Artisan 0{idx + 1}
                 </span>
                 <h3 className="font-serif text-2xl text-plum mb-1">
                   {artisan.name}
@@ -52,7 +52,7 @@ export default function HumanHandsAtelier() {
                   <Heart className="w-3.5 h-3.5 text-rosewood fill-rosewood" />
                   <span>Master Bead Artisan</span>
                 </span>
-                <span className="font-serif italic text-rosewood">Kalajay Atelier</span>
+                <span className="font-serif italic text-rosewood">Kalajay Craft House</span>
               </div>
             </div>
           ))}
@@ -65,14 +65,14 @@ export default function HumanHandsAtelier() {
               Every Purchase Directly Sustains Independent Women Makers.
             </h4>
             <p className="text-xs text-canvas/70 font-light">
-              We practice transparent pricing, fair remuneration, and safe atelier working conditions.
+              We practice transparent pricing, fair remuneration, and safe craft house working conditions.
             </p>
           </div>
           <Link
             href="/atelier"
             className="shrink-0 px-6 py-3 bg-champagne hover:bg-champagne-light text-plum text-xs uppercase tracking-editorial font-semibold rounded-sm transition-colors flex items-center gap-2"
           >
-            <span>Learn About Our Ateliers</span>
+            <span>Explore the Craft House</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>

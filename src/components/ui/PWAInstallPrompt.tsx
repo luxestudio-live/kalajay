@@ -146,7 +146,7 @@ export default function PWAInstallPrompt() {
             <div className="flex-1 min-w-0 pr-6">
               <div className="flex items-center gap-1.5">
                 <span className="font-serif text-sm text-ink font-semibold truncate">
-                  Kalajay Atelier
+                  Kalajay Craft House
                 </span>
                 <span className="text-[11px] uppercase tracking-refined bg-ink text-champagne font-sans font-medium px-2 py-0.5 rounded-full">
                   App

@@ -31,12 +31,12 @@ export const GIFTING_PACKAGES: GiftingPackage[] = [
       'Personalised hot-foil couple monogram tag',
       'Curated gift packaging and doorstep delivery'
     ],
-    features: ['Custom Palette Matching', 'Bespoke Monogramming', 'Luxe Gift Boxing', 'Dedicated Atelier Liaison']
+    features: ['Custom Palette Matching', 'Bespoke Monogramming', 'Luxe Gift Boxing', 'Dedicated Craft House Liaison']
   },
   {
     id: 'gift-corp-02',
     slug: 'executive-craft-hampers',
-    title: 'The Atelier Corporate Curation',
+    title: 'The Craft House Corporate Curation',
     subtitle: 'Desk trays, crystal pen stands & artisanal\u00A0coasters',
     category: 'corporate',
     description: 'Move beyond generic corporate gifting. Offer clients and team members handcrafted desk sculptures—pearl-beaded vanity trays, crystal tissue dispensers, and coaster sets that celebrate patient human craft and lasting appreciation.',
@@ -167,7 +167,7 @@ export const FAQS = [
   },
   {
     q: 'How long does it take for my order to ship?',
-    a: 'Because pieces are made by hand one at a time, our standard turnaround is 3 to 5 business days for dispatch. Custom orders and bespoke bridal hampers require 7 to 21 business days depending on volume. You will receive real-time tracking updates via SMS and WhatsApp as soon as your parcel is dispatched from our atelier.'
+    a: 'Because pieces are made by hand one at a time, our standard turnaround is 3 to 5 business days for dispatch. Custom orders and bespoke bridal hampers require 7 to 21 business days depending on volume. You will receive real-time tracking updates via SMS and WhatsApp as soon as your parcel is dispatched from our craft house.'
   },
   {
     q: 'What is your shipping policy across India?',
@@ -190,7 +190,7 @@ export const FAQS = [
 export const ARTISAN_STORIES = [
   {
     name: 'Sunita Devi',
-    location: 'Madhubani Atelier, Bihar',
+    location: 'Madhubani Craft House, Bihar',
     experience: '8 years of bead loom mastery',
     quote: 'When I sit down with a tray of crystal beads, time slows down. Stringing each row with exact tension requires complete presence. Knowing that our boxes and purses travel to homes in Mumbai, Delhi, and abroad gives our hands immense pride.'
   },
@@ -202,7 +202,7 @@ export const ARTISAN_STORIES = [
   },
   {
     name: 'Amina Sheikh',
-    location: 'Bandra Atelier, Mumbai',
+    location: 'Bandra Studio, Mumbai',
     experience: 'Finishing, quality control & bridal curation',
     quote: 'Before any piece leaves our studio, I inspect the knots, the lining, and the magnetic clasps. It must feel like an heirloom the moment you open the box.'
   }

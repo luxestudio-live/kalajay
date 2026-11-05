@@ -23,7 +23,7 @@ export default function ContactPage() {
       <div className="bg-canvas-subtle/80 border-b border-border-subtle py-16 sm:py-24">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <span className="text-[11px] uppercase tracking-refined text-rosewood font-sans font-semibold block mb-3">
-            Atelier Coordinates & Conversations
+            Craft House Coordinates & Conversations
           </span>
           <h1 className="font-serif text-4xl sm:text-6xl lg:text-7xl text-plum font-normal tracking-tight leading-[1.05]">
             Connect with Kalajay
@@ -57,7 +57,7 @@ export default function ContactPage() {
                 <MessageCircle className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
                 <div>
                   <span className="font-semibold text-plum block group-hover:text-emerald-800">
-                    WhatsApp Atelier Line (Fastest)
+                    WhatsApp Craft House Line (Fastest)
                   </span>
                   <span className="text-ink-muted">{BRAND_CONFIG.contact.phone}</span>
                   <p className="text-[11px] text-ink-light mt-0.5">
@@ -89,20 +89,20 @@ export default function ContactPage() {
                 <Instagram className="w-5 h-5 text-rosewood shrink-0 mt-0.5" />
                 <div>
                   <span className="font-semibold text-plum block group-hover:text-rosewood">
-                    Instagram Atelier Journal
+                    Instagram Craft House Journal
                   </span>
                   <span className="text-ink-muted">{BRAND_CONFIG.contact.instagram}</span>
                   <p className="text-[11px] text-ink-light mt-0.5">
-                    Follow behind-the-scenes bead stringing and studio drops
+                    Follow behind-the-scenes bead stringing and craft house drops
                   </p>
                 </div>
               </a>
             </div>
 
-            {/* Atelier Physical Hubs */}
+            {/* Craft House Physical Hubs */}
             <div className="pt-4 border-t border-border-subtle space-y-4">
               <span className="text-[10px] uppercase tracking-monumental text-rosewood font-bold block">
-                Atelier Hubs & Verification
+                Craft House Hubs & Verification
               </span>
 
               <div className="p-4 bg-canvas rounded-sm border border-border-subtle space-y-1 text-xs">
@@ -142,7 +142,7 @@ export default function ContactPage() {
                   Message Sent
                 </h4>
                 <p className="text-xs sm:text-sm text-ink-muted leading-relaxed max-w-sm mx-auto">
-                  Thank you for writing to Kalajay, {name}. Our atelier concierge will review your message and respond within one business day.
+                  Thank you for writing to Kalajay, {name}. Our Craft House concierge will review your message and respond within one business day.
                 </p>
                 <div className="pt-2">
                   <button

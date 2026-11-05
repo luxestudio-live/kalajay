@@ -15,7 +15,7 @@ export const TOKENS = {
     // Extended tints & supporting shades
     canvasSubtle: '#F5EFE6', // Soft secondary card background
     canvasMuted: '#EDE4D8',  // Border & divider soft fill
-    canvasDark: '#1C1620',   // Deep night atelier background
+    canvasDark: '#1C1620',   // Deep night craft house background
     canvasDarker: '#140F18', // Deepest charcoal plum
 
     // UI text hierarchy

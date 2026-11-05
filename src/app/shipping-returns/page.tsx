@@ -19,7 +19,7 @@ export default function ShippingReturnsPage() {
     },
     {
       q: 'Can I request express delivery for an upcoming birthday or wedding?',
-      a: 'Yes. If you have an urgent deadline within 48–72 hours, message our studio concierge via WhatsApp prior to or immediately after ordering. We can expedite atelier production and dispatch via priority air express.'
+      a: 'Yes. If you have an urgent deadline within 48–72 hours, message our studio concierge via WhatsApp prior to or immediately after ordering. We can expedite Craft House production and dispatch via priority air express.'
     },
     {
       q: 'Do you ship internationally outside India?',
@@ -35,7 +35,7 @@ export default function ShippingReturnsPage() {
         
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
           <span className="text-[11px] uppercase tracking-monumental text-rosewood font-sans font-semibold block">
-            Atelier Logistics &amp; Peace of Mind
+            Craft House Logistics &amp; Peace of Mind
           </span>
           <h1 className="font-serif text-4xl sm:text-6xl md:text-7xl text-plum font-normal tracking-tight">
             Shipping &amp; Return Guarantee

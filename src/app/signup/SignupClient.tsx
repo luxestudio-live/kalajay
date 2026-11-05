@@ -171,7 +171,7 @@ export default function SignupClient() {
                 </div>
                 <div>
                   <span className="text-[10px] uppercase tracking-monumental text-champagne font-sans font-semibold block">
-                    Atelier Membership
+                    Craft House Membership
                   </span>
                   <span className="font-serif text-lg tracking-[0.18em] text-canvas font-normal">
                     THE KALAJAY CIRCLE
@@ -233,7 +233,7 @@ export default function SignupClient() {
             <div className="relative z-10 pt-5 border-t border-canvas/15 text-xs text-canvas/70 italic font-serif">
               “Every bead placed is a heartbeat of patience.”
               <span className="block not-italic font-sans text-[10px] tracking-refined uppercase text-champagne font-semibold mt-1">
-                Kalajay Atelier · 100% Handcrafted
+                Kalajay Craft House · 100% Handcrafted
               </span>
             </div>
           </div>
@@ -406,7 +406,7 @@ export default function SignupClient() {
                         <Gem className="w-3 h-3" />
                       </div>
                       <span className="font-sans text-left">
-                        Atelier Passcode: <strong className="font-mono font-bold tracking-widest text-ink">{demoCode}</strong>
+                        Craft House Passcode: <strong className="font-mono font-bold tracking-widest text-ink">{demoCode}</strong>
                       </span>
                     </div>
                     <span className="text-[11px] font-semibold text-gold-dark group-hover:text-ink flex items-center gap-1 transition-colors shrink-0">

@@ -70,7 +70,7 @@ export default function ObjectsOfAffection() {
                   {/* Subtle Badge */}
                   {product.isBestSeller && (
                     <span className="absolute top-3 left-3 bg-plum text-canvas text-[11px] uppercase tracking-refined px-2.5 py-1 rounded-sm font-sans font-medium">
-                      Atelier Icon
+                      Craft House Signature
                     </span>
                   )}
                   {product.variants.length > 0 && (

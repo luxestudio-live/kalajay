@@ -219,7 +219,7 @@ export default function CartPage() {
               {/* Order Notes for Maker */}
               <div className="p-6 bg-canvas-subtle rounded-sm border border-border-subtle space-y-2">
                 <label className="text-xs uppercase tracking-editorial text-plum font-bold block">
-                  Artisan Delivery Instructions / Atelier Notes
+                  Artisan Delivery Instructions / Craft House Notes
                 </label>
                 <textarea
                   rows={2}

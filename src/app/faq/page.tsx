@@ -70,7 +70,7 @@ export default function FAQPage() {
           <HelpCircle className="w-8 h-8 mx-auto text-rosewood" />
           <h3 className="font-serif text-2xl text-plum">Still Have a Question?</h3>
           <p className="text-xs text-ink-muted max-w-md mx-auto">
-            Our atelier liaisons in Mumbai are always happy to answer questions or share live video previews of finished pieces.
+            Our Craft House liaisons in Mumbai are always happy to answer questions or share live video previews of finished pieces.
           </p>
           <div className="pt-2">
             <a

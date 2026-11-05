@@ -40,12 +40,12 @@ export default function WorldNarrative() {
               From pearl jewellery boxes that shimmer upon morning vanities to crystalline clutches and AirPod talismans that accompany you into the night—each piece is counted, knotted, and balanced one single element at a time.
             </p>
 
-            {/* Atelier Geographic Anchors */}
+            {/* Craft House Geographic Anchors */}
             <div className="pt-4 grid grid-cols-2 gap-4 border-t border-border-subtle text-xs">
               <div className="p-4 bg-canvas rounded-sm border border-border-subtle shadow-xs">
                 <span className="text-[11px] uppercase tracking-refined text-rosewood block mb-1 font-semibold flex items-center gap-1">
                   <MapPin className="w-3 h-3 inline" />
-                  <span>Bihar Atelier</span>
+                  <span>Bihar Craft House</span>
                 </span>
                 <p className="font-serif text-base text-plum font-normal">Design & Loom Beadwork</p>
                 <p className="text-xs text-ink-muted mt-1 leading-relaxed">
@@ -70,7 +70,7 @@ export default function WorldNarrative() {
                 href="/story"
                 className="inline-flex items-center gap-2 text-xs uppercase tracking-editorial text-plum hover:text-rosewood font-semibold border-b border-plum hover:border-rosewood pb-1 transition-all"
               >
-                <span>Read the Complete Atelier Chronicle</span>
+                <span>Read the Complete Craft House Chronicle</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>

@@ -5,12 +5,12 @@ import LoginClient from './LoginClient';
 export const metadata: Metadata = {
   title: 'Sign In · Enter the Kalajay Circle | OTP & Patron Access',
   description:
-    'Sign in to your Kalajay Atelier account using instant Mobile OTP or email. Track your hand-strung bead pieces from our looms to wax-sealed dispatch, access heirloom invoices, and unlock custom studio designs.',
+    'Sign in to your Kalajay Craft House account using instant Mobile OTP or email. Track your hand-strung bead pieces from our looms to wax-sealed dispatch, access heirloom invoices, and unlock custom studio designs.',
   alternates: {
     canonical: '/login',
   },
   openGraph: {
-    title: 'Patron Sign In | Kalajay Atelier',
+    title: 'Patron Sign In | Kalajay Craft House',
     description: 'Enter the Kalajay Circle with instant Mobile OTP or password.',
     url: 'https://www.kalajay.in/login',
   },

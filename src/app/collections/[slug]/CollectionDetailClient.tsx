@@ -199,3 +199,4 @@ export default function CollectionDetailClient({ slug: propSlug }: CollectionDet
     </div>
   );
 }
+

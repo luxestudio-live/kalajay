@@ -14,7 +14,7 @@ export default function NotFound() {
         </div>
 
         <h1 className="font-serif text-5xl sm:text-7xl text-ink font-normal tracking-tight">
-          Lost in the Atelier
+          Lost in the Craft House
         </h1>
 
         <p className="text-xs sm:text-sm text-ink-muted font-light leading-relaxed max-w-md mx-auto">

@@ -45,6 +45,16 @@ export const BRAND_CONFIG = {
   "story": "Kalajay began with a simple love for making things by hand. Today, we are a small business built almost entirely by women, creating pieces that bring beauty to everyday life. From jewellery boxes that shimmer on your dresser to beaded bags and charms that travel with you, every piece is made one bead, one stitch, one detail at a time.",
   "artisanCount": 21,
   "cityCount": 2,
+  "craftHouses": [
+    {
+      "city": "Bihar",
+      "role": "Design, Beadwork & Handcrafted Production"
+    },
+    {
+      "city": "Mumbai",
+      "role": "Product Planning, Curation, Packaging & Global Dispatch"
+    }
+  ],
   "ateliers": [
     {
       "city": "Bihar",
@@ -78,7 +88,7 @@ export const COLLECTIONS: Collection[] = [
     "name": "Organisers",
     "slug": "organisers",
     "tagline": "Pearl-beaded boxes & trays for jewellery and everyday essentials",
-    "description": "Luminous pearl-strung catch-alls, vanity trays, and lidded jewel boxes. Hand-assembled bead by bead with reinforced wire structures to bring poetic order to dressing tables, nightstands, and private ateliers.",
+    "description": "Luminous pearl-strung catch-alls, vanity trays, and lidded jewel boxes. Hand-assembled bead by bead with reinforced wire structures to bring poetic order to dressing tables, nightstands, and private craft houses.",
     "image": "https://www.kalajay.in/v2/p3-2.jpg"
   },
   {

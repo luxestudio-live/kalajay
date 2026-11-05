@@ -59,7 +59,7 @@ export default function CheckoutPage() {
           </div>
 
           <p className="text-xs sm:text-sm text-ink-muted font-light leading-relaxed max-w-lg mx-auto">
-            Your piece is now scheduled on our atelier artisan loom. A confirmation letter with tracking details has been simulated for{' '}
+            Your piece is now scheduled on our Craft House artisan loom. A confirmation letter with tracking details has been simulated for{' '}
             <strong className="text-plum">{email || 'your email'}</strong> and SMS updates to{' '}
             <strong className="text-plum">{phone || '+91 97405 40847'}</strong>.
           </p>
@@ -67,7 +67,7 @@ export default function CheckoutPage() {
           <div className="p-5 bg-canvas rounded-sm border border-border-subtle text-left space-y-2 text-xs">
             <div className="flex justify-between border-b border-border-subtle/80 pb-2 font-medium text-plum">
               <span>Delivery Destination</span>
-              <span>Kalajay Atelier Dispatch</span>
+              <span>Kalajay Craft House Dispatch</span>
             </div>
             <p className="text-ink-muted">
               {name || 'Honoured Guest'} <br />

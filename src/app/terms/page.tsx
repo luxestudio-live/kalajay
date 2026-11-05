@@ -41,7 +41,7 @@ export default function TermsPage() {
         <section className="space-y-3">
           <h2 className="font-serif text-2xl text-plum font-normal">3. Bespoke & Custom Orders</h2>
           <p>
-            Custom orders created through the &quot;Create Your Own&quot; studio or approved via WhatsApp are individually hand-crafted to your requested specifications. Once custom bead stringing commences on our looms, custom orders cannot be cancelled or altered without prior consent from the atelier manager.
+            Custom orders created through the &quot;Create Your Own&quot; studio or approved via WhatsApp are individually hand-crafted to your requested specifications. Once custom bead stringing commences on our looms, custom orders cannot be cancelled or altered without prior consent from the Craft House manager.
           </p>
         </section>
 

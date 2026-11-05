@@ -14,10 +14,10 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
   if (!collection) return {};
 
   return {
-    title: `${collection.name} Collection · Kalajay Atelier`,
+    title: `${collection.name} Collection · Kalajay Craft House`,
     description: collection.description,
     openGraph: {
-      title: `${collection.name} Collection · Kalajay Atelier`,
+      title: `${collection.name} Collection · Kalajay Craft House`,
       description: collection.description,
       images: [collection.image],
     },

@@ -215,7 +215,7 @@ export default function GiftingPage() {
           <div className="text-center max-w-2xl mx-auto mb-14">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-canvas rounded-full border border-gold/40 text-ink text-[11px] font-sans uppercase tracking-refined font-semibold mb-3">
               <Palette className="w-3.5 h-3.5 text-gold" />
-              <span>Interactive Atelier Studio</span>
+              <span>Interactive Craft House Studio</span>
             </div>
             <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-ink font-normal tracking-tight">
               Curate Your Custom Hamper

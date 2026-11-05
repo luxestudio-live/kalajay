@@ -174,7 +174,7 @@ export default function BestSellersRail() {
                       />
 
                       <span className="absolute top-2 left-2 bg-ink/85 backdrop-blur-sm text-canvas text-[11px] uppercase tracking-refined px-2.5 py-0.5 rounded-full font-sans font-medium">
-                        Atelier Icon
+                        Craft House Signature
                       </span>
                     </div>
 

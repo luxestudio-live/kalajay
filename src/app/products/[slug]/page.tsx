@@ -14,10 +14,10 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
   if (!product) return {};
 
   return {
-    title: `${product.name} · Kalajay Atelier`,
+    title: `${product.name} · Kalajay Craft House`,
     description: product.description,
     openGraph: {
-      title: `${product.name} · Kalajay Atelier`,
+      title: `${product.name} · Kalajay Craft House`,
       description: product.description,
       images: [product.coverImage],
     },
