@@ -269,21 +269,31 @@ export default function CartPage() {
                 <div className="space-y-3 pt-2">
                   <Link
                     href="/checkout"
-                    className="w-full py-4 bg-plum hover:bg-rosewood text-canvas text-xs uppercase tracking-monumental font-semibold rounded-sm flex items-center justify-center gap-2 transition-all shadow-md text-center"
+                    className="w-full py-4 px-6 bg-ink hover:bg-gold hover:text-ink text-canvas text-xs uppercase tracking-refined font-semibold rounded-full flex items-center justify-center gap-2 transition-all shadow-md group"
                   >
                     <span>Proceed to Checkout</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </Link>
 
                   <a
                     href={whatsappCheckoutUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full py-3.5 bg-canvas border border-border-strong hover:border-emerald-700 text-plum hover:text-emerald-800 text-xs uppercase tracking-editorial font-medium rounded-sm flex items-center justify-center gap-2 transition-colors text-center"
+                    className="w-full py-3.5 px-4 sm:px-5 bg-canvas hover:bg-emerald-50/60 border border-emerald-700/30 hover:border-emerald-600 text-ink hover:text-emerald-950 text-xs rounded-full flex items-center justify-center gap-2.5 transition-all shadow-2xs group cursor-pointer"
                   >
-                    <MessageCircle className="w-4 h-4 text-emerald-700" />
-                    <span>Order via WhatsApp (Instant Approval)</span>
+                    <span className="w-5 h-5 rounded-full bg-emerald-600 group-hover:bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow-2xs transition-colors">
+                      <MessageCircle className="w-3.5 h-3.5" />
+                    </span>
+                    <span className="tracking-refined uppercase text-xs font-semibold whitespace-nowrap">
+                      Order via WhatsApp
+                    </span>
+                    <span className="text-[10px] uppercase tracking-wider text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full font-medium shrink-0 hidden sm:inline-block">
+                      Instant Approval
+                    </span>
                   </a>
+                  <p className="text-[10px] text-ink-light text-center tracking-wide">
+                    Direct Craft House concierge & instant order confirmation
+                  </p>
                 </div>
 
                 <div className="p-4 bg-canvas rounded-sm border border-border-subtle text-[11px] text-ink-light space-y-1">

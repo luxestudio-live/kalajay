@@ -227,20 +227,24 @@ export default function CartDrawer() {
                 <Link
                   href="/checkout"
                   onClick={closeCart}
-                  className="w-full py-3.5 px-4 bg-plum hover:bg-plum-light text-canvas font-medium text-xs uppercase tracking-editorial flex items-center justify-center gap-2 rounded-sm transition-all shadow-md cursor-pointer"
+                  className="w-full py-3.5 px-6 bg-ink hover:bg-gold hover:text-ink text-canvas font-semibold text-xs uppercase tracking-refined flex items-center justify-center gap-2 rounded-full transition-all shadow-md group cursor-pointer"
                 >
                   <span>Proceed to Checkout</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
 
                 <a
                   href={whatsappCheckoutUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full py-3 px-4 bg-canvas border border-border-strong text-plum hover:border-rosewood hover:text-rosewood font-medium text-xs flex items-center justify-center gap-2 rounded-sm transition-colors cursor-pointer"
+                  className="w-full py-2.5 px-4 bg-canvas hover:bg-emerald-50/50 border border-emerald-700/30 hover:border-emerald-600 text-ink hover:text-emerald-950 font-medium text-xs flex items-center justify-center gap-2 rounded-full transition-all shadow-2xs group cursor-pointer"
                 >
-                  <MessageCircle className="w-4 h-4 text-emerald-700" />
-                  <span>Order Directly via WhatsApp</span>
+                  <span className="w-4 h-4 rounded-full bg-emerald-600 group-hover:bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow-2xs transition-colors">
+                    <MessageCircle className="w-2.5 h-2.5" />
+                  </span>
+                  <span className="tracking-refined uppercase text-[11px] font-semibold">
+                    Order via WhatsApp
+                  </span>
                 </a>
               </div>
 
