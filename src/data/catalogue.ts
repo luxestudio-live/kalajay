@@ -72,7 +72,7 @@ export const BRAND_CONFIG = {
     "altEmail": "kalajay.handcrafted@gmail.com",
     "instagram": "@kalajay.handcrafted",
     "instagramUrl": "https://www.instagram.com/kalajay.handcrafted/",
-    "gst": "27FAAPS2113B1Z6",
+    "gst": "11XXXXX1111X1Z1",
     "location": "Mumbai, Maharashtra, India",
     "whatsappUrl": "https://wa.me/919740540847?text=Hi%20Kalajay!%20I%27d%20like%20to%20know%20more%20about%20your%20handcrafted%20pieces."
   },

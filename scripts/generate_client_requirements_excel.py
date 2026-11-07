@@ -245,7 +245,7 @@ def create_requirements_workbook():
         ("Shipping & Returns", "Exchange & Return Terms", "Return Eligibility Rules", "Eligible: Unused items with tags within 7 days, transit defects.\nNon-eligible: Custom/monogrammed pieces, earrings/hair accessories for hygiene.", "List any non-returnable categories and exchange windows."),
         ("FAQ (/faq)", "Key Customer Questions", "Product Care & Repairs", "Beads are water-resistant but avoid submerging. Wipe with dry microfiber cloth. Re-stringing / repair service available on request.", "Confirm aftercare recommendations and repair policy."),
         ("Terms & Privacy (/terms)", "Legal Entity", "Registered Business Name", "Kalajay Handcrafted", "Exact registered legal entity name (LLP, Private Limited, or Sole Proprietorship) for invoices and terms."),
-        ("Terms & Privacy (/terms)", "GSTIN Number", "Official GST Registration", "27FAAPS2113B1Z6 (Current placeholder in code)", "Official 15-digit GSTIN number to print on tax invoices."),
+        ("Terms & Privacy (/terms)", "GSTIN Number", "Official GST Registration", "11XXXXX1111X1Z1 (Current placeholder in code)", "Official 15-digit GSTIN number to print on tax invoices."),
         ("Terms & Privacy (/terms)", "Legal Jurisdiction", "Dispute Resolution City", "Courts of Mumbai, Maharashtra, India", "Jurisdiction city for legal dispute clauses."),
         ("Account / Circle (/signup)", "Patron Welcome Offer", "Welcome Discount Code", "₹300 Welcome Gift Code upon joining Patron Circle.", "Confirm welcome coupon details (e.g. ₹300 off on first order, 10% off code, or minimum spend rule)."),
     ]
@@ -254,11 +254,16 @@ def create_requirements_workbook():
     # Save to root, public, and out directories
     paths = [
         "kalajay-client-content-requirements.xlsx",
-        "public/kalajay-client-content-requirements.xlsx"
+        "public/kalajay-client-content-requirements.xlsx",
+        "out/kalajay-client-content-requirements.xlsx"
     ]
     for p in paths:
-        wb.save(p)
-        print(f"Saved: {p} ({os.path.getsize(p)} bytes)")
+        try:
+            wb.save(p)
+            print(f"Saved: {p} ({os.path.getsize(p)} bytes)")
+        except PermissionError:
+            print(f"Notice: {p} is currently open in Excel. Saved other destinations.")
 
 if __name__ == "__main__":
     create_requirements_workbook()
+
