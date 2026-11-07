@@ -1,2 +1,0 @@
-See .agent/gemini.md
-

@@ -40,3 +40,24 @@ next-env.d.ts
 *.jpg
 ~$*.xlsx
 
+# AI / Agent configuration & instruction files (kept in local only)
+.agent/
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+
+# Local helper scripts, test runners & generation utilities (kept in local only)
+/scripts/
+take-screenshots.js
+deploy-to-amplify.ps1
+
+# Local client handover documents, briefs & deliverables (kept in local only)
+*.pdf
+*.docx
+*.xlsx
+PHOTOGRAPHY_BRIEF.md
+PRODUCT.md
+catalogue-raw.json
+public/*.pdf
+public/*.docx
+public/*.xlsx
