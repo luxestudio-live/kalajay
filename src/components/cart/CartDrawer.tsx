@@ -239,9 +239,7 @@ export default function CartDrawer() {
                   rel="noopener noreferrer"
                   className="w-full py-2.5 px-4 bg-canvas hover:bg-emerald-50/50 border border-emerald-700/30 hover:border-emerald-600 text-ink hover:text-emerald-950 font-medium text-xs flex items-center justify-center gap-2 rounded-full transition-all shadow-2xs group cursor-pointer"
                 >
-                  <span className="w-4 h-4 rounded-full bg-emerald-600 group-hover:bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow-2xs transition-colors">
-                    <MessageCircle className="w-2.5 h-2.5" />
-                  </span>
+                  <img src="/whatsapp.png" alt="WhatsApp" className="w-4 h-4 shrink-0 object-contain" />
                   <span className="tracking-refined uppercase text-[11px] font-semibold">
                     Order via WhatsApp
                   </span>

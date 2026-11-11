@@ -278,7 +278,7 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
                   rel="noopener noreferrer"
                   className="w-full py-3.5 px-6 bg-canvas border border-border-strong hover:border-emerald-700 text-plum hover:text-emerald-800 text-xs uppercase tracking-refined font-medium rounded-full flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
-                  <MessageCircle className="w-4 h-4 text-emerald-700" />
+                  <img src="/whatsapp.png" alt="WhatsApp" className="w-4 h-4 shrink-0 object-contain" />
                   <span>Order Directly via WhatsApp</span>
                 </a>
               </div>
@@ -479,9 +479,9 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Order on WhatsApp"
-          className="p-3 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full"
+          className="p-3 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full flex items-center justify-center"
         >
-          <MessageCircle className="w-5 h-5 text-emerald-700" />
+          <img src="/whatsapp.png" alt="WhatsApp" className="w-5 h-5 shrink-0 object-contain" />
         </a>
       </div>
     </div>

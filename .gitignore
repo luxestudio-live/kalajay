@@ -43,6 +43,9 @@ next-env.d.ts
 !public/**/*.png
 !public/*.jpg
 !public/**/*.jpg
+!src/app/*.png
+!src/app/*.ico
+!src/app/*.svg
 
 # AI / Agent configuration & instruction files (kept in local only)
 .agent/

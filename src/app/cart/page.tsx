@@ -281,9 +281,7 @@ export default function CartPage() {
                     rel="noopener noreferrer"
                     className="w-full py-3.5 px-4 sm:px-5 bg-canvas hover:bg-emerald-50/60 border border-emerald-700/30 hover:border-emerald-600 text-ink hover:text-emerald-950 text-xs rounded-full flex items-center justify-center gap-2.5 transition-all shadow-2xs group cursor-pointer"
                   >
-                    <span className="w-5 h-5 rounded-full bg-emerald-600 group-hover:bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow-2xs transition-colors">
-                      <MessageCircle className="w-3.5 h-3.5" />
-                    </span>
+                    <img src="/whatsapp.png" alt="WhatsApp" className="w-5 h-5 shrink-0 object-contain" />
                     <span className="tracking-refined uppercase text-xs font-semibold whitespace-nowrap">
                       Order via WhatsApp
                     </span>
