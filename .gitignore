@@ -34,11 +34,15 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# deployment archives & screenshots
+# deployment archives & screenshots (exclude public assets)
 *.zip
 *.png
 *.jpg
 ~$*.xlsx
+!public/*.png
+!public/**/*.png
+!public/*.jpg
+!public/**/*.jpg
 
 # AI / Agent configuration & instruction files (kept in local only)
 .agent/

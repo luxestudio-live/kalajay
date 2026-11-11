@@ -84,10 +84,14 @@ export default function Preloader() {
           <span>Bihar & Mumbai</span>
         </div>
 
-        {/* Brand Wordmark */}
-        <h1 className="font-serif text-3xl sm:text-5xl tracking-[0.28em] text-ink font-normal mb-3 transition-transform duration-1000 ease-out select-none">
-          KALAJAY
-        </h1>
+        {/* Brand Logo */}
+        <div className="mb-3 transition-transform duration-1000 ease-out select-none">
+          <img
+            src="/logo.png"
+            alt="Kalajay — A World of Little Wonders"
+            className="h-20 sm:h-24 w-auto object-contain mx-auto"
+          />
+        </div>
 
         {/* Animated Thread SVG */}
         <div className="relative w-52 sm:w-64 h-6 mx-auto my-2 overflow-visible flex items-center justify-center">

@@ -39,6 +39,7 @@ export interface Collection {
 
 export const BRAND_CONFIG = {
   "name": "Kalajay",
+  "logo": "/logo.png",
   "tagline": "A World of Little Wonders",
   "subheadline": "Small wonders. Beautifully made.",
   "philosophy": "A single bead or a strand of yarn or a paint brush. A little patience. Something beautiful.",

@@ -27,6 +27,13 @@ export default function Footer() {
         {/* Top Editorial Invitation Spread */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 pb-14 border-b border-canvas/10">
           <div className="lg:col-span-5 space-y-4">
+            <Link href="/" className="inline-block group mb-1" aria-label="Kalajay">
+              <img
+                src="/logo.png"
+                alt="Kalajay"
+                className="h-12 sm:h-14 w-auto object-contain brightness-0 invert opacity-90 group-hover:opacity-100 transition-opacity"
+              />
+            </Link>
             <span className="text-[11px] uppercase tracking-refined text-champagne font-sans block font-medium">
               Editorial Flagship · LuxeStudio Edition
             </span>

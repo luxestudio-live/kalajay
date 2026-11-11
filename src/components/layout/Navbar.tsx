@@ -166,15 +166,20 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
               </button>
             </div>
 
-            {/* Center Brand Identity Wordmark */}
-            <div className="text-center">
-              <Link href="/" className="inline-block group focus:outline-none">
-                <span className="block font-serif text-xl sm:text-3xl md:text-4xl tracking-[0.22em] text-ink font-normal transition-transform duration-300 group-hover:scale-[1.01] leading-none">
-                  KALAJAY
-                </span>
-                <span className="hidden sm:block text-[11px] sm:text-xs uppercase tracking-refined text-ink-muted mt-1 font-sans font-medium">
-                  A World of Little Wonders
-                </span>
+            {/* Center Brand Identity Logo */}
+            <div className="text-center flex justify-center">
+              <Link
+                href="/"
+                className="inline-flex flex-col items-center group focus:outline-none"
+                aria-label="Kalajay — A World of Little Wonders"
+              >
+                <img
+                  src="/logo.png"
+                  alt="Kalajay — A World of Little Wonders"
+                  className={`w-auto object-contain transition-all duration-300 group-hover:scale-[1.03] ${
+                    isScrolled ? 'h-9 sm:h-11 md:h-12' : 'h-11 sm:h-14 md:h-16'
+                  }`}
+                />
               </Link>
             </div>
 
@@ -250,8 +255,17 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
           <div className="fixed inset-y-0 left-0 w-full max-w-xs bg-canvas shadow-2xl p-6 flex flex-col justify-between overflow-y-auto animate-fade-in border-r border-border-subtle">
             <div>
               <div className="flex items-center justify-between pb-5 border-b border-border-subtle">
-                <Link href="/" className="font-serif text-2xl tracking-[0.2em] text-plum">
-                  KALAJAY
+                <Link
+                  href="/"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="inline-block"
+                  aria-label="Kalajay"
+                >
+                  <img
+                    src="/logo.png"
+                    alt="Kalajay"
+                    className="h-10 w-auto object-contain"
+                  />
                 </Link>
                 <button
                   type="button"
