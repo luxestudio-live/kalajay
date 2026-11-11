@@ -78,9 +78,9 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            {/* Left Desktop Navigation */}
-            <nav className="hidden lg:flex items-center gap-7 text-[13px] tracking-refined font-medium text-ink">
+          <div className="relative flex items-center justify-between">
+            {/* Left Desktop Navigation: Core Discovery */}
+            <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-[13px] tracking-refined font-medium text-ink">
               <Link
                 href="/shop"
                 className={`transition-colors hover:text-gold-dark ${
@@ -135,23 +135,6 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                 <Gem className={`w-3.5 h-3.5 ${pathname === '/customise' ? 'text-champagne' : 'text-gold-dark'}`} />
                 <span>Create Your Own</span>
               </Link>
-
-              <Link
-                href="/story"
-                className={`transition-colors hover:text-gold-dark ${
-                  pathname === '/story' ? 'text-ink font-semibold border-b border-ink' : ''
-                }`}
-              >
-                Our Story
-              </Link>
-              <Link
-                href="/atelier"
-                className={`transition-colors hover:text-gold-dark ${
-                  pathname === '/atelier' ? 'text-ink font-semibold border-b border-ink' : ''
-                }`}
-              >
-                The Craft House
-              </Link>
             </nav>
 
             {/* Mobile Hamburger Button */}
@@ -166,8 +149,8 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
               </button>
             </div>
 
-            {/* Center Brand Identity Logo */}
-            <div className="text-center flex justify-center">
+            {/* Center Brand Identity Logo (Optical True Center on Desktop) */}
+            <div className="lg:absolute lg:left-1/2 lg:-translate-x-1/2 text-center flex justify-center z-10 pointer-events-auto">
               <Link
                 href="/"
                 className="inline-flex flex-col items-center group focus:outline-none"
@@ -177,66 +160,90 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                   src="/logo.png"
                   alt="Kalajay — A World of Little Wonders"
                   className={`w-auto object-contain transition-all duration-300 group-hover:scale-[1.03] ${
-                    isScrolled ? 'h-9 sm:h-11 md:h-12' : 'h-11 sm:h-14 md:h-16'
+                    isScrolled ? 'h-9 sm:h-11 md:h-12' : 'h-12 sm:h-15 md:h-16'
                   }`}
                 />
               </Link>
             </div>
 
-            {/* Right Tools & Cart */}
-            <div className="flex items-center gap-1.5 sm:gap-4 md:gap-5">
-              <button
-                type="button"
-                onClick={onOpenSearch}
-                aria-label="Search Collection"
-                className="p-2 text-ink hover:text-gold-dark transition-colors focus:outline-none"
-              >
-                <Search className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
+            {/* Right Desktop Links + Utility Tools */}
+            <div className="flex items-center gap-4 sm:gap-5 md:gap-6 text-[13px] tracking-refined font-medium text-ink">
+              {/* Brand Story & Atelier links */}
+              <div className="hidden lg:flex items-center gap-6 xl:gap-7">
+                <Link
+                  href="/story"
+                  className={`transition-colors hover:text-gold-dark ${
+                    pathname === '/story' ? 'text-ink font-semibold border-b border-ink' : ''
+                  }`}
+                >
+                  Our Story
+                </Link>
+                <Link
+                  href="/atelier"
+                  className={`transition-colors hover:text-gold-dark ${
+                    pathname === '/atelier' ? 'text-ink font-semibold border-b border-ink' : ''
+                  }`}
+                >
+                  The Craft House
+                </Link>
+                <Link
+                  href="/gifting"
+                  className={`transition-colors hover:text-gold-dark ${
+                    pathname === '/gifting' ? 'text-ink font-semibold border-b border-ink' : ''
+                  }`}
+                >
+                  Gifting
+                </Link>
+              </div>
 
-              <Link
-                href="/gifting"
-                className="hidden md:inline-block text-[13px] tracking-refined text-ink hover:text-gold-dark font-medium transition-colors"
-              >
-                Gifting
-              </Link>
+              {/* Action Icons */}
+              <div className="flex items-center gap-1.5 sm:gap-3.5 md:gap-4 pl-1">
+                <button
+                  type="button"
+                  onClick={onOpenSearch}
+                  aria-label="Search Collection"
+                  className="p-2 text-ink hover:text-gold-dark transition-colors focus:outline-none"
+                >
+                  <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
 
-              {/* Wishlist Link */}
-              <Link
-                href="/wishlist"
-                aria-label="Saved Pieces (Wishlist)"
-                className="p-2 text-ink hover:text-gold-dark transition-colors focus:outline-none"
-                title="Saved Pieces (Wishlist)"
-              >
-                <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
-              </Link>
+                {/* Wishlist Link */}
+                <Link
+                  href="/wishlist"
+                  aria-label="Saved Pieces (Wishlist)"
+                  className="p-2 text-ink hover:text-gold-dark transition-colors focus:outline-none"
+                  title="Saved Pieces (Wishlist)"
+                >
+                  <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
+                </Link>
 
-              {/* Account / User Portal Link */}
-              <Link
-                href={user ? '/account' : '/login'}
-                aria-label={user ? `Patron Account: ${user.name}` : 'Sign In'}
-                className="relative flex items-center justify-center p-2 text-ink hover:text-gold-dark transition-colors focus:outline-none group"
-                title={user ? `Signed in as ${user.name} (${user.tier})` : 'Sign In / Register'}
-              >
-                <User className="w-4 h-4 sm:w-5 sm:h-5" />
-                {user && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-gold ring-1 ring-canvas" />
-                )}
-              </Link>
+                {/* Account / User Portal Link */}
+                <Link
+                  href={user ? '/account' : '/login'}
+                  aria-label={user ? `Patron Account: ${user.name}` : 'Sign In'}
+                  className="relative flex items-center justify-center p-2 text-ink hover:text-gold-dark transition-colors focus:outline-none group"
+                  title={user ? `Signed in as ${user.name} (${user.tier})` : 'Sign In / Register'}
+                >
+                  <User className="w-4 h-4 sm:w-5 sm:h-5" />
+                  {user && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-gold ring-1 ring-canvas" />
+                  )}
+                </Link>
 
-              <button
-                type="button"
-                onClick={openCart}
-                aria-label="Shopping Bag"
-                className="relative flex items-center justify-center p-2 text-ink hover:text-gold-dark transition-colors focus:outline-none"
-              >
-                <ShoppingBag className="w-5 h-5" />
-                {totalCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-ink text-canvas text-[11px] font-bold flex items-center justify-center shadow-sm">
-                    {totalCount}
-                  </span>
-                )}
-              </button>
+                <button
+                  type="button"
+                  onClick={openCart}
+                  aria-label="Shopping Bag"
+                  className="relative flex items-center justify-center p-2 text-ink hover:text-gold-dark transition-colors focus:outline-none"
+                >
+                  <ShoppingBag className="w-5 h-5" />
+                  {totalCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-ink text-canvas text-[11px] font-bold flex items-center justify-center shadow-sm">
+                      {totalCount}
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
