@@ -21,7 +21,7 @@ export default function StoryPage() {
           <h1 className="font-serif text-4xl sm:text-6xl md:text-7xl lg:text-8xl text-plum font-normal tracking-tight leading-[1.03]">
             A single bead. <br className="hidden sm:inline" />
             A strand of yarn. <br />
-            <span className="italic font-light text-rosewood">Something beautiful.</span>
+            <span className="text-rosewood">Something beautiful.</span>
           </h1>
 
           <p className="max-w-2xl mx-auto text-base sm:text-lg text-ink-muted font-light leading-relaxed">
