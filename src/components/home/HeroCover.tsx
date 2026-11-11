@@ -292,7 +292,7 @@ export default function HeroCover() {
       >
         {/* Background Tactile Texture & Radiant Auras */}
         <div className="absolute inset-0 bg-tactile-grain opacity-40 pointer-events-none" />
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-gold/10 rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-[#9E5430]/10 rounded-full blur-[140px] pointer-events-none" />
 
         {/* Main Viewport Stage: Text + 3-Piece Visual Presentation */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1 flex flex-col justify-center items-center relative z-10 py-1">
@@ -300,19 +300,19 @@ export default function HeroCover() {
           <div ref={textStageRef} className="text-center relative select-none will-change-transform max-w-2xl mx-auto shrink-0 mb-2 sm:mb-3">
             <h1
               ref={headlineRef}
-              className="font-serif text-[7.5vw] sm:text-[4.5vw] lg:text-[2.8vw] leading-[1.04] tracking-tight text-ink font-normal uppercase"
+              className="font-serif text-[7.5vw] sm:text-[4.5vw] lg:text-[2.8vw] leading-[1.04] tracking-tight text-[#372921] font-normal uppercase"
             >
               <span className="block overflow-hidden pb-0.5">
                 <span className="headline-line inline-block">Handcrafted with love,</span>
               </span>
               <span className="block overflow-hidden">
-                <span className="headline-line inline-block italic font-light text-ink-muted lowercase">
+                <span className="headline-line inline-block italic font-light text-[#9E5430] lowercase">
                   one at a time.
                 </span>
               </span>
             </h1>
 
-            <p className="mt-2 max-w-md mx-auto font-sans text-xs sm:text-[13px] text-ink-muted leading-relaxed font-light px-4">
+            <p className="mt-2 max-w-md mx-auto font-sans text-xs sm:text-[13px] text-[#685B52] leading-relaxed font-light px-4">
               A world of little wonders. Hand-strung jewellery boxes, luminous evening clutches, and tactile daily charms.
             </p>
           </div>
@@ -325,7 +325,7 @@ export default function HeroCover() {
             {/* Piece 1: Left - Pearl Beaded Mini Tote */}
             <div
               ref={leftPieceRef}
-              className="absolute w-[134px] sm:w-[185px] lg:w-[210px] aspect-[4/5] rounded-[18px] sm:rounded-[20px] overflow-hidden bg-canvas-subtle border border-border-medium shadow-md will-change-transform flex flex-col justify-between group z-10 select-none"
+              className="absolute w-[134px] sm:w-[185px] lg:w-[210px] aspect-[4/5] rounded-[18px] sm:rounded-[20px] overflow-hidden bg-canvas-subtle border border-[#DED3C5] hover:border-[#9E5430] shadow-[0_12px_32px_rgba(55,41,33,0.09)] transition-colors will-change-transform flex flex-col justify-between group z-10 select-none"
             >
               <Link href="/shop" className="absolute inset-0 z-20" aria-label="Inspect Pearl Beaded Mini Tote" />
               <img
@@ -333,54 +333,64 @@ export default function HeroCover() {
                 alt="Handcrafted Pearl Beaded Mini Tote Bag"
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-ink/95 via-ink/40 to-transparent pointer-events-none" />
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background: 'linear-gradient(180deg, rgba(35, 25, 21, 0) 38%, rgba(35, 25, 21, 0.86) 100%)',
+                }}
+              />
               
               <div className="relative p-2 sm:p-2.5">
-                <span className="inline-block text-[11px] uppercase tracking-refined bg-ink/90 backdrop-blur-md px-2 py-0.5 rounded-full text-champagne font-sans border border-champagne/30 font-medium">
+                <span className="inline-block text-[11px] uppercase tracking-refined bg-[#372921]/90 backdrop-blur-md px-2 py-0.5 rounded-full text-[#F7F3EC] font-sans border border-[#DED3C5]/30 font-medium">
                   Tote
                 </span>
               </div>
 
-              <div className="relative p-2 sm:p-2.5 text-canvas">
-                <h2 className="font-serif text-xs sm:text-sm text-canvas font-normal leading-tight">
+              <div className="relative p-2 sm:p-2.5 text-[#F7F3EC]">
+                <h2 className="font-serif text-xs sm:text-sm text-[#F7F3EC] font-normal leading-tight">
                   Pearl<br className="sm:hidden" /> Tote
                 </h2>
-                <span className="text-xs text-champagne font-serif font-medium block mt-0.5">₹1,199</span>
+                <span className="text-xs text-[#F0E9DF] font-serif font-medium block mt-0.5">₹1,199</span>
               </div>
             </div>
 
             {/* Piece 2: Center - Signature Pearl Vanity Box (Commanding Centerpiece) */}
             <div
               ref={centerPieceRef}
-              className="relative w-[168px] sm:w-[205px] lg:w-[230px] aspect-[4/5] rounded-[20px] sm:rounded-[22px] overflow-hidden bg-canvas border-2 border-gold/70 shadow-xl will-change-transform flex flex-col justify-between group z-20 select-none"
+              className="relative w-[168px] sm:w-[205px] lg:w-[230px] aspect-[4/5] rounded-[20px] sm:rounded-[22px] overflow-hidden bg-canvas border-2 border-[#9E5430] shadow-[0_18px_45px_rgba(55,41,33,0.14)] will-change-transform flex flex-col justify-between group z-20 select-none"
             >
               <img
                 src="https://www.kalajay.in/v2/p3-2.jpg"
                 alt="Pearl Beaded Vanity Box with interior mirror"
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-ink/95 via-ink/40 to-transparent pointer-events-none" />
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background: 'linear-gradient(180deg, rgba(35, 25, 21, 0) 38%, rgba(35, 25, 21, 0.86) 100%)',
+                }}
+              />
               
               <div className="relative p-2 sm:p-3 flex justify-between items-start gap-1">
-                <span className="inline-block text-[11px] uppercase tracking-refined bg-ink/90 backdrop-blur-md px-2 sm:px-2.5 py-0.5 rounded-full text-champagne font-sans border border-champagne/30 font-medium shadow-sm">
+                <span className="inline-block text-[11px] uppercase tracking-refined bg-[#372921]/90 backdrop-blur-md px-2 sm:px-2.5 py-0.5 rounded-full text-[#F7F3EC] font-sans border border-[#DED3C5]/30 font-medium shadow-sm">
                   Craft House Heirloom
                 </span>
-                <span className="font-serif text-xs sm:text-sm font-semibold text-champagne bg-ink/90 backdrop-blur-md px-2 py-0.5 rounded-full border border-champagne/30">
+                <span className="font-serif text-xs sm:text-sm font-semibold text-[#F7F3EC] bg-[#372921]/90 backdrop-blur-md px-2 py-0.5 rounded-full border border-[#DED3C5]/30">
                   ₹1,449
                 </span>
               </div>
 
-              <div className="relative p-2 sm:p-3 text-canvas flex flex-col gap-1">
-                <h2 className="font-serif text-xs sm:text-base lg:text-lg text-canvas font-medium leading-tight">
+              <div className="relative p-2 sm:p-3 text-[#F7F3EC] flex flex-col gap-1">
+                <h2 className="font-serif text-xs sm:text-base lg:text-lg text-[#F7F3EC] font-medium leading-tight">
                   Pearl Vanity Box
                 </h2>
                 <div className="flex items-center justify-between pt-0.5">
-                  <p className="text-xs text-canvas/90 font-light">
+                  <p className="text-xs text-[#F0E9DF]/90 font-light">
                     1,400+ pearls
                   </p>
                   <Link
                     href="/shop"
-                    className="shrink-0 px-2.5 py-0.5 sm:px-3 sm:py-1 bg-champagne hover:bg-champagne-light text-ink text-[11px] font-semibold uppercase tracking-refined rounded-full flex items-center gap-1 shadow-md transition-all"
+                    className="shrink-0 px-2.5 py-0.5 sm:px-3 sm:py-1 bg-[#F7F3EC] hover:bg-[#F0E9DF] text-[#372921] text-[11px] font-semibold uppercase tracking-refined rounded-full flex items-center gap-1 shadow-md transition-all"
                   >
                     <span>Inspect</span>
                     <ArrowRight className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
@@ -392,7 +402,7 @@ export default function HeroCover() {
             {/* Piece 3: Right - Pink Crystal Butterfly Clutch */}
             <div
               ref={rightPieceRef}
-              className="absolute w-[134px] sm:w-[185px] lg:w-[210px] aspect-[4/5] rounded-[18px] sm:rounded-[20px] overflow-hidden bg-canvas-subtle border border-border-medium shadow-md will-change-transform flex flex-col justify-between group z-10 select-none text-right"
+              className="absolute w-[134px] sm:w-[185px] lg:w-[210px] aspect-[4/5] rounded-[18px] sm:rounded-[20px] overflow-hidden bg-canvas-subtle border border-[#DED3C5] hover:border-[#9E5430] shadow-[0_12px_32px_rgba(55,41,33,0.09)] transition-colors will-change-transform flex flex-col justify-between group z-10 select-none text-right"
             >
               <Link href="/shop" className="absolute inset-0 z-20" aria-label="Inspect Rose Pink Crystal Butterfly Evening Clutch" />
               <img
@@ -400,19 +410,24 @@ export default function HeroCover() {
                 alt="Rose Pink Crystal Butterfly Evening Clutch"
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-ink/95 via-ink/40 to-transparent pointer-events-none" />
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background: 'linear-gradient(180deg, rgba(35, 25, 21, 0) 38%, rgba(35, 25, 21, 0.86) 100%)',
+                }}
+              />
               
               <div className="relative p-2 sm:p-2.5 flex justify-end">
-                <span className="inline-block text-[11px] uppercase tracking-refined bg-ink/90 backdrop-blur-md px-2.5 py-0.5 rounded-full text-champagne font-sans border border-champagne/30 font-medium">
+                <span className="inline-block text-[11px] uppercase tracking-refined bg-[#372921]/90 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[#F7F3EC] font-sans border border-[#DED3C5]/30 font-medium">
                   Clutch
                 </span>
               </div>
 
-              <div className="relative p-2 sm:p-2.5 text-canvas text-right">
-                <h2 className="font-serif text-xs sm:text-sm text-canvas font-normal leading-tight">
+              <div className="relative p-2 sm:p-2.5 text-[#F7F3EC] text-right">
+                <h2 className="font-serif text-xs sm:text-sm text-[#F7F3EC] font-normal leading-tight">
                   Crystal<br className="sm:hidden" /> Clutch
                 </h2>
-                <span className="text-xs text-champagne font-serif font-medium block mt-0.5">₹1,299</span>
+                <span className="text-xs text-[#F0E9DF] font-serif font-medium block mt-0.5">₹1,299</span>
               </div>
             </div>
           </div>
@@ -421,7 +436,7 @@ export default function HeroCover() {
         <div ref={ctaRef} className="mt-6 sm:mt-8 lg:mt-9 flex items-center justify-center gap-3.5 relative z-30 shrink-0">
           <Link
             href="/shop"
-            className="px-6 sm:px-8 py-2.5 sm:py-3 bg-ink hover:bg-black text-canvas text-xs uppercase tracking-editorial font-semibold rounded-full transition-all shadow-md flex items-center justify-center gap-2 group cursor-pointer"
+            className="px-6 sm:px-8 py-2.5 sm:py-3 bg-[#372921] hover:bg-[#503A2E] text-[#F7F3EC] text-xs uppercase tracking-editorial font-semibold rounded-full transition-all duration-200 shadow-md flex items-center justify-center gap-2 group cursor-pointer"
           >
             <span>View the Catalogue</span>
             <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
@@ -429,9 +444,9 @@ export default function HeroCover() {
 
           <Link
             href="/customise"
-            className="px-5 sm:px-7 py-2.5 sm:py-3 bg-canvas hover:bg-canvas-subtle border border-border-strong text-ink hover:text-gold-dark text-xs uppercase tracking-editorial font-medium rounded-full transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+            className="px-5 sm:px-7 py-2.5 sm:py-3 bg-transparent hover:bg-[#F0E9DF] border border-[#B7A696] hover:border-[#9E5430] text-[#372921] text-xs uppercase tracking-editorial font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
           >
-            <Compass className="w-3.5 h-3.5 text-gold-dark" />
+            <Compass className="w-3.5 h-3.5 text-[#9E5430]" />
             <span>Custom Orders</span>
           </Link>
         </div>

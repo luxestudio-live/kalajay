@@ -332,8 +332,8 @@ export function ShopContent() {
                             style={{
                               backgroundColor:
                                 swatch.label === 'Pearl' || swatch.label === 'Rose Pink' || swatch.label === 'Crystal Clear'
-                                    ? '#141312'
-                                    : '#FAF9F6',
+                                  ? '#372921'
+                                  : '#F7F3EC',
                             }}
                           />
                         )}
@@ -465,7 +465,7 @@ export function ShopContent() {
                             type="button"
                             onClick={(e) => openQuickView(product, e)}
                             title="Quick View"
-                            className="absolute bottom-3 right-3 hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-canvas-muted/90 backdrop-blur-md rounded-full text-ink hover:bg-gold hover:text-[#120A10] text-xs font-semibold shadow-md opacity-0 group-hover:opacity-100 transition-all cursor-pointer border border-border-gold"
+                            className="absolute bottom-3 right-3 hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-[#F7F3EC]/90 backdrop-blur-md rounded-full text-[#372921] hover:bg-[#9E5430] hover:text-white text-xs font-semibold shadow-md opacity-0 group-hover:opacity-100 transition-all cursor-pointer border border-[#DED3C5]"
                           >
                             <Eye className="w-3.5 h-3.5" />
                             <span>Quick View</span>

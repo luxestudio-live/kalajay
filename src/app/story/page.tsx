@@ -10,7 +10,7 @@ export default function StoryPage() {
     <div className="bg-canvas min-h-screen pb-28 selection:bg-blush selection:text-plum">
       {/* 1. EDITORIAL HERO SECTION */}
       <section className="relative overflow-hidden bg-canvas-subtle/70 border-b border-border-subtle pt-24 pb-20 sm:pt-32 sm:pb-28">
-        <div className="absolute inset-0 pointer-events-none opacity-40 mix-blend-multiply bg-[radial-gradient(#8C3B4A_1px,transparent_1px)] [background-size:24px_24px]" />
+        <div className="absolute inset-0 pointer-events-none opacity-40 mix-blend-multiply bg-[radial-gradient(#9E5430_1px,transparent_1px)] [background-size:24px_24px]" />
         
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/70 backdrop-blur border border-gold/30 rounded-full text-[11px] uppercase tracking-monumental text-rosewood font-sans font-semibold">

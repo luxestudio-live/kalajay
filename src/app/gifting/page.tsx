@@ -44,10 +44,10 @@ export default function GiftingPage() {
   ];
 
   const sealOptions = [
-    { name: 'Deep Rosewood', hex: '#8C3B4A' },
-    { name: 'Antique Gold', hex: '#B8924A' },
-    { name: 'Porcelain Ivory', hex: '#FAF7F2' },
-    { name: 'Plum Midnight', hex: '#2B1A22' },
+    { name: 'Heritage Terracotta', hex: '#9E5430' },
+    { name: 'Soft Ivory', hex: '#F7F3EC' },
+    { name: 'Dark Cacao', hex: '#372921' },
+    { name: 'Warm Champagne', hex: '#F0E9DF' },
   ];
 
   const toggleItem = (name: string) => {

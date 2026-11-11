@@ -80,11 +80,11 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="relative flex items-center justify-between">
             {/* Left Desktop Navigation: Core Discovery */}
-            <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-[13px] tracking-refined font-medium text-ink">
+            <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-[13px] tracking-refined font-medium text-[#372921]">
               <Link
                 href="/shop"
-                className={`transition-colors hover:text-gold-dark ${
-                  pathname === '/shop' ? 'text-ink font-semibold border-b border-ink' : ''
+                className={`transition-colors py-1 hover:text-[#9E5430] ${
+                  pathname === '/shop' ? 'text-[#372921] font-semibold border-b-2 border-[#9E5430]' : ''
                 }`}
               >
                 Shop All
@@ -98,7 +98,7 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
               >
                 <button
                   type="button"
-                  className="flex items-center gap-1 transition-colors hover:text-gold-dark cursor-pointer"
+                  className="flex items-center gap-1 transition-colors hover:text-[#9E5430] cursor-pointer"
                   onClick={() => setCollectionsDropdown(prev => !prev)}
                 >
                   <span>Collections</span>
@@ -106,18 +106,18 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                 </button>
 
                 {collectionsDropdown && (
-                  <div className="absolute left-0 top-full w-72 bg-canvas border border-border-medium shadow-xl rounded-sm p-3 py-2 z-50 animate-fade-in">
-                    <div className="text-[11px] uppercase tracking-refined text-ink-muted px-3 py-1 font-sans font-semibold border-b border-border-subtle mb-1">
+                  <div className="absolute left-0 top-full w-72 bg-[#FFFCF7] border border-[#DED3C5] shadow-xl rounded-sm p-3 py-2 z-50 animate-fade-in">
+                    <div className="text-[11px] uppercase tracking-refined text-[#76695F] px-3 py-1 font-sans font-semibold border-b border-[#EAE2D8] mb-1">
                       Curated Editions
                     </div>
                     {COLLECTIONS.map(col => (
                       <Link
                         key={col.slug}
                         href={`/collections/${col.slug}`}
-                        className="flex items-center justify-between px-3 py-2 rounded-sm text-[13px] text-ink hover:bg-canvas-subtle hover:text-gold-dark transition-colors"
+                        className="flex items-center justify-between px-3 py-2 rounded-sm text-[13px] text-[#372921] hover:bg-[#F0E9DF] hover:text-[#9E5430] transition-colors"
                       >
                         <span>{col.name}</span>
-                        <span className="text-[11px] text-ink-faint">→</span>
+                        <span className="text-[11px] text-[#A99583]">→</span>
                       </Link>
                     ))}
                   </div>
@@ -128,11 +128,11 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                 href="/customise"
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all text-xs cursor-pointer ${
                   pathname === '/customise'
-                    ? 'bg-ink border-ink text-canvas shadow-xs font-semibold'
-                    : 'bg-canvas border-gold/40 text-ink hover:bg-gold/10 hover:border-gold'
+                    ? 'bg-[#874427] border-[#874427] text-white shadow-xs font-semibold'
+                    : 'bg-[#9E5430] border-[#9E5430] text-white hover:bg-[#874427] shadow-xs'
                 }`}
               >
-                <Gem className={`w-3.5 h-3.5 ${pathname === '/customise' ? 'text-champagne' : 'text-gold-dark'}`} />
+                <Gem className="w-3.5 h-3.5 text-white" />
                 <span>Create Your Own</span>
               </Link>
             </nav>
@@ -143,7 +143,7 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                 type="button"
                 onClick={() => setMobileMenuOpen(true)}
                 aria-label="Open Navigation Menu"
-                className="p-2 -ml-2 text-ink hover:text-gold-dark focus:outline-none"
+                className="p-2 -ml-2 text-[#372921] hover:text-[#9E5430] focus:outline-none"
               >
                 <Menu className="w-5 h-5" />
               </button>
@@ -167,29 +167,29 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
             </div>
 
             {/* Right Desktop Links + Utility Tools */}
-            <div className="flex items-center gap-4 sm:gap-5 md:gap-6 text-[13px] tracking-refined font-medium text-ink">
+            <div className="flex items-center gap-4 sm:gap-5 md:gap-6 text-[13px] tracking-refined font-medium text-[#372921]">
               {/* Brand Story & Atelier links */}
               <div className="hidden lg:flex items-center gap-6 xl:gap-7">
                 <Link
                   href="/story"
-                  className={`transition-colors hover:text-gold-dark ${
-                    pathname === '/story' ? 'text-ink font-semibold border-b border-ink' : ''
+                  className={`transition-colors py-1 hover:text-[#9E5430] ${
+                    pathname === '/story' ? 'text-[#372921] font-semibold border-b-2 border-[#9E5430]' : ''
                   }`}
                 >
                   Our Story
                 </Link>
                 <Link
                   href="/atelier"
-                  className={`transition-colors hover:text-gold-dark ${
-                    pathname === '/atelier' ? 'text-ink font-semibold border-b border-ink' : ''
+                  className={`transition-colors py-1 hover:text-[#9E5430] ${
+                    pathname === '/atelier' ? 'text-[#372921] font-semibold border-b-2 border-[#9E5430]' : ''
                   }`}
                 >
                   The Craft House
                 </Link>
                 <Link
                   href="/gifting"
-                  className={`transition-colors hover:text-gold-dark ${
-                    pathname === '/gifting' ? 'text-ink font-semibold border-b border-ink' : ''
+                  className={`transition-colors py-1 hover:text-[#9E5430] ${
+                    pathname === '/gifting' ? 'text-[#372921] font-semibold border-b-2 border-[#9E5430]' : ''
                   }`}
                 >
                   Gifting
@@ -202,7 +202,7 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                   type="button"
                   onClick={onOpenSearch}
                   aria-label="Search Collection"
-                  className="p-2 text-ink hover:text-gold-dark transition-colors focus:outline-none"
+                  className="p-2 text-[#372921] hover:text-[#9E5430] transition-colors focus:outline-none"
                 >
                   <Search className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
@@ -211,7 +211,7 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                 <Link
                   href="/wishlist"
                   aria-label="Saved Pieces (Wishlist)"
-                  className="p-2 text-ink hover:text-gold-dark transition-colors focus:outline-none"
+                  className="p-2 text-[#372921] hover:text-[#9E5430] transition-colors focus:outline-none"
                   title="Saved Pieces (Wishlist)"
                 >
                   <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -221,12 +221,12 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                 <Link
                   href={user ? '/account' : '/login'}
                   aria-label={user ? `Patron Account: ${user.name}` : 'Sign In'}
-                  className="relative flex items-center justify-center p-2 text-ink hover:text-gold-dark transition-colors focus:outline-none group"
+                  className="relative flex items-center justify-center p-2 text-[#372921] hover:text-[#9E5430] transition-colors focus:outline-none group"
                   title={user ? `Signed in as ${user.name} (${user.tier})` : 'Sign In / Register'}
                 >
                   <User className="w-4 h-4 sm:w-5 sm:h-5" />
                   {user && (
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-gold ring-1 ring-canvas" />
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#9E5430] ring-1 ring-[#F7F3EC]" />
                   )}
                 </Link>
 
@@ -234,11 +234,11 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                   type="button"
                   onClick={openCart}
                   aria-label="Shopping Bag"
-                  className="relative flex items-center justify-center p-2 text-ink hover:text-gold-dark transition-colors focus:outline-none"
+                  className="relative flex items-center justify-center p-2 text-[#372921] hover:text-[#9E5430] transition-colors focus:outline-none"
                 >
                   <ShoppingBag className="w-5 h-5" />
                   {totalCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-ink text-canvas text-[11px] font-bold flex items-center justify-center shadow-sm">
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#372921] text-[#F7F3EC] text-[11px] font-bold flex items-center justify-center shadow-sm">
                       {totalCount}
                     </span>
                   )}

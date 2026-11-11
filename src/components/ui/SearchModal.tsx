@@ -55,23 +55,23 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-plum/70 backdrop-blur-md transition-opacity"
+        className="fixed inset-0 bg-[#372921]/70 backdrop-blur-md transition-opacity"
         onClick={onClose}
       />
 
       <div className="min-h-screen px-4 text-center sm:p-0 flex items-start justify-center pt-16 sm:pt-24 relative z-10">
-        <div className="w-full max-w-3xl bg-canvas rounded-sm shadow-2xl border border-border-medium overflow-hidden text-left animate-fade-in">
+        <div className="w-full max-w-3xl bg-[#FFFCF7] rounded-sm shadow-2xl border border-[#DED3C5] overflow-hidden text-left animate-fade-in">
           {/* Search Header Bar */}
-          <div className="p-4 sm:p-6 border-b border-border-subtle bg-canvas-subtle/50">
+          <div className="p-4 sm:p-6 border-b border-[#EAE2D8] bg-[#F7F3EC]/50">
             <div className="relative flex items-center">
-              <Search className="w-5 h-5 text-ink-light absolute left-3 pointer-events-none" />
+              <Search className="w-5 h-5 text-[#76695F] absolute left-3 pointer-events-none" />
               <input
                 ref={inputRef}
                 type="text"
                 placeholder="Search by piece name, bead type, crystal, category, or code (e.g. 'KJ-ORG-101')..."
                 value={query}
                 onChange={e => setQuery(e.target.value)}
-                className="w-full pl-11 pr-10 py-3.5 bg-canvas border border-border-medium rounded-sm text-sm text-plum placeholder:text-ink-faint focus:outline-none focus:border-rosewood"
+                className="w-full pl-11 pr-10 py-3.5 bg-[#F7F3EC] border border-[#DED3C5] rounded-sm text-sm text-[#372921] placeholder:text-[#76695F] focus:outline-none focus:border-[#9E5430] transition-colors"
               />
               {query ? (
                 <button

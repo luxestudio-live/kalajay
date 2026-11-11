@@ -97,7 +97,7 @@ export default function ProcessStepScroll() {
   const current = steps[activeStep];
 
   return (
-    <section className="relative w-full bg-[#141312] border-b border-border-subtle/20 overflow-hidden">
+    <section className="relative w-full bg-[#372921] border-b border-[#DED3C5]/20 overflow-hidden">
       {/* 
         Inner Pin Stage: GSAP pins this inner wrapper.
         The outer <section> is owned purely by React and never reparented,
@@ -105,10 +105,10 @@ export default function ProcessStepScroll() {
       */}
       <div
         ref={pinWrapperRef}
-        className="bg-[#141312] text-canvas relative overflow-hidden flex flex-col justify-center py-6 lg:py-8 lg:h-screen lg:max-h-[760px] lg:min-h-[540px]"
+        className="bg-[#372921] text-canvas relative overflow-hidden flex flex-col justify-center py-6 lg:py-8 lg:h-screen lg:max-h-[760px] lg:min-h-[540px]"
       >
         {/* Background Soft Radiance */}
-        <div className="absolute top-1/2 left-1/3 -translate-y-1/2 w-[550px] h-[550px] bg-gold/10 rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute top-1/2 left-1/3 -translate-y-1/2 w-[550px] h-[550px] bg-[#9E5430]/10 rounded-full blur-[140px] pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
           {/* Section Heading */}
@@ -164,7 +164,7 @@ export default function ProcessStepScroll() {
                   <div className="absolute left-2.5 top-3.5 bottom-3.5 w-[1.5px] bg-white/10 rounded-full overflow-hidden">
                     {/* Animated Fill Bar */}
                     <div
-                      className="w-full bg-gold transition-all duration-300 ease-out rounded-full"
+                      className="w-full bg-[#9E5430] transition-all duration-300 ease-out rounded-full"
                       style={{ height: `${(activeStep / 3) * 100}%` }}
                     />
                   </div>
@@ -177,7 +177,7 @@ export default function ProcessStepScroll() {
                         onClick={() => setActiveStep(idx)}
                         className={`relative rounded-[14px] p-3 transition-all duration-300 cursor-pointer border select-none ${
                           isActive
-                            ? 'bg-white/[0.06] border-gold/60 shadow-lg'
+                            ? 'bg-white/[0.06] border-[#9E5430] shadow-lg'
                             : 'bg-transparent border-transparent hover:bg-white/[0.02] opacity-75 hover:opacity-100'
                         }`}
                       >
@@ -185,8 +185,8 @@ export default function ProcessStepScroll() {
                         <div
                           className={`absolute -left-6 top-3.5 w-5 h-5 -translate-x-1/2 rounded-full border flex items-center justify-center transition-all duration-300 ${
                             isActive
-                              ? 'bg-[#141312] border-gold text-champagne scale-110 shadow-xs'
-                              : 'bg-[#0C0B0A] border-white/30 text-canvas/80'
+                              ? 'bg-[#372921] border-[#9E5430] text-[#F7F3EC] scale-110 shadow-xs'
+                              : 'bg-[#231915] border-[#DED3C5]/30 text-[#DED3C5]'
                           }`}
                         >
                           <span className="text-[11px] font-mono font-semibold">{st.num}</span>

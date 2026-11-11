@@ -210,8 +210,8 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
                       }}
                       className={`px-3.5 py-2 rounded-full text-xs font-sans transition-all border cursor-pointer ${
                         selectedVariant?.code === v.code
-                          ? 'bg-plum text-canvas border-plum shadow-sm font-medium'
-                          : 'bg-canvas text-ink border-border-medium hover:border-border-strong'
+                          ? 'bg-[#9E5430] text-white border-[#9E5430] shadow-sm font-medium'
+                          : 'bg-canvas text-ink border-border-medium hover:border-[#A99583]'
                       }`}
                     >
                       <span>{v.label}</span>
@@ -256,7 +256,7 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
                 <button
                   type="button"
                   onClick={handleAddToCart}
-                  className="w-full py-4 px-6 bg-plum hover:bg-rosewood text-canvas text-xs uppercase tracking-monumental font-semibold rounded-full flex items-center justify-center gap-2.5 transition-all shadow-md cursor-pointer"
+                  className="w-full py-4 px-6 bg-[#372921] hover:bg-[#503A2E] text-[#F7F3EC] text-xs uppercase tracking-monumental font-semibold rounded-full flex items-center justify-center gap-2.5 transition-all shadow-md cursor-pointer"
                 >
                   {added ? (
                     <>

@@ -93,7 +93,7 @@ export default function TheThread() {
           y1="0"
           x2="24"
           y2="1000"
-          stroke="rgba(197, 168, 128, 0.2)"
+          stroke="rgba(222, 211, 197, 0.6)"
           strokeWidth="1"
         />
 
@@ -101,19 +101,19 @@ export default function TheThread() {
         <path
           ref={pathRef}
           d="M 24,0 L 24,1000"
-          stroke="#C5A880"
+          stroke="#9E5430"
           strokeWidth="1.5"
           strokeDasharray="4 6"
           strokeLinecap="round"
         />
 
         {/* Milestone Pearl Anchors strictly inside the left gutter */}
-        <circle cx="24" cy="40" r="3" fill="#FAF9F6" stroke="#C5A880" strokeWidth="1.5" />
-        <circle cx="24" cy="200" r="3" fill="#FAF9F6" stroke="#C5A880" strokeWidth="1.5" />
-        <circle cx="24" cy="400" r="3" fill="#FAF9F6" stroke="#C5A880" strokeWidth="1.5" />
-        <circle cx="24" cy="600" r="3" fill="#FAF9F6" stroke="#C5A880" strokeWidth="1.5" />
-        <circle cx="24" cy="800" r="3" fill="#FAF9F6" stroke="#C5A880" strokeWidth="1.5" />
-        <circle cx="24" cy="980" r="3" fill="#C5A880" stroke="#FAF9F6" strokeWidth="1.5" />
+        <circle cx="24" cy="40" r="3" fill="#F7F3EC" stroke="#9E5430" strokeWidth="1.5" />
+        <circle cx="24" cy="200" r="3" fill="#F7F3EC" stroke="#9E5430" strokeWidth="1.5" />
+        <circle cx="24" cy="400" r="3" fill="#F7F3EC" stroke="#9E5430" strokeWidth="1.5" />
+        <circle cx="24" cy="600" r="3" fill="#F7F3EC" stroke="#9E5430" strokeWidth="1.5" />
+        <circle cx="24" cy="800" r="3" fill="#F7F3EC" stroke="#9E5430" strokeWidth="1.5" />
+        <circle cx="24" cy="980" r="3" fill="#9E5430" stroke="#F7F3EC" strokeWidth="1.5" />
       </svg>
     </div>
   );

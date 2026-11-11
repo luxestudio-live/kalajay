@@ -148,24 +148,24 @@ export default function SignupClient() {
         <div className="bg-canvas-subtle rounded-2xl sm:rounded-3xl border border-border-gold shadow-xl sm:shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-0 lg:min-h-[700px] relative">
           
           {/* Left Column: Exclusive Atelier Invitation & Privilege Card (Desktop) */}
-          <div className="hidden lg:flex lg:col-span-5 relative bg-[#141312] text-canvas p-10 lg:p-12 flex-col justify-between overflow-hidden">
-            <div className="absolute inset-0 opacity-20 mix-blend-screen pointer-events-none bg-[radial-gradient(#C5A880_1px,transparent_1px)] [background-size:24px_24px]" />
+          <div className="hidden lg:flex lg:col-span-5 relative bg-[#372921] text-canvas p-10 lg:p-12 flex-col justify-between overflow-hidden">
+            <div className="absolute inset-0 opacity-20 mix-blend-screen pointer-events-none bg-[radial-gradient(#9E5430_1px,transparent_1px)] [background-size:24px_24px]" />
             <div
               className="absolute inset-0 opacity-35 pointer-events-none bg-cover bg-center transition-transform duration-1000 scale-105"
               style={{
                 backgroundImage: `url('https://images.unsplash.com/photo-1566150905458-1bf1fc113f0d?auto=format&fit=crop&w=1200&q=80')`,
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#141312] via-[#141312]/80 to-[#141312]/50 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#372921] via-[#372921]/80 to-[#372921]/50 pointer-events-none" />
 
             {/* Top Brand & Seal */}
             <div className="relative z-10">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#2D2A28] to-[#141312] border-2 border-gold/60 flex items-center justify-center shadow-lg relative group">
-                  <div className="w-9 h-9 rounded-full border border-gold/40 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#503A2E] to-[#372921] border-2 border-[#9E5430] flex items-center justify-center shadow-lg relative group">
+                  <div className="w-9 h-9 rounded-full border border-[#9E5430]/40 flex items-center justify-center">
                     <Gem className="w-5 h-5 text-champagne" />
                   </div>
-                  <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-gold text-[#141312] text-[8px] font-bold flex items-center justify-center">
+                  <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#9E5430] text-[#F7F3EC] text-[8px] font-bold flex items-center justify-center">
                     ★
                   </span>
                 </div>

@@ -78,7 +78,7 @@ export default function CheckoutPage() {
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/shop"
-              className="w-full sm:w-auto px-8 py-3.5 bg-plum hover:bg-rosewood text-canvas text-xs uppercase tracking-editorial font-semibold rounded-sm transition-colors"
+              className="w-full sm:w-auto px-8 py-3.5 bg-[#372921] hover:bg-[#503A2E] text-[#F7F3EC] text-xs uppercase tracking-editorial font-semibold rounded-full transition-colors"
             >
               <span>Explore More Creations</span>
             </Link>
@@ -133,7 +133,7 @@ export default function CheckoutPage() {
                     placeholder="you@domain.com"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    className="w-full px-3.5 py-3 bg-canvas border border-border-medium rounded-sm text-plum focus:outline-none focus:border-rosewood"
+                    className="w-full px-3.5 py-3 bg-[#FFFCF7] border border-[#DED3C5] hover:border-[#A99583] rounded-sm text-[#372921] focus:outline-none focus:border-[#9E5430] transition-colors"
                   />
                 </div>
                 <div>
@@ -144,7 +144,7 @@ export default function CheckoutPage() {
                     placeholder="+91 98765 43210"
                     value={phone}
                     onChange={e => setPhone(e.target.value)}
-                    className="w-full px-3.5 py-3 bg-canvas border border-border-medium rounded-sm text-plum focus:outline-none focus:border-rosewood"
+                    className="w-full px-3.5 py-3 bg-[#FFFCF7] border border-[#DED3C5] hover:border-[#A99583] rounded-sm text-[#372921] focus:outline-none focus:border-[#9E5430] transition-colors"
                   />
                 </div>
               </div>
@@ -166,7 +166,7 @@ export default function CheckoutPage() {
                     placeholder="e.g. Radhika Kapoor"
                     value={name}
                     onChange={e => setName(e.target.value)}
-                    className="w-full px-3.5 py-3 bg-canvas border border-border-medium rounded-sm text-plum focus:outline-none focus:border-rosewood"
+                    className="w-full px-3.5 py-3 bg-[#FFFCF7] border border-[#DED3C5] hover:border-[#A99583] rounded-sm text-[#372921] focus:outline-none focus:border-[#9E5430] transition-colors"
                   />
                 </div>
 
@@ -178,7 +178,7 @@ export default function CheckoutPage() {
                     placeholder="e.g. Apartment 14B, Sea Green Mansions, Worli Sea Face"
                     value={address}
                     onChange={e => setAddress(e.target.value)}
-                    className="w-full px-3.5 py-3 bg-canvas border border-border-medium rounded-sm text-plum focus:outline-none focus:border-rosewood"
+                    className="w-full px-3.5 py-3 bg-[#FFFCF7] border border-[#DED3C5] hover:border-[#A99583] rounded-sm text-[#372921] focus:outline-none focus:border-[#9E5430] transition-colors"
                   />
                 </div>
 
@@ -191,7 +191,7 @@ export default function CheckoutPage() {
                       placeholder="e.g. Mumbai"
                       value={city}
                       onChange={e => setCity(e.target.value)}
-                      className="w-full px-3.5 py-3 bg-canvas border border-border-medium rounded-sm text-plum focus:outline-none focus:border-rosewood"
+                      className="w-full px-3.5 py-3 bg-[#FFFCF7] border border-[#DED3C5] hover:border-[#A99583] rounded-sm text-[#372921] focus:outline-none focus:border-[#9E5430] transition-colors"
                     />
                   </div>
                   <div>
@@ -199,7 +199,7 @@ export default function CheckoutPage() {
                     <select
                       value={stateName}
                       onChange={e => setStateName(e.target.value)}
-                      className="w-full px-3.5 py-3 bg-canvas border border-border-medium rounded-sm text-plum focus:outline-none focus:border-rosewood cursor-pointer"
+                      className="w-full px-3.5 py-3 bg-[#FFFCF7] border border-[#DED3C5] hover:border-[#A99583] rounded-sm text-[#372921] focus:outline-none focus:border-[#9E5430] cursor-pointer transition-colors"
                     >
                       <option value="Maharashtra">Maharashtra</option>
                       <option value="Delhi">Delhi NCR</option>
@@ -220,7 +220,7 @@ export default function CheckoutPage() {
                       placeholder="400018"
                       value={pincode}
                       onChange={e => setPincode(e.target.value)}
-                      className="w-full px-3.5 py-3 bg-canvas border border-border-medium rounded-sm text-plum focus:outline-none focus:border-rosewood"
+                      className="w-full px-3.5 py-3 bg-[#FFFCF7] border border-[#DED3C5] hover:border-[#A99583] rounded-sm text-[#372921] focus:outline-none focus:border-[#9E5430] transition-colors"
                     />
                   </div>
                 </div>
@@ -302,7 +302,7 @@ export default function CheckoutPage() {
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="w-full py-4 bg-plum hover:bg-rosewood text-canvas text-xs uppercase tracking-monumental font-semibold rounded-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full py-4 bg-[#372921] hover:bg-[#503A2E] text-[#F7F3EC] text-xs uppercase tracking-monumental font-semibold rounded-full transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <ShieldCheck className="w-4 h-4" />
                   <span>Place Order & Confirm Handcraft · {formatINR(total)}</span>

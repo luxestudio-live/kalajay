@@ -73,7 +73,7 @@ export default function CartPage() {
             <div className="pt-2">
               <Link
                 href="/shop"
-                className="inline-flex items-center gap-2 px-8 py-3.5 bg-plum hover:bg-rosewood text-canvas text-xs uppercase tracking-editorial font-semibold rounded-sm transition-colors"
+                className="inline-flex items-center gap-2 px-8 py-3.5 bg-[#372921] hover:bg-[#503A2E] text-[#F7F3EC] text-xs uppercase tracking-editorial font-semibold rounded-full transition-colors"
               >
                 <span>Browse All Collections</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -269,7 +269,7 @@ export default function CartPage() {
                 <div className="space-y-3 pt-2">
                   <Link
                     href="/checkout"
-                    className="w-full py-4 px-6 bg-ink hover:bg-gold hover:text-ink text-canvas text-xs uppercase tracking-refined font-semibold rounded-full flex items-center justify-center gap-2 transition-all shadow-md group"
+                    className="w-full py-4 px-6 bg-[#372921] hover:bg-[#503A2E] text-[#F7F3EC] text-xs uppercase tracking-refined font-semibold rounded-full flex items-center justify-center gap-2 transition-all shadow-md group"
                   >
                     <span>Proceed to Checkout</span>
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

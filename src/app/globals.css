@@ -9,22 +9,79 @@
   --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-script: 'Caveat', cursive;
   
-  /* Sartorial Pure Ivory & Noir Haute Atelier Theme Variables */
-  --color-canvas: #FAF9F6;
-  --color-canvas-subtle: #F3EFEA;
-  --color-canvas-card: #FFFFFF;
-  --color-canvas-muted: #EAE4DC;
-  --color-canvas-dark: #141312;
-  --color-ink: #141312;
-  --color-ink-muted: #44403C;
-  --color-ink-light: #68625C;
-  --color-gold: #C5A880;
-  --color-rosewood: #1F1E1D;
-  --color-champagne: #EADCC8;
-  --color-plum: #141312;
-  --color-plum-dark: #0C0B0A;
-  --color-border: #EBE6DE;
-  --color-border-gold: rgba(197, 168, 128, 0.32);
+  /* Core Brand Tokens */
+  --color-primary: #9E5430;
+  --color-secondary: #F7F3EC;
+  --color-accent: #372921;
+
+  /* Backgrounds */
+  --bg-page: #F7F3EC;
+  --bg-surface: #FFFCF7;
+  --bg-surface-muted: #F0E9DF;
+  --bg-brand: #9E5430;
+  --bg-dark: #372921;
+
+  /* Typography */
+  --text-primary: #372921;
+  --text-secondary: #685B52;
+  --text-muted: #76695F;
+  --text-on-dark: #F7F3EC;
+  --text-brand: #9E5430;
+
+  /* Borders & Dividers */
+  --border-default: #DED3C5;
+  --border-subtle: #EAE2D8;
+  --border-strong: #A99583;
+  --border-brand: #9E5430;
+
+  /* Buttons */
+  --button-primary-bg: #372921;
+  --button-primary-text: #F7F3EC;
+  --button-primary-hover: #503A2E;
+
+  --button-secondary-bg: transparent;
+  --button-secondary-text: #372921;
+  --button-secondary-border: #B7A696;
+  --button-secondary-hover-bg: #F0E9DF;
+
+  --button-brand-bg: #9E5430;
+  --button-brand-text: #FFFFFF;
+  --button-brand-hover: #874427;
+
+  /* Interaction */
+  --color-hover: #874427;
+  --color-focus: #9E5430;
+  --color-active: #9E5430;
+
+  /* Image Overlays */
+  --overlay-dark: rgba(35, 25, 21, 0.72);
+  --overlay-gradient: linear-gradient(
+    180deg,
+    rgba(35, 25, 21, 0) 38%,
+    rgba(35, 25, 21, 0.86) 100%
+  );
+
+  /* Shadows */
+  --shadow-card: 0 12px 32px rgba(55, 41, 33, 0.09);
+  --shadow-floating: 0 18px 45px rgba(55, 41, 33, 0.14);
+
+  /* Semantic Theme Mappings for Tailwind compatibility */
+  --color-canvas: #F7F3EC;
+  --color-canvas-subtle: #F0E9DF;
+  --color-canvas-card: #FFFCF7;
+  --color-canvas-muted: #EAE2D8;
+  --color-canvas-dark: #372921;
+  --color-ink: #372921;
+  --color-ink-muted: #685B52;
+  --color-ink-light: #76695F;
+  --color-gold: #9E5430;
+  --color-rosewood: #9E5430;
+  --color-champagne: #F0E9DF;
+  --color-plum: #372921;
+  --color-plum-dark: #231915;
+  --color-border: #DED3C5;
+  --color-border-subtle: #EAE2D8;
+  --color-border-gold: #DED3C5;
 }
 
 * {
@@ -32,15 +89,15 @@
 }
 
 html {
-  background-color: #FAF9F6;
-  color: #141312;
+  background-color: #F7F3EC;
+  color: #372921;
 }
 
 body {
   margin: 0;
   padding: 0;
-  background-color: #FAF9F6;
-  color: #141312;
+  background-color: #F7F3EC;
+  color: #372921;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -48,8 +105,8 @@ body {
 }
 
 ::selection {
-  background: #EADCC8;
-  color: #141312;
+  background: #EAE2D8;
+  color: #372921;
 }
 
 /* Luxury subtle scrollbar */
@@ -59,27 +116,27 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #FAF9F6;
+  background: #F7F3EC;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #DDD6CA;
+  background: #DED3C5;
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #141312;
+  background: #372921;
 }
 
 /* Accessible focus ring */
 :focus-visible {
-  outline: 2px solid #C5A880;
+  outline: 2px solid #9E5430;
   outline-offset: 3px;
 }
 
 /* Luxury Form Caret */
 input, textarea, select {
-  caret-color: #141312;
+  caret-color: #9E5430;
 }
 
 /* Typography balancing and orphan prevention */

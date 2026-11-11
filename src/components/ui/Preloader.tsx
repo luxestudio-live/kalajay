@@ -59,28 +59,28 @@ export default function Preloader() {
 
   return (
     <div
-      className={`fixed inset-0 z-50 bg-[#FAF9F6] flex flex-col items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.76,0,0.24,1)] ${
+      className={`fixed inset-0 z-50 bg-[#F7F3EC] flex flex-col items-center justify-center transition-all duration-700 ease-[cubic-bezier(0.76,0,0.24,1)] ${
         fadeOut ? 'opacity-0 -translate-y-6 pointer-events-none' : 'opacity-100 translate-y-0'
       }`}
       aria-hidden="true"
     >
       {/* Editorial Frame Borders (subtle luxury hairline border) */}
-      <div className="absolute inset-4 sm:inset-6 border border-border-subtle/70 pointer-events-none rounded-xl" />
+      <div className="absolute inset-4 sm:inset-6 border border-[#EAE2D8] pointer-events-none rounded-xl" />
 
       {/* Skip control */}
       <button
         type="button"
         onClick={handleSkip}
-        className="absolute top-7 right-7 sm:top-9 sm:right-9 z-10 text-[11px] text-ink-muted hover:text-ink tracking-editorial uppercase px-3.5 py-1.5 rounded-full border border-border-subtle hover:border-gold transition-all duration-300 bg-canvas/80 backdrop-blur-xs cursor-pointer"
+        className="absolute top-7 right-7 sm:top-9 sm:right-9 z-10 text-[11px] text-[#685B52] hover:text-[#372921] tracking-editorial uppercase px-3.5 py-1.5 rounded-full border border-[#EAE2D8] hover:border-[#9E5430] transition-all duration-300 bg-[#F7F3EC]/80 backdrop-blur-xs cursor-pointer"
       >
         Skip
       </button>
 
       <div className="relative z-10 text-center px-6 max-w-md flex flex-col items-center">
         {/* Craft House Heritage Badge */}
-        <div className="mb-3.5 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-champagne/25 border border-gold/30 text-[10px] uppercase tracking-monumental text-gold-dark font-sans font-medium animate-fade-in">
+        <div className="mb-3.5 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F0E9DF] border border-[#DED3C5] text-[10px] uppercase tracking-monumental text-[#9E5430] font-sans font-medium animate-fade-in">
           <span>The Craft House</span>
-          <span className="w-1 h-1 rounded-full bg-gold" />
+          <span className="w-1 h-1 rounded-full bg-[#9E5430]" />
           <span>Bihar & Mumbai</span>
         </div>
 
@@ -103,14 +103,14 @@ export default function Preloader() {
             {/* Background hairline guide path */}
             <path
               d="M 0,8 Q 60,0 120,8 T 240,8"
-              stroke="#EBE6DE"
+              stroke="#EAE2D8"
               strokeWidth="1"
               strokeLinecap="round"
             />
-            {/* Animated drawing golden thread */}
+            {/* Animated drawing terracotta thread */}
             <path
               d="M 0,8 Q 60,0 120,8 T 240,8"
-              stroke="#C5A880"
+              stroke="#9E5430"
               strokeWidth="2"
               strokeLinecap="round"
               className="animate-[threadDraw_1.4s_cubic-bezier(0.16,1,0.3,1)_forwards]"
@@ -119,19 +119,19 @@ export default function Preloader() {
                 strokeDashoffset: 240,
               }}
             />
-            {/* Central obsidian bead with glowing pulse */}
+            {/* Central Dark Cacao bead with glowing pulse */}
             <circle
               cx="120"
               cy="8"
               r="4"
-              fill="#141312"
+              fill="#372921"
               className="animate-[beadPop_1.2s_cubic-bezier(0.16,1,0.3,1)_forwards]"
             />
             <circle
               cx="120"
               cy="8"
               r="7"
-              stroke="#C5A880"
+              stroke="#9E5430"
               strokeWidth="1"
               className="opacity-40 animate-ping"
               style={{ animationDuration: '2.5s' }}
@@ -140,19 +140,19 @@ export default function Preloader() {
         </div>
 
         {/* Brand Slogan */}
-        <p className="text-xs uppercase tracking-monumental text-ink font-sans font-medium opacity-90 mt-2 mb-4">
+        <p className="text-xs uppercase tracking-monumental text-[#372921] font-sans font-medium opacity-90 mt-2 mb-4">
           A World of Little Wonders
         </p>
 
         {/* Subtle Artisan Progress Meter */}
-        <div className="flex items-center gap-3 text-[11px] text-ink-light font-mono tracking-widest mt-1">
-          <div className="w-24 sm:w-32 h-[2px] bg-border-subtle rounded-full overflow-hidden">
+        <div className="flex items-center gap-3 text-[11px] text-[#76695F] font-mono tracking-widest mt-1">
+          <div className="w-24 sm:w-32 h-[2px] bg-[#EAE2D8] rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-gold/50 via-gold to-rosewood transition-all duration-100 ease-out rounded-full"
+              className="h-full bg-gradient-to-r from-[#9E5430]/50 via-[#9E5430] to-[#874427] transition-all duration-100 ease-out rounded-full"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <span className="w-8 text-left text-ink-muted">{progress}%</span>
+          <span className="w-8 text-left text-[#685B52]">{progress}%</span>
         </div>
       </div>
 

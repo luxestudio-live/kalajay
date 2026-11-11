@@ -8,47 +8,48 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Sartorial Pure Ivory & Noir Luxury Haute Atelier Palette
+        // Kalajay Premium Brand Colour System
+        // Primary: Heritage Terracotta (#9E5430) | Secondary: Soft Ivory (#F7F3EC) | Accent: Dark Cacao (#372921)
         canvas: {
-          DEFAULT: '#FAF9F6', // Luminous Crisp Porcelain Ivory
-          subtle: '#F3EFEA',  // Warm Bone Alabaster
-          card: '#FFFFFF',    // Pure Gallery White
-          muted: '#EAE4DC',   // Tactile Linen
-          dark: '#141312',    // Architectural Deep Noir
-          darker: '#0C0B0A',  // Gallery Obsidian
+          DEFAULT: '#F7F3EC', // Soft Ivory — Main website background
+          subtle: '#F0E9DF',  // Layered Ivory surface muted
+          card: '#FFFCF7',    // Light Ivory surface card
+          muted: '#EAE2D8',   // Tactile warm neutral
+          dark: '#372921',    // Dark Cacao
+          darker: '#231915',  // Deep Dark Cacao
         },
         ink: {
-          DEFAULT: '#141312', // Architectural Noir Ink
-          muted: '#44403C',   // Warm Deep Charcoal (8.2:1 contrast)
-          light: '#68625C',   // Refined Mineral (5.1:1 contrast)
-          faint: '#999187',   // Hairline Stone
+          DEFAULT: '#372921', // Dark Cacao primary text (11.4:1 contrast on Soft Ivory)
+          muted: '#685B52',   // Secondary text (5.4:1 contrast)
+          light: '#76695F',   // Muted text (4.5:1 contrast)
+          faint: '#A99583',   // Strong outline & subtle indicators
         },
         plum: {
-          DEFAULT: '#141312', // Architectural Noir Ink (Wordmarks & Headings)
-          dark: '#0C0B0A',    // Gallery Obsidian
-          light: '#262422',   // Muted Charcoal
-          surface: '#1C1A18', // Deep Atelier Surface
+          DEFAULT: '#372921', // Dark Cacao (Wordmarks & Headings)
+          dark: '#231915',    // Deep Dark Cacao
+          light: '#503A2E',   // Primary CTA Hover Dark Cacao
+          surface: '#2A1F19', // Deep dark surface
         },
         blush: {
-          DEFAULT: '#F0EBE1', // Warm Bone Wash
-          subtle: '#FAF7F2',  // Soft Silk Glow
-          rich: '#E4DDD2',    // Warm Sand
+          DEFAULT: '#F0E9DF', // Warm Bone Wash
+          subtle: '#F7F3EC',  // Soft Silk Glow
+          rich: '#EAE2D8',    // Warm Sand
         },
         rosewood: {
-          DEFAULT: '#1F1E1D', // Architectural Noir Accent
-          dark: '#121211',    // Pitch Noir
-          light: '#383533',   // Soft Charcoal
+          DEFAULT: '#9E5430', // Heritage Terracotta primary brand identity
+          dark: '#874427',    // Terracotta Hover
+          light: '#B86B45',   // Terracotta Light Tint
         },
         gold: {
-          DEFAULT: '#C5A880', // Restrained Champagne Gold
-          hairline: 'rgba(197, 168, 128, 0.32)',
-          light: '#E0CBAB',
-          dark: '#9A7D55',
+          DEFAULT: '#9E5430', // Heritage Terracotta brand accent
+          hairline: '#DED3C5',
+          light: '#F0E9DF',
+          dark: '#874427',
         },
         champagne: {
-          DEFAULT: '#EADCC8', // Warm Pearl Silk
-          light: '#F7F1E7',
-          dark: '#C5A880',
+          DEFAULT: '#F0E9DF', // Warm Pearl Silk
+          light: '#FFFCF7',
+          dark: '#DED3C5',
         },
         lilac: {
           DEFAULT: '#C9B4DB',
@@ -56,15 +57,35 @@ module.exports = {
           deep: '#A78FBD',
         },
         warm: {
-          ink: '#141312',
-          terracotta: '#A85A48',
-          gold: '#C5A880',
+          ink: '#372921',
+          terracotta: '#9E5430',
+          gold: '#9E5430',
         },
         border: {
-          subtle: '#EBE6DE',
-          medium: '#DDD6CA',
-          strong: '#C5BDB0',
-          gold: 'rgba(197, 168, 128, 0.32)',
+          DEFAULT: '#DED3C5',
+          subtle: '#EAE2D8',
+          medium: '#DED3C5',
+          strong: '#A99583',
+          brand: '#9E5430',
+          secondary: '#B7A696',
+          gold: '#DED3C5',
+        },
+        terracotta: {
+          DEFAULT: '#9E5430',
+          hover: '#874427',
+          light: '#F6ECE6',
+        },
+        cacao: {
+          DEFAULT: '#372921',
+          hover: '#503A2E',
+          light: '#685B52',
+          muted: '#76695F',
+          dark: '#231915',
+        },
+        ivory: {
+          DEFAULT: '#F7F3EC',
+          surface: '#FFFCF7',
+          muted: '#F0E9DF',
         }
       },
       borderRadius: {

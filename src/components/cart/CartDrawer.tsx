@@ -227,7 +227,7 @@ export default function CartDrawer() {
                 <Link
                   href="/checkout"
                   onClick={closeCart}
-                  className="w-full py-3.5 px-6 bg-ink hover:bg-gold hover:text-ink text-canvas font-semibold text-xs uppercase tracking-refined flex items-center justify-center gap-2 rounded-full transition-all shadow-md group cursor-pointer"
+                  className="w-full py-3.5 px-6 bg-[#372921] hover:bg-[#503A2E] text-[#F7F3EC] font-semibold text-xs uppercase tracking-refined flex items-center justify-center gap-2 rounded-full transition-all shadow-md group cursor-pointer"
                 >
                   <span>Proceed to Checkout</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

@@ -170,12 +170,12 @@ export default function MakersRoute() {
                 <path
                   ref={routeLineRef}
                   d="M 10,20 Q 80,-10 150,20"
-                  stroke="#B8924A"
+                  stroke="#9E5430"
                   strokeWidth="2"
                   strokeDasharray="4 4"
                 />
-                <circle cx="10" cy="20" r="4.5" fill="#8C3B4A" />
-                <circle cx="150" cy="20" r="4.5" fill="#B8924A" />
+                <circle cx="10" cy="20" r="4.5" fill="#9E5430" />
+                <circle cx="150" cy="20" r="4.5" fill="#372921" />
               </svg>
               <span className="text-xs uppercase tracking-monumental text-champagne font-sans mt-1 font-medium">
                 Artisan Transit

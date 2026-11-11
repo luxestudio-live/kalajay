@@ -31,7 +31,7 @@ export default function ShippingReturnsPage() {
     <div className="bg-canvas min-h-screen pb-28 selection:bg-blush selection:text-plum">
       {/* 1. EDITORIAL HEADER */}
       <section className="bg-canvas-subtle/80 border-b border-border-subtle py-20 sm:py-28 relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none opacity-40 mix-blend-multiply bg-[radial-gradient(#8C3B4A_1px,transparent_1px)] [background-size:24px_24px]" />
+        <div className="absolute inset-0 pointer-events-none opacity-40 mix-blend-multiply bg-[radial-gradient(#9E5430_1px,transparent_1px)] [background-size:24px_24px]" />
         
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
           <span className="text-[11px] uppercase tracking-monumental text-rosewood font-sans font-semibold block">
