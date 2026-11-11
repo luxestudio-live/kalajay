@@ -87,7 +87,7 @@ export default function PrettyLittleCollection() {
           <div className="collection-tile md:col-span-7">
             <Link
               href={`/collections/${COLLECTIONS[0].slug}`}
-              className="group block relative aspect-[16/11] sm:aspect-[16/10] bg-canvas-subtle rounded-image overflow-hidden border border-border-gold shadow-md"
+              className="group block relative aspect-[16/11] sm:aspect-[16/10] md:aspect-auto md:h-full bg-canvas-subtle rounded-image overflow-hidden border border-border-gold shadow-md"
             >
               <img
                 src={COLLECTIONS[0].image}
