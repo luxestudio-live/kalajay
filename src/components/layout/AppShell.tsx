@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import CartDrawer from '../cart/CartDrawer';
@@ -15,6 +16,17 @@ import PWAInstallPrompt from '../ui/PWAInstallPrompt';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const pathname = usePathname();
+  const isAdmin = pathname?.startsWith('/admin');
+
+  // Admin operational console routes are completely isolated from storefront chrome
+  if (isAdmin) {
+    return (
+      <div className="min-h-screen bg-[#F7F3EC] text-[#372921] font-sans antialiased">
+        {children}
+      </div>
+    );
+  }
 
   return (
     <SmoothScroll>
