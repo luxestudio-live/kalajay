@@ -150,6 +150,34 @@ html.lenis, html.lenis body {
   scrollbar-width: none;
 }
 
+/* Continuous Right-to-Left Marquee Ticker (Moves text smoothly from right towards left) */
+@keyframes marquee-rtl {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee-rtl {
+  display: flex;
+  width: max-content;
+  animation: marquee-rtl 32s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-rtl:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee-rtl {
+    animation: none;
+    transform: none;
+  }
+}
+
 /* Continuous Left-to-Right Marquee Ticker (Moves text smoothly towards right) */
 @keyframes marquee-ltr {
   0% {

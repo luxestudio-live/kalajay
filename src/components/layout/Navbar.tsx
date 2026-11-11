@@ -36,14 +36,14 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
 
   return (
     <>
-      {/* Top Luxury Marquee Ticker - continuously moves from left to right */}
+      {/* Top Luxury Marquee Ticker - continuously moves from right to left */}
       <div
         className={`bg-plum text-canvas font-sans text-[11px] sm:text-xs tracking-refined border-b border-plum-light/20 relative z-40 overflow-hidden transition-all duration-300 select-none group ${
           isScrolled ? 'max-h-0 py-0 opacity-0 border-b-0' : 'max-h-12 py-2 opacity-100'
         }`}
         title="Continuous Craft House Ticker (Hover to pause)"
       >
-        <div className="animate-marquee-ltr flex items-center">
+        <div className="animate-marquee-rtl flex items-center">
           {[0, 1, 2, 3].map((copyIndex) => (
             <div
               key={copyIndex}
