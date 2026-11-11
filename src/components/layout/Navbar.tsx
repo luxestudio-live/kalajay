@@ -36,20 +36,36 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
 
   return (
     <>
-      {/* Top Luxury Ticker - collapses on scroll */}
+      {/* Top Luxury Marquee Ticker - continuously moves from left to right */}
       <div
-        className={`bg-plum text-canvas font-sans text-xs tracking-refined px-4 text-center border-b border-plum-light/20 relative z-40 overflow-hidden transition-all duration-300 ${
+        className={`bg-plum text-canvas font-sans text-[11px] sm:text-xs tracking-refined border-b border-plum-light/20 relative z-40 overflow-hidden transition-all duration-300 select-none group ${
           isScrolled ? 'max-h-0 py-0 opacity-0 border-b-0' : 'max-h-12 py-2 opacity-100'
         }`}
+        title="Continuous Craft House Ticker (Hover to pause)"
       >
-        <div className="flex items-center justify-center gap-6 whitespace-nowrap">
-          <span className="hidden sm:inline">Handcrafted with love, one at a time</span>
-          <span className="opacity-40">·</span>
-          <span>Ships Across India</span>
-          <span className="opacity-40">·</span>
-          <span className="text-champagne font-medium">Free Delivery above INR 599</span>
-          <span className="hidden md:inline opacity-40">·</span>
-          <span className="hidden md:inline">21 Master Women Artisans · 100% Handcrafted</span>
+        <div className="animate-marquee-ltr flex items-center">
+          {[0, 1, 2, 3].map((copyIndex) => (
+            <div
+              key={copyIndex}
+              className="flex shrink-0 items-center gap-6 sm:gap-8 whitespace-nowrap px-3 sm:px-4"
+              aria-hidden={copyIndex > 0}
+            >
+              <span className="text-canvas/90 font-light">Handcrafted with love, one at a time</span>
+              <span className="text-gold/70 text-[10px] select-none">✦</span>
+              <span className="text-canvas/90 font-light">Ships Across India</span>
+              <span className="text-gold/70 text-[10px] select-none">✦</span>
+              <span className="text-champagne font-semibold tracking-wider">Free Delivery above INR 599</span>
+              <span className="text-gold/70 text-[10px] select-none">✦</span>
+              <span className="text-canvas/90 font-light">The Craft House · Bihar &amp; Mumbai</span>
+              <span className="text-gold/70 text-[10px] select-none">✦</span>
+              <span className="text-canvas/90 font-light">21 Master Women Artisans</span>
+              <span className="text-gold/70 text-[10px] select-none">✦</span>
+              <span className="text-canvas/90 font-light">100% Hand-Knotted &amp; Loom-Strung</span>
+              <span className="text-gold/70 text-[10px] select-none">✦</span>
+              <span className="text-canvas/90 font-light">48-Hour Transit Protection</span>
+              <span className="text-gold/70 text-[10px] select-none">✦</span>
+            </div>
+          ))}
         </div>
       </div>
 
