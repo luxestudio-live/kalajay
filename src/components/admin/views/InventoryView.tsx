@@ -18,9 +18,27 @@ import { useAdminStore } from '@/data/AdminStoreContext';
 import { StockAdjustment } from '@/data/adminTypes';
 
 export default function InventoryView() {
-  const { inventory, stockAdjustments, adjustStock, can } = useAdminStore();
+  const { inventory, stockAdjustments, adjustStock, can, activeSubPage, setActiveSubPage } = useAdminStore();
 
-  const [activeTab, setActiveTab] = useState<'master' | 'low_stock' | 'adjustments' | 'raw_materials'>('master');
+  const activeTab: 'master' | 'low_stock' | 'adjustments' | 'raw_materials' =
+    activeSubPage === 'inventory.low_stock'
+      ? 'low_stock'
+      : activeSubPage === 'inventory.adjustments'
+      ? 'adjustments'
+      : activeSubPage === 'inventory.materials'
+      ? 'raw_materials'
+      : 'master';
+
+  const handleTabClick = (tabId: string) => {
+    const map: Record<string, string> = {
+      master: 'inventory.master',
+      low_stock: 'inventory.low_stock',
+      raw_materials: 'inventory.materials',
+      adjustments: 'inventory.adjustments',
+    };
+    setActiveSubPage(map[tabId] || 'inventory.master');
+  };
+
   const [search, setSearch] = useState('');
   const [locationFilter, setLocationFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
@@ -102,7 +120,7 @@ export default function InventoryView() {
           <button
             key={tab.id}
             type="button"
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => handleTabClick(tab.id)}
             className={`px-3.5 py-2 rounded-t-lg font-medium transition-colors whitespace-nowrap cursor-pointer ${
               activeTab === tab.id
                 ? 'bg-white border-t-2 border-t-[#9E5430] border-x border-[#DED3C5] text-[#9E5430] font-semibold'

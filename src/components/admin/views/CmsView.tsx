@@ -53,12 +53,46 @@ export default function CmsView() {
     updateBanner,
     createBanner,
     deleteBanner,
+    activeSubPage,
+    setActiveSubPage,
     can,
   } = useAdminStore();
 
-  const [activeTab, setActiveTab] = useState<
-    'pages' | 'homepage' | 'banners' | 'media' | 'artisans' | 'policies' | 'seo'
-  >('homepage');
+  // Map activeSubPage to internal tab for two-way synchronization with sidebar
+  const getTabFromSubPage = (sub: string): 'pages' | 'homepage' | 'banners' | 'media' | 'artisans' | 'policies' | 'seo' => {
+    switch (sub) {
+      case 'cms.banners':
+        return 'banners';
+      case 'cms.media':
+        return 'media';
+      case 'cms.story':
+        return 'artisans';
+      case 'cms.navigation':
+        return 'pages';
+      case 'cms.policies':
+        return 'policies';
+      case 'cms.seo':
+        return 'seo';
+      case 'cms.homepage':
+      default:
+        return 'homepage';
+    }
+  };
+
+  const activeTab = getTabFromSubPage(activeSubPage);
+
+  const handleTabClick = (tabId: string) => {
+    const subMap: Record<string, string> = {
+      homepage: 'cms.homepage',
+      banners: 'cms.banners',
+      media: 'cms.media',
+      artisans: 'cms.story',
+      pages: 'cms.navigation',
+      policies: 'cms.policies',
+      seo: 'cms.seo',
+    };
+    setActiveSubPage(subMap[tabId] || 'cms.homepage');
+  };
 
   // Homepage Builder selected section for editing
   const [selectedSectionId, setSelectedSectionId] = useState<string>('sec-hero');
@@ -156,7 +190,7 @@ export default function CmsView() {
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => handleTabClick(tab.id)}
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-t-lg font-medium transition-colors whitespace-nowrap cursor-pointer ${
                 isActive
                   ? 'bg-white border-t-2 border-t-[#9E5430] border-x border-[#DED3C5] text-[#9E5430] font-semibold shadow-2xs'

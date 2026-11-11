@@ -40,8 +40,8 @@ const SEED_SETTLEMENTS: SettlementItem[] = [
 ];
 
 export default function FinanceView() {
-  const { logAction } = useAdminStore();
-  const [activeTab, setActiveTab] = useState<'overview' | 'gst'>('overview');
+  const { logAction, activeSubPage, setActiveSubPage } = useAdminStore();
+  const activeTab: 'overview' | 'gst' = activeSubPage === 'finance.gst' ? 'gst' : 'overview';
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -91,7 +91,7 @@ export default function FinanceView() {
       <div className="flex items-center gap-1 border-b border-[#DED3C5] text-xs pb-1">
         <button
           type="button"
-          onClick={() => setActiveTab('overview')}
+          onClick={() => setActiveSubPage('finance.overview')}
           className={`px-3.5 py-2 rounded-t-lg font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'overview'
               ? 'bg-white border-t-2 border-t-[#9E5430] border-x border-[#DED3C5] text-[#9E5430] font-semibold'
@@ -103,7 +103,7 @@ export default function FinanceView() {
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('gst')}
+          onClick={() => setActiveSubPage('finance.gst')}
           className={`px-3.5 py-2 rounded-t-lg font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'gst'
               ? 'bg-white border-t-2 border-t-[#9E5430] border-x border-[#DED3C5] text-[#9E5430] font-semibold'

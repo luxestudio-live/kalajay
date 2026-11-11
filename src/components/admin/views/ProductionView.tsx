@@ -19,8 +19,9 @@ import { WorkOrder } from '@/data/adminTypes';
 import { PRODUCTS } from '@/data/catalogue';
 
 export default function ProductionView() {
-  const { workOrders, updateWorkOrderStage, createWorkOrder, can } = useAdminStore();
+  const { workOrders, updateWorkOrderStage, createWorkOrder, can, activeSubPage, setActiveSubPage } = useAdminStore();
 
+  const isQcView = activeSubPage === 'production.qc';
   const [activeStage, setActiveStage] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [newOrderModal, setNewOrderModal] = useState(false);
@@ -81,6 +82,33 @@ export default function ProductionView() {
 
   return (
     <div className="space-y-6 animate-fade-in pb-12">
+      {/* 0. SUBPAGE NAVIGATION TABS (Two-Way Sync with Sidebar) */}
+      <div className="flex items-center gap-1 border-b border-[#DED3C5] text-xs pb-1">
+        <button
+          type="button"
+          onClick={() => setActiveSubPage('production.work_orders')}
+          className={`px-3.5 py-2 rounded-t-lg font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+            !isQcView
+              ? 'bg-white border-t-2 border-t-[#9E5430] border-x border-[#DED3C5] text-[#9E5430] font-semibold'
+              : 'text-[#76695F] hover:text-[#372921]'
+          }`}
+        >
+          <Hammer className="w-3.5 h-3.5" />
+          <span>Work Orders &amp; Looms ({workOrders.length})</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveSubPage('production.qc')}
+          className={`px-3.5 py-2 rounded-t-lg font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+            isQcView
+              ? 'bg-white border-t-2 border-t-[#9E5430] border-x border-[#DED3C5] text-[#9E5430] font-semibold'
+              : 'text-[#76695F] hover:text-[#372921]'
+          }`}
+        >
+          <ShieldCheck className="w-3.5 h-3.5" />
+          <span>Quality Control (QC Inspections)</span>
+        </button>
+      </div>
       {/* 1. HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#DED3C5]">
         <div>

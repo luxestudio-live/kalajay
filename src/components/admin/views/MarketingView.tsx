@@ -43,8 +43,8 @@ const SEED_SUBSCRIBERS: NewsletterSubscriber[] = [
 ];
 
 export default function MarketingView() {
-  const { coupons, createCoupon, toggleCouponStatus, logAction } = useAdminStore();
-  const [activeTab, setActiveTab] = useState<'coupons' | 'subscribers'>('coupons');
+  const { coupons, createCoupon, toggleCouponStatus, logAction, activeSubPage, setActiveSubPage } = useAdminStore();
+  const activeTab: 'coupons' | 'subscribers' = activeSubPage === 'marketing.subscribers' ? 'subscribers' : 'coupons';
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreatingCoupon, setIsCreatingCoupon] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -152,7 +152,7 @@ export default function MarketingView() {
       <div className="flex items-center gap-1 border-b border-[#DED3C5] text-xs pb-1">
         <button
           type="button"
-          onClick={() => setActiveTab('coupons')}
+          onClick={() => setActiveSubPage('marketing.coupons')}
           className={`px-3.5 py-2 rounded-t-lg font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'coupons'
               ? 'bg-white border-t-2 border-t-[#9E5430] border-x border-[#DED3C5] text-[#9E5430] font-semibold'
@@ -164,7 +164,7 @@ export default function MarketingView() {
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('subscribers')}
+          onClick={() => setActiveSubPage('marketing.subscribers')}
           className={`px-3.5 py-2 rounded-t-lg font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'subscribers'
               ? 'bg-white border-t-2 border-t-[#9E5430] border-x border-[#DED3C5] text-[#9E5430] font-semibold'

@@ -17,8 +17,24 @@ import { useAdminStore } from '@/data/AdminStoreContext';
 import { PRODUCTS, COLLECTIONS, Product } from '@/data/catalogue';
 
 export default function CatalogueView() {
-  const { can } = useAdminStore();
-  const [activeTab, setActiveTab] = useState<'products' | 'collections' | 'reviews'>('products');
+  const { can, activeSubPage, setActiveSubPage } = useAdminStore();
+
+  const activeTab: 'products' | 'collections' | 'reviews' =
+    activeSubPage === 'catalogue.collections'
+      ? 'collections'
+      : activeSubPage === 'catalogue.reviews'
+      ? 'reviews'
+      : 'products';
+
+  const handleTabClick = (tabId: string) => {
+    const map: Record<string, string> = {
+      products: 'catalogue.products',
+      collections: 'catalogue.collections',
+      reviews: 'catalogue.reviews',
+    };
+    setActiveSubPage(map[tabId] || 'catalogue.products');
+  };
+
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -73,7 +89,7 @@ export default function CatalogueView() {
           <button
             key={tab.id}
             type="button"
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => handleTabClick(tab.id)}
             className={`px-3.5 py-2 rounded-t-lg font-medium transition-colors whitespace-nowrap cursor-pointer ${
               activeTab === tab.id
                 ? 'bg-white border-t-2 border-t-[#9E5430] border-x border-[#DED3C5] text-[#9E5430] font-semibold'

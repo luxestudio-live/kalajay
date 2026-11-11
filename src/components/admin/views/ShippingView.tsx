@@ -15,8 +15,8 @@ import {
 import { useAdminStore } from '@/data/AdminStoreContext';
 
 export default function ShippingView() {
-  const { orders } = useAdminStore();
-  const [activeTab, setActiveTab] = useState<'shipments' | 'rules'>('shipments');
+  const { orders, activeSubPage, setActiveSubPage } = useAdminStore();
+  const activeTab: 'shipments' | 'rules' = activeSubPage === 'shipping.rules' ? 'rules' : 'shipments';
 
   const shipments = orders.filter(o => o.fulfillmentStatus === 'shipped' || o.fulfillmentStatus === 'delivered');
 
@@ -51,7 +51,7 @@ export default function ShippingView() {
       <div className="flex items-center gap-1 border-b border-[#DED3C5] text-xs pb-1">
         <button
           type="button"
-          onClick={() => setActiveTab('shipments')}
+          onClick={() => setActiveSubPage('shipping.shipments')}
           className={`px-3.5 py-2 rounded-t-lg font-medium transition-colors cursor-pointer ${
             activeTab === 'shipments'
               ? 'bg-white border-t-2 border-t-[#9E5430] border-x border-[#DED3C5] text-[#9E5430] font-semibold'
@@ -62,7 +62,7 @@ export default function ShippingView() {
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('rules')}
+          onClick={() => setActiveSubPage('shipping.rules')}
           className={`px-3.5 py-2 rounded-t-lg font-medium transition-colors cursor-pointer ${
             activeTab === 'rules'
               ? 'bg-white border-t-2 border-t-[#9E5430] border-x border-[#DED3C5] text-[#9E5430] font-semibold'
