@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Search, X, ArrowRight, Gem } from 'lucide-react';
+import { Search, X, ArrowRight, Sparkles } from 'lucide-react';
 import { PRODUCTS, COLLECTIONS, Product } from '@/data/catalogue';
 import { useCart } from '@/context/CartContext';
 
@@ -171,7 +171,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
           {/* Modal Footer */}
           <div className="p-4 bg-canvas-subtle/80 border-t border-border-subtle flex items-center justify-between text-xs text-ink-light">
             <span className="flex items-center gap-1.5">
-              <Gem className="w-3.5 h-3.5 text-gold" />
+              <Sparkles className="w-3.5 h-3.5 text-rosewood" />
               <span>Looking for a custom color or bridal order?</span>
             </span>
             <Link

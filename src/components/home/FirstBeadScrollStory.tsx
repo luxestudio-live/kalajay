@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Gem, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, CircleDot, CheckCircle2 } from 'lucide-react';
 
 export default function FirstBeadScrollStory() {
   const [activeStep, setActiveStep] = useState(0);
@@ -53,7 +53,7 @@ export default function FirstBeadScrollStory() {
         {/* Section Heading */}
         <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-canvas/10 rounded-full border border-canvas/20 text-champagne text-[11px] font-sans uppercase tracking-refined font-semibold mb-3">
-            <Gem className="w-3 h-3 text-gold" />
+            <CircleDot className="w-3 h-3 text-champagne" />
             <span>Chapter 04 · From the First Bead</span>
           </div>
           <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-canvas font-normal tracking-tight">

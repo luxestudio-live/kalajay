@@ -2,7 +2,7 @@
 
 import React, { useLayoutEffect, useEffect, useRef, useState, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowRight, ShoppingBag, Check, Gem } from 'lucide-react';
+import { ArrowRight, ShoppingBag, Check, Star } from 'lucide-react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { PRODUCTS, Product } from '@/data/catalogue';
@@ -122,7 +122,7 @@ export default function BestSellersRail() {
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-border-subtle pb-2.5">
             <div>
               <div className="inline-flex items-center gap-1.5 px-3 py-0.5 bg-canvas-subtle rounded-full border border-gold/40 text-ink text-[11px] font-sans uppercase tracking-refined font-semibold mb-1">
-                <Gem className="w-3 h-3 text-gold" />
+                <Star className="w-3 h-3 text-gold-dark fill-gold-dark/20" />
                 <span>Chapter 03 · Best Sellers</span>
               </div>
               <h2 className="font-serif text-2xl sm:text-3xl lg:text-[2rem] text-ink font-normal tracking-tight leading-tight">

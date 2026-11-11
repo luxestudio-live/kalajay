@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, ShoppingBag, Gem, Check } from 'lucide-react';
+import { ArrowRight, ShoppingBag, Heart, Check } from 'lucide-react';
 import { PRODUCTS, Product } from '@/data/catalogue';
 import { useCart } from '@/context/CartContext';
 
@@ -28,7 +28,7 @@ export default function ObjectsOfAffection() {
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 sm:mb-16 pb-6 border-b border-border-subtle gap-6">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-blush/60 rounded-full border border-blush text-rosewood text-[11px] font-sans uppercase tracking-refined font-semibold mb-3">
-              <Gem className="w-3 h-3 text-gold" />
+              <Heart className="w-3 h-3 text-rosewood" />
               <span>Chapter 05 · Objects of Affection</span>
             </div>
             <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-plum font-normal tracking-tight">

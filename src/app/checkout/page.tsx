@@ -10,7 +10,7 @@ import {
   CreditCard,
   Truck,
   MessageCircle,
-  Gem,
+  Zap,
   ArrowLeft
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
@@ -253,7 +253,7 @@ export default function CheckoutPage() {
                       <span className="text-ink-light">Zero transaction fees. Instant QR code generation.</span>
                     </div>
                   </div>
-                  <Gem className="w-4 h-4 text-gold" />
+                  <Zap className="w-4 h-4 text-rosewood" />
                 </label>
 
                 <label

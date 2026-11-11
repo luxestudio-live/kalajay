@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { MapPin, Heart, ArrowRight, Gem } from 'lucide-react';
+import { MapPin, Heart, ArrowRight } from 'lucide-react';
 import { ARTISAN_STORIES } from '@/data/extras';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -79,7 +79,7 @@ export default function MakersRoute() {
         {/* Section Header */}
         <div className="max-w-2xl mb-12 sm:mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-blush/60 rounded-full border border-blush text-rosewood text-[11px] font-sans uppercase tracking-refined font-semibold mb-3">
-            <Gem className="w-3.5 h-3.5 text-gold" />
+            <MapPin className="w-3.5 h-3.5 text-rosewood" />
             <span>Chapter 07 · The Makers & The Route</span>
           </div>
           <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-plum font-normal tracking-tight">

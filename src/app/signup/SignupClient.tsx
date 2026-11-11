@@ -4,7 +4,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  Gem,
+  Sparkles,
+  KeyRound,
   Smartphone,
   Mail,
   User as UserIcon,
@@ -163,7 +164,7 @@ export default function SignupClient() {
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#503A2E] to-[#372921] border-2 border-[#9E5430] flex items-center justify-center shadow-lg relative group">
                   <div className="w-9 h-9 rounded-full border border-[#9E5430]/40 flex items-center justify-center">
-                    <Gem className="w-5 h-5 text-champagne" />
+                    <Sparkles className="w-5 h-5 text-champagne" />
                   </div>
                   <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#9E5430] text-[#F7F3EC] text-[8px] font-bold flex items-center justify-center">
                     ★
@@ -215,7 +216,7 @@ export default function SignupClient() {
 
                 <div className="flex items-center gap-2.5">
                   <div className="w-5 h-5 rounded-full bg-gold/25 flex items-center justify-center text-gold shrink-0">
-                    <Gem className="w-3 h-3" />
+                    <Sparkles className="w-3 h-3" />
                   </div>
                   <span>Surprise hand-strung bead charm sent on your birthday</span>
                 </div>
@@ -403,7 +404,7 @@ export default function SignupClient() {
                   >
                     <div className="flex items-center gap-2 text-ink">
                       <div className="w-5 h-5 rounded-full bg-ink flex items-center justify-center text-gold shadow-2xs">
-                        <Gem className="w-3 h-3" />
+                        <KeyRound className="w-3 h-3" />
                       </div>
                       <span className="font-sans text-left">
                         Craft House Passcode: <strong className="font-mono font-bold tracking-widest text-ink">{demoCode}</strong>

@@ -8,7 +8,7 @@ import {
   SlidersHorizontal,
   ShoppingBag,
   Check,
-  Gem,
+  Palette,
   X,
   Eye,
   Plus,
@@ -287,7 +287,7 @@ export function ShopContent() {
             {/* Desktop Gemstone Color Palette Swatches */}
             <div className="hidden lg:flex items-center gap-2.5 bg-canvas px-3.5 py-1.5 rounded-full border border-border-subtle shadow-2xs">
               <span className="text-[11px] uppercase tracking-refined text-ink-muted font-medium flex items-center gap-1.5">
-                <Gem className="w-3 h-3 text-gold" />
+                <Palette className="w-3 h-3 text-gold" />
                 <span>Palette</span>
               </span>
 
@@ -412,7 +412,7 @@ export function ShopContent() {
           {totalItems === 0 ? (
             <div className="py-20 text-center space-y-4 max-w-md mx-auto">
               <div className="w-16 h-16 mx-auto rounded-full bg-blush/40 flex items-center justify-center text-rosewood">
-                <Gem className="w-8 h-8 text-gold" />
+                <Search className="w-8 h-8 text-rosewood" strokeWidth={1.5} />
               </div>
               <h3 className="font-serif text-2xl text-plum">No matching pieces found</h3>
               <p className="text-xs text-ink-muted leading-relaxed">

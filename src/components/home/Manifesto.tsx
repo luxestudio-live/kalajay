@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Gem } from 'lucide-react';
+import { Feather } from 'lucide-react';
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger);
@@ -63,7 +63,7 @@ export default function Manifesto() {
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
         <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-canvas rounded-full border border-gold/40 text-ink text-[11px] font-sans uppercase tracking-refined font-semibold mb-6 sm:mb-8 shadow-2xs">
-          <Gem className="w-3.5 h-3.5 text-gold" />
+          <Feather className="w-3.5 h-3.5 text-gold-dark" />
           <span>The Kalajay Manifesto</span>
         </div>
 

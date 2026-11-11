@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Smartphone, Download, Share, PlusSquare, X, Gem, Check } from 'lucide-react';
+import { Smartphone, Download, Share, PlusSquare, X, Check } from 'lucide-react';
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: Array<string>;
@@ -138,8 +138,8 @@ export default function PWAInstallPrompt() {
         >
           <div className="bg-canvas border border-border-gold rounded-image p-4 shadow-2xl backdrop-blur-md relative flex items-center gap-3.5">
             {/* App Icon */}
-            <div className="w-12 h-12 rounded-xl bg-ink border border-gold/40 flex items-center justify-center shrink-0 shadow-md">
-              <Gem className="w-6 h-6 text-gold" />
+            <div className="w-12 h-12 rounded-xl bg-ink border border-gold/40 flex items-center justify-center shrink-0 shadow-md overflow-hidden p-1.5">
+              <img src="/icon.png" alt="Kalajay" className="w-full h-full object-contain" />
             </div>
 
             {/* Info */}
@@ -201,8 +201,8 @@ export default function PWAInstallPrompt() {
             </button>
 
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-ink border border-gold/40 flex items-center justify-center shrink-0">
-                <Gem className="w-6 h-6 text-gold" />
+              <div className="w-12 h-12 rounded-xl bg-ink border border-gold/40 flex items-center justify-center shrink-0 overflow-hidden p-1.5">
+                <img src="/icon.png" alt="Kalajay" className="w-full h-full object-contain" />
               </div>
               <div>
                 <h4 className="font-serif text-lg text-ink font-normal">Install Kalajay</h4>

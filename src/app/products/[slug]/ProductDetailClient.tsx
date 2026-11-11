@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   ShoppingBag,
   Check,
-  Gem,
   ShieldCheck,
   Truck,
   Clock,
@@ -147,7 +146,7 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
 
             {/* "Made by Hand" Authentic Nuance Note */}
             <div className="p-5 bg-canvas-subtle/80 rounded-image border border-border-gold flex items-start gap-3.5 text-xs text-ink-muted">
-              <Gem className="w-4 h-4 text-gold shrink-0 mt-0.5" />
+              <Heart className="w-4 h-4 text-rosewood shrink-0 mt-0.5" />
               <div>
                 <strong className="text-plum block mb-0.5 font-medium font-serif text-sm">
                   Made by Hand: Variation is Part of the Charm

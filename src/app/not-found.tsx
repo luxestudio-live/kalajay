@@ -2,14 +2,14 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Compass, Gem } from 'lucide-react';
+import { ArrowRight, Compass } from 'lucide-react';
 
 export default function NotFound() {
   return (
     <div className="bg-canvas min-h-[75vh] flex items-center justify-center py-20 px-4">
       <div className="max-w-xl mx-auto text-center space-y-6 animate-fade-in">
         <div className="inline-flex items-center gap-2 px-3 py-1 bg-canvas rounded-full border border-gold/40 text-ink text-[10px] font-sans uppercase tracking-monumental font-semibold">
-          <Gem className="w-3 h-3 text-gold" />
+          <Compass className="w-3 h-3 text-gold" />
           <span>Error 404 · Uncharted Space</span>
         </div>
 

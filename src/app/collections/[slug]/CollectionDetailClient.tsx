@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { notFound, useParams } from 'next/navigation';
-import { ArrowLeft, ShoppingBag, Check, Gem, Filter } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, Check, Layers, Filter } from 'lucide-react';
 import { COLLECTIONS, PRODUCTS, Product } from '@/data/catalogue';
 import { useCart } from '@/context/CartContext';
 
@@ -101,7 +101,7 @@ export default function CollectionDetailClient({ slug: propSlug }: CollectionDet
         {/* Sub-header Bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between pb-6 border-b border-border-subtle gap-4 text-xs text-ink">
           <div className="flex items-center gap-2">
-            <Gem className="w-4 h-4 text-gold" />
+            <Layers className="w-4 h-4 text-rosewood" />
             <span className="font-medium text-plum">
               {products.length} {products.length === 1 ? 'Piece' : 'Pieces'} in {collection.name}
             </span>

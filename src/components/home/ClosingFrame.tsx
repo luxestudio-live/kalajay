@@ -2,14 +2,14 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Gem } from 'lucide-react';
+import { ArrowRight, Heart } from 'lucide-react';
 
 export default function ClosingFrame() {
   return (
     <section className="py-24 sm:py-32 bg-canvas relative overflow-hidden border-b border-border-subtle text-center">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="inline-flex items-center gap-2 px-3 py-1 bg-blush/60 rounded-full border border-blush text-rosewood text-[11px] font-sans uppercase tracking-refined font-semibold mb-6">
-          <Gem className="w-3 h-3 text-gold" />
+          <Heart className="w-3 h-3 text-rosewood" />
           <span>Chapter 10 · The Closing Frame</span>
         </div>
 

@@ -4,7 +4,10 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  Gem,
+  Sparkles,
+  Award,
+  LayoutDashboard,
+  Palette,
   Package,
   MapPin,
   User as UserIcon,
@@ -96,7 +99,7 @@ export default function AccountClient() {
       <div className="bg-canvas min-h-screen py-24 flex items-center justify-center">
         <div className="text-center space-y-3">
           <div className="w-12 h-12 mx-auto rounded-full bg-ink flex items-center justify-center animate-pulse">
-            <Gem className="w-6 h-6 text-gold" />
+            <Sparkles className="w-6 h-6 text-gold" />
           </div>
           <p className="font-serif text-lg text-ink">Opening Your Craft House Portfolio...</p>
         </div>
@@ -162,7 +165,7 @@ export default function AccountClient() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-ink text-canvas text-[11px] uppercase tracking-monumental font-sans font-semibold">
-                <Gem className="w-3 h-3 text-gold" />
+                <Award className="w-3 h-3 text-gold" />
                 <span>{user.tier} · Patron</span>
               </div>
               <h1 className="font-serif text-3xl sm:text-5xl text-ink font-normal tracking-tight">
@@ -207,7 +210,7 @@ export default function AccountClient() {
                 : 'bg-canvas text-ink border-border-subtle hover:border-border-strong'
             }`}
           >
-            <Gem className="w-3.5 h-3.5 text-gold" />
+            <LayoutDashboard className="w-3.5 h-3.5 text-gold" />
             <span>Overview</span>
           </button>
 
@@ -294,7 +297,7 @@ export default function AccountClient() {
                   Member Status
                 </span>
                 <div className="font-serif text-xl text-ink font-semibold mt-1 flex items-center gap-1.5">
-                  <Gem className="w-4 h-4 text-gold" />
+                  <Award className="w-4 h-4 text-gold" />
                   <span>Circle Patron</span>
                 </div>
                 <span className="text-[11px] text-ink-muted mt-1 block">Since {user.memberSince}</span>
@@ -415,7 +418,7 @@ export default function AccountClient() {
                 href="/customise"
                 className="bg-canvas-subtle p-6 rounded-2xl border border-border-subtle hover:border-gold transition-all cursor-pointer group shadow-2xs block"
               >
-                <Gem className="w-6 h-6 text-gold mb-3 group-hover:scale-110 transition-transform" />
+                <Palette className="w-6 h-6 text-rosewood mb-3 group-hover:scale-110 transition-transform" />
                 <h4 className="font-serif text-lg text-ink font-medium">Custom Studio Creations</h4>
                 <p className="text-xs text-ink-muted mt-1 leading-relaxed">
                   Design bespoke color combinations or request customized wedding favours.
@@ -540,7 +543,7 @@ export default function AccountClient() {
                         {/* Artisan Note Card */}
                         <div className="p-4 bg-canvas rounded-xl border border-border-gold flex items-start gap-3.5">
                           <div className="w-8 h-8 rounded-full bg-ink flex items-center justify-center shrink-0">
-                            <Gem className="w-4 h-4 text-gold" />
+                            <Award className="w-4 h-4 text-gold" />
                           </div>
                           <div className="text-xs space-y-1">
                             <strong className="text-ink font-semibold block">
@@ -872,7 +875,7 @@ export default function AccountClient() {
                     Signature Bead Palette
                   </span>
                   <div className="flex items-center gap-2 mt-1.5">
-                    <Gem className="w-4 h-4 text-gold" />
+                    <Palette className="w-4 h-4 text-rosewood" />
                     <span className="text-sm font-serif font-semibold text-ink">
                       {user.preferences.preferredPalette}
                     </span>

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, MapPin, Gem } from 'lucide-react';
+import { ArrowRight, MapPin, Compass } from 'lucide-react';
 import { BRAND_CONFIG } from '@/data/catalogue';
 
 export default function WorldNarrative() {
@@ -22,7 +22,7 @@ export default function WorldNarrative() {
           {/* Left Column: Intimate Narrative & Brand Voice */}
           <div className="lg:col-span-6 space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-blush/60 rounded-full border border-blush text-rosewood text-[11px] font-sans uppercase tracking-refined font-semibold">
-              <Gem className="w-3 h-3 text-gold" />
+              <Compass className="w-3 h-3 text-rosewood" />
               <span>Chapter 02 · The World of Kalajay</span>
             </div>
 

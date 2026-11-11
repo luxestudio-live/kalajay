@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import {
-  Gem,
+  Sparkles,
   ArrowRight,
   Check,
   MessageCircle,
@@ -90,7 +90,7 @@ export default function CustomisePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-canvas rounded-full border border-gold/40 text-ink text-[11px] font-sans uppercase tracking-refined font-semibold mb-3">
-              <Gem className="w-3 h-3 text-gold" />
+              <Sparkles className="w-3 h-3 text-gold" />
               <span>Bespoke Craft House Studio</span>
             </div>
             <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl text-ink font-normal tracking-tight">

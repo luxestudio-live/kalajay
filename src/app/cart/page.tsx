@@ -9,7 +9,8 @@ import {
   ArrowRight,
   MessageCircle,
   ShieldCheck,
-  Gem,
+  Truck,
+  ShoppingBag,
   Gift,
   ArrowLeft
 } from 'lucide-react';
@@ -64,7 +65,7 @@ export default function CartPage() {
         {cart.length === 0 ? (
           <div className="py-24 text-center max-w-md mx-auto space-y-4">
             <div className="w-16 h-16 mx-auto rounded-full bg-blush/40 flex items-center justify-center text-rosewood">
-              <Gem className="w-8 h-8 text-gold" />
+              <ShoppingBag className="w-8 h-8 text-rosewood" strokeWidth={1.5} />
             </div>
             <h2 className="font-serif text-3xl text-plum">Your Bag is Empty</h2>
             <p className="text-xs text-ink-light leading-relaxed">
@@ -94,7 +95,7 @@ export default function CartPage() {
                     </span>
                   ) : (
                     <span className="text-rosewood font-semibold flex items-center gap-1.5">
-                      <Gem className="w-4 h-4 text-gold" />
+                      <Truck className="w-4 h-4 text-rosewood" />
                       <span>Complimentary Pan-India Delivery Unlocked!</span>
                     </span>
                   )}

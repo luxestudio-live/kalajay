@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Gem, Check } from 'lucide-react';
+import { ArrowRight, Palette, Check } from 'lucide-react';
 import { CUSTOMISER_CONFIG } from '@/data/extras';
 import { useCart } from '@/context/CartContext';
 
@@ -22,7 +22,7 @@ export default function CustomiseTeaser() {
         {/* Section Header */}
         <div className="max-w-2xl mb-12 sm:mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-blush/60 rounded-full border border-blush text-rosewood text-[11px] font-sans uppercase tracking-refined font-semibold mb-3">
-            <Gem className="w-3 h-3 text-gold" />
+            <Palette className="w-3 h-3 text-rosewood" />
             <span>Chapter 07 · Beautifully Yours</span>
           </div>
           <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-plum font-normal tracking-tight">

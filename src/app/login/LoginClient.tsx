@@ -4,7 +4,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  Gem,
+  Sparkles,
+  Gift,
+  KeyRound,
+  Zap,
   Smartphone,
   Mail,
   Lock,
@@ -187,7 +190,7 @@ export default function LoginClient() {
                 {/* Wax Seal Emblem */}
                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#503A2E] to-[#372921] border-2 border-[#9E5430] flex items-center justify-center shadow-lg relative group">
                   <div className="w-9 h-9 rounded-full border border-[#9E5430]/40 flex items-center justify-center">
-                    <Gem className="w-5 h-5 text-champagne" />
+                    <Sparkles className="w-5 h-5 text-champagne" />
                   </div>
                   <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#9E5430] text-[#F7F3EC] text-[8px] font-bold flex items-center justify-center">
                     K
@@ -240,7 +243,7 @@ export default function LoginClient() {
 
                 <div className="flex items-start gap-2.5">
                   <div className="w-5 h-5 rounded-full bg-gold/20 flex items-center justify-center shrink-0 mt-0.5 text-gold">
-                    <Gem className="w-3 h-3" />
+                    <Gift className="w-3 h-3 text-gold" />
                   </div>
                   <div>
                     <strong className="text-canvas block font-medium">Inaugural ₹300 Welcome Honour</strong>
@@ -280,7 +283,7 @@ export default function LoginClient() {
               <div className="flex items-center justify-between pb-4 sm:pb-5 border-b border-border-subtle">
                 <div className="space-y-1">
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-canvas-subtle border border-gold/30 text-[10px] uppercase tracking-monumental text-gold-dark font-semibold">
-                    <Gem className="w-3 h-3 text-gold" />
+                    <KeyRound className="w-3 h-3 text-gold" />
                     <span>Patron Access</span>
                   </div>
                   <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-ink font-normal tracking-tight">
@@ -422,7 +425,7 @@ export default function LoginClient() {
                       >
                         <div className="flex items-center gap-2 text-ink">
                           <div className="w-5 h-5 rounded-full bg-ink flex items-center justify-center text-gold shadow-2xs">
-                            <Gem className="w-3 h-3" />
+                            <KeyRound className="w-3 h-3 text-gold" />
                           </div>
                           <span className="font-sans text-left">
                             Craft House Passcode: <strong className="font-mono font-bold tracking-widest text-ink">{demoCode}</strong>
@@ -586,7 +589,7 @@ export default function LoginClient() {
                   onClick={handleQuickDemo}
                   className="w-full sm:w-auto px-4 py-2 rounded-full bg-canvas-subtle hover:bg-border-medium border border-border-subtle text-ink font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs text-xs"
                 >
-                  <Gem className="w-3.5 h-3.5 text-gold" />
+                  <Zap className="w-3.5 h-3.5 text-gold" />
                   <span>1-Click Demo Sign In</span>
                 </button>
               </div>

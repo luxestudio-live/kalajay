@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Gem, Heart } from 'lucide-react';
+import { ArrowRight, Heart } from 'lucide-react';
 import { ARTISAN_STORIES } from '@/data/extras';
 
 export default function HumanHandsAtelier() {
@@ -12,7 +12,7 @@ export default function HumanHandsAtelier() {
         {/* Section Header */}
         <div className="max-w-3xl mb-14 sm:mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-blush/60 rounded-full border border-blush text-rosewood text-[11px] font-sans uppercase tracking-refined font-semibold mb-3">
-            <Gem className="w-3 h-3 text-gold" />
+            <Heart className="w-3 h-3 text-rosewood" />
             <span>Chapter 06 · Made by Human Hands</span>
           </div>
           <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-plum font-normal tracking-tight">

@@ -10,7 +10,6 @@ import {
   Truck,
   Package,
   Sparkles,
-  Gem,
   MessageCircle,
   ArrowRight,
   ShieldCheck,
@@ -323,7 +322,7 @@ export default function TrackOrderPage() {
 
             {/* Artisan Verification Note */}
             <div className="p-4 bg-blush/30 rounded-sm border border-gold/30 flex items-start gap-3 text-xs">
-              <Gem className="w-4 h-4 text-rosewood shrink-0 mt-0.5" />
+              <Sparkles className="w-4 h-4 text-rosewood shrink-0 mt-0.5" />
               <div>
                 <strong className="text-plum block font-medium">Master Artisan Provenance Log:</strong>
                 <p className="text-ink-muted font-light italic mt-0.5">&ldquo;{activeOrder.artisanNote}&rdquo;</p>

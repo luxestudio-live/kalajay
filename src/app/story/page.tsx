@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Heart, MapPin, Scissors, Gem, Award, MessageCircle, CircleDot } from 'lucide-react';
+import { ArrowRight, Heart, MapPin, Scissors, Gem, Award, MessageCircle, CircleDot, BookOpen, Sparkles } from 'lucide-react';
 import { BRAND_CONFIG } from '@/data/catalogue';
 
 export default function StoryPage() {
@@ -14,7 +14,7 @@ export default function StoryPage() {
         
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/70 backdrop-blur border border-gold/30 rounded-full text-[11px] uppercase tracking-monumental text-rosewood font-sans font-semibold">
-            <Gem className="w-3 h-3 text-gold" />
+            <BookOpen className="w-3 h-3 text-rosewood" />
             <span>Craft House Chronicle · The Kalajay Story</span>
           </div>
 
@@ -74,7 +74,7 @@ export default function StoryPage() {
               We unashamedly celebrate delicate, feminine joy. Faceted crystal glass that captures sunbeams on your vanity table, soft blush silks, and luminous pearl luster that elevates any outfit.
             </p>
             <div className="pt-2 text-[11px] uppercase tracking-editorial text-rosewood font-semibold flex items-center gap-1.5">
-              <Gem className="w-3.5 h-3.5 text-gold" />
+              <Sparkles className="w-3.5 h-3.5 text-rosewood" />
               <span>Refined Light &amp; Luster</span>
             </div>
           </div>

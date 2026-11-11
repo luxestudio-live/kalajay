@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShoppingBag, Search, Menu, X, Gem, Heart, Smartphone, Download, User, ArrowRight } from 'lucide-react';
+import { ShoppingBag, Search, Menu, X, Sparkles, Heart, Smartphone, Download, User, ArrowRight } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { COLLECTIONS } from '@/data/catalogue';
@@ -132,7 +132,7 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                     : 'bg-[#9E5430] border-[#9E5430] text-white hover:bg-[#874427] shadow-xs'
                 }`}
               >
-                <Gem className="w-3.5 h-3.5 text-white" />
+                <Sparkles className="w-3.5 h-3.5 text-white" />
                 <span>Create Your Own</span>
               </Link>
             </nav>
@@ -384,7 +384,7 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                     href="/customise"
                     className="flex items-center gap-2 p-2.5 rounded-sm bg-canvas-subtle border border-gold/30 text-ink font-medium"
                   >
-                    <Gem className="w-4 h-4 text-gold" />
+                    <Sparkles className="w-4 h-4 text-rosewood" />
                     <span>Create Your Own (Custom Studio)</span>
                   </Link>
                   <Link href="/gifting" className="block hover:text-gold-dark py-1">

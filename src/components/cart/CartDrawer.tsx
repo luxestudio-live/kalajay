@@ -3,7 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { X, Trash2, Plus, Minus, ArrowRight, MessageCircle, ShieldCheck, Gem } from 'lucide-react';
+import { X, Trash2, Plus, Minus, ArrowRight, MessageCircle, ShieldCheck, Truck, ShoppingBag } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { BRAND_CONFIG } from '@/data/catalogue';
 
@@ -71,7 +71,7 @@ export default function CartDrawer() {
                   </span>
                 ) : (
                   <span className="text-rosewood font-semibold flex items-center gap-1">
-                    <Gem className="w-3.5 h-3.5 text-gold" />
+                    <Truck className="w-3.5 h-3.5 text-rosewood" />
                     <span>Unlocked: Free Delivery across India!</span>
                   </span>
                 )}
@@ -91,7 +91,7 @@ export default function CartDrawer() {
             {cart.length === 0 ? (
               <div className="py-16 text-center space-y-4">
                 <div className="w-16 h-16 mx-auto rounded-full bg-blush/50 flex items-center justify-center text-rosewood">
-                  <Gem className="w-8 h-8" />
+                  <ShoppingBag className="w-8 h-8 text-rosewood" strokeWidth={1.5} />
                 </div>
                 <h3 className="font-serif text-xl text-plum">Your bag is empty</h3>
                 <p className="text-xs text-ink-light max-w-xs mx-auto leading-relaxed">
