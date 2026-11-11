@@ -294,26 +294,6 @@ export default function HeroCover() {
         <div className="absolute inset-0 bg-tactile-grain opacity-40 pointer-events-none" />
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-gold/10 rounded-full blur-[140px] pointer-events-none" />
 
-        {/* Top Editorial Metadata Banner */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10 shrink-0">
-          <div className="flex items-center justify-between border-b border-border-subtle/80 pb-1.5 text-[11px] font-sans uppercase tracking-refined text-ink-muted">
-            <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-gold inline-block" />
-              <span className="font-medium text-ink">KALAJAY DIGITAL FLAGSHIP</span>
-              <span className="hidden md:inline opacity-40">·</span>
-              <span className="hidden md:inline">VOL. 02</span>
-            </div>
-            <div className="hidden sm:flex items-center gap-6">
-              <span>21 WOMEN ARTISANS</span>
-              <span className="opacity-40">·</span>
-              <span>LIMITED CRAFT HOUSE RUN</span>
-            </div>
-            <div className="text-ink font-medium">
-              100% HAND-STRUNG
-            </div>
-          </div>
-        </div>
-
         {/* Main Viewport Stage: Text + 3-Piece Visual Presentation */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex-1 flex flex-col justify-center items-center relative z-10 py-1">
           {/* Zone 1: Magazine Headline & Subtitle */}
