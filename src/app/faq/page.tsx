@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ChevronDown, ChevronUp, MessageCircle, HelpCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, MessageCircle, HelpCircle, Sparkles } from 'lucide-react';
 import { FAQS } from '@/data/extras';
 import { BRAND_CONFIG } from '@/data/catalogue';
 
@@ -72,15 +72,27 @@ export default function FAQPage() {
           <p className="text-xs text-ink-muted max-w-md mx-auto">
             Our Craft House liaisons in Mumbai are always happy to answer questions or share live video previews of finished pieces.
           </p>
-          <div className="pt-2">
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('open-faq-concierge'));
+                }
+              }}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#9E5430] hover:bg-[#372921] text-white text-xs uppercase tracking-editorial font-semibold rounded-sm transition-colors cursor-pointer shadow-xs"
+            >
+              <Sparkles className="w-4 h-4 text-[#D4AF37]" />
+              <span>Ask Our Instant FAQ Bot</span>
+            </button>
             <a
               href={BRAND_CONFIG.contact.whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-plum hover:bg-rosewood text-canvas text-xs uppercase tracking-editorial font-semibold rounded-sm transition-colors"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#372921] hover:bg-[#9E5430] text-[#F7F3EC] text-xs uppercase tracking-editorial font-semibold rounded-sm transition-colors"
             >
               <MessageCircle className="w-4 h-4 text-emerald-400" />
-              <span>Message Us on WhatsApp</span>
+              <span>Message on WhatsApp</span>
             </a>
           </div>
         </div>

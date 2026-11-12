@@ -14,6 +14,7 @@ import Preloader from '../ui/Preloader';
 import PageTransitionCurtain from '../ui/PageTransitionCurtain';
 import PWAInstallPrompt from '../ui/PWAInstallPrompt';
 import DPDPConsentBanner from '../ui/DPDPConsentBanner';
+import FAQConcierge from '../ui/FAQConcierge';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -45,6 +46,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
       <PWAInstallPrompt />
       <DPDPConsentBanner />
+      <FAQConcierge />
 
       {/* Floating Artisan WhatsApp Concierge */}
       <a

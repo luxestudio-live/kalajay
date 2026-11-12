@@ -174,6 +174,22 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.dispatchEvent(new CustomEvent('open-faq-concierge'));
+                    }
+                  }}
+                  className="hover:text-[#F7F3EC] transition-colors text-left flex items-center gap-1.5 cursor-pointer text-[#DED3C5]"
+                >
+                  <span>Instant FAQ Concierge</span>
+                  <span className="text-[9px] uppercase tracking-wider bg-[#D4AF37]/20 text-[#D4AF37] px-1.5 py-0.2 rounded-xs border border-[#D4AF37]/30 font-mono font-medium">
+                    Bot
+                  </span>
+                </button>
+              </li>
+              <li>
                 <Link href="/privacy" className="hover:text-[#F7F3EC] transition-colors">
                   Privacy Policy (DPDP 2023)
                 </Link>
