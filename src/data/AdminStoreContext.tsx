@@ -89,6 +89,9 @@ interface AdminStoreContextType {
     reason: StockAdjustment['reason'],
     notes: string
   ) => void;
+  createInventoryItem: (item: Omit<InventoryItem, 'id'>) => void;
+  updateInventoryItem: (id: string, updates: Partial<InventoryItem>) => void;
+  deleteInventoryItem: (id: string) => void;
 
   // Production & Work Orders (Bihar Hub)
   workOrders: WorkOrder[];
@@ -134,7 +137,7 @@ interface AdminStoreContextType {
 
 const AdminStoreContext = createContext<AdminStoreContextType | null>(null);
 
-const STORAGE_KEY = 'kalajay_admin_store_v2';
+const STORAGE_KEY = 'kalajay_admin_store_v3';
 
 export function AdminStoreProvider({ children }: { children: React.ReactNode }) {
   // 1. Core State
@@ -176,7 +179,14 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.roles) setRoles(parsed.roles);
-        if (parsed.users) setUsers(parsed.users);
+        if (parsed.users) {
+          const sanitized = parsed.users.map((u: AdminUser) =>
+            u.id === 'KJ-ADM-001'
+              ? { ...u, name: 'Soumya (Founder)', email: 'soumya@kalajay.in', roleName: 'Founder & Head of Maison', department: 'Founders Office & Creative Direction' }
+              : u
+          );
+          setUsers(sanitized);
+        }
         if (parsed.featuredConfig) setFeaturedConfig(parsed.featuredConfig);
         if (parsed.homepageSections) setHomepageSections(parsed.homepageSections);
         if (parsed.banners) setBanners(parsed.banners);
@@ -228,7 +238,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     const newLog: AuditLogItem = {
       id: `aud-${Date.now()}`,
       userId: users[0]?.id || 'KJ-ADM-001',
-      userName: users[0]?.name || 'Sonali (Principal Architect)',
+      userName: users[0]?.name || 'Soumya (Founder)',
       action,
       module,
       details,
@@ -505,6 +515,40 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     );
   };
 
+  const createInventoryItem = (itemData: Omit<InventoryItem, 'id'>) => {
+    const newItem: InventoryItem = {
+      ...itemData,
+      id: `inv-${Date.now()}`,
+    };
+    const next = [newItem, ...inventory];
+    setInventory(next);
+    saveState({ inventory: next });
+    logAction(
+      'CREATE_INVENTORY_ITEM',
+      'inventory',
+      `Registered new SKU: ${newItem.sku} (${newItem.name}) in ${newItem.location}`
+    );
+  };
+
+  const updateInventoryItem = (id: string, updates: Partial<InventoryItem>) => {
+    const next = inventory.map(item => (item.id === id ? { ...item, ...updates } : item));
+    setInventory(next);
+    saveState({ inventory: next });
+    logAction('UPDATE_INVENTORY_ITEM', 'inventory', `Updated inventory SKU specifications: ${id}`);
+  };
+
+  const deleteInventoryItem = (id: string) => {
+    const target = inventory.find(i => i.id === id);
+    const next = inventory.filter(item => item.id !== id);
+    setInventory(next);
+    saveState({ inventory: next });
+    logAction(
+      'DELETE_INVENTORY_ITEM',
+      'inventory',
+      `Archived inventory item: ${target?.sku || id} (${target?.name || ''})`
+    );
+  };
+
   // Work Orders (Atelier Production)
   const updateWorkOrderStage = (
     orderId: string,
@@ -718,6 +762,9 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
         inventory,
         stockAdjustments,
         adjustStock,
+        createInventoryItem,
+        updateInventoryItem,
+        deleteInventoryItem,
         workOrders,
         updateWorkOrderStage,
         createWorkOrder,

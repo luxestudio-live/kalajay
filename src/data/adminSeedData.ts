@@ -18,12 +18,12 @@ import { PRODUCTS, COLLECTIONS } from './catalogue';
 export const SEED_ADMIN_USERS: AdminUser[] = [
   {
     id: 'KJ-ADM-001',
-    name: 'Sonali (Principal Architect)',
-    email: 'sonali@kalajay.in',
+    name: 'Soumya (Founder)',
+    email: 'soumya@kalajay.in',
     phone: '+91 97405 40847',
     roleId: 'role-super-admin',
-    roleName: 'Super Admin',
-    department: 'Executive Operations',
+    roleName: 'Founder & Head of Maison',
+    department: 'Founders Office & Creative Direction',
     status: 'active',
     lastLogin: '2026-11-12T00:15:00Z',
     createdAt: '2026-09-01T00:00:00Z',
@@ -764,7 +764,7 @@ export const SEED_AUDIT_LOGS: AuditLogItem[] = [
   {
     id: 'aud-001',
     userId: 'KJ-ADM-001',
-    userName: 'Sonali (Principal Architect)',
+    userName: 'Soumya (Founder)',
     action: 'PUBLISH_HOMEPAGE_CMS',
     module: 'cms',
     details: 'Published visual section updates across Chapter 01 Hero and Chapter 04 Process Scroll.',
