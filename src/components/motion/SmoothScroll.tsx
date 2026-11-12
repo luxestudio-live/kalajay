@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, createContext, useContext, useRef } from 'react';
+import React, { useEffect, createContext, useContext, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
@@ -20,6 +20,7 @@ export const useSmoothScroll = () => useContext(SmoothScrollContext);
 
 export default function SmoothScroll({ children }: { children: React.ReactNode }) {
   const lenisRef = useRef<Lenis | null>(null);
+  const [lenisInstance, setLenisInstance] = useState<Lenis | null>(null);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -39,6 +40,10 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     });
 
     lenisRef.current = lenis;
+    setLenisInstance(lenis);
+    if (typeof window !== 'undefined') {
+      (window as unknown as { __lenis?: Lenis }).__lenis = lenis;
+    }
 
     // Sync Lenis with GSAP ScrollTrigger
     lenis.on('scroll', ScrollTrigger.update);
@@ -54,6 +59,10 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
       gsap.ticker.remove(updateTicker);
       lenis.destroy();
       lenisRef.current = null;
+      setLenisInstance(null);
+      if (typeof window !== 'undefined') {
+        delete (window as unknown as { __lenis?: Lenis }).__lenis;
+      }
     };
   }, []);
 
@@ -69,7 +78,7 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
   }, [pathname]);
 
   return (
-    <SmoothScrollContext.Provider value={{ lenis: lenisRef.current }}>
+    <SmoothScrollContext.Provider value={{ lenis: lenisInstance }}>
       {children}
     </SmoothScrollContext.Provider>
   );

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSmoothScroll } from '@/components/motion/SmoothScroll';
 import {
   ShieldCheck,
   Lock,
@@ -97,6 +98,40 @@ export default function DPDPConsentBanner() {
   const [conciergeConsent, setConciergeConsent] = useState(true);
   const [analyticsConsent, setAnalyticsConsent] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const { lenis } = useSmoothScroll();
+
+  // Scroll lock and Lenis pause when Preferences modal is open
+  useEffect(() => {
+    if (!showModal) return;
+
+    const originalOverflow = document.body.style.overflow;
+    const originalTouchAction = document.body.style.touchAction;
+
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+
+    lenis?.stop();
+    const winLenis = typeof window !== 'undefined'
+      ? (window as unknown as { __lenis?: { stop: () => void; start: () => void } }).__lenis
+      : undefined;
+    winLenis?.stop();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.touchAction = originalTouchAction;
+      window.removeEventListener('keydown', handleKeyDown);
+      lenis?.start();
+      winLenis?.start();
+    };
+  }, [showModal, lenis]);
 
   useEffect(() => {
     setMounted(true);
@@ -239,17 +274,25 @@ export default function DPDPConsentBanner() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="dpdp-modal-heading"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fade-in"
+          data-lenis-prevent="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowModal(false);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-xs animate-fade-in overflow-hidden"
         >
-          <div className="bg-[#FAF7F2] text-[#372921] w-full max-w-xl rounded-2xl border border-[#D4AF37]/40 shadow-2xl p-6 sm:p-8 relative max-h-[92vh] overflow-y-auto">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-4 pb-4 border-b border-[#DED3C5]">
-              <div className="space-y-1">
+          <div
+            data-lenis-prevent="true"
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#FAF7F2] text-[#372921] w-full max-w-xl max-h-[min(90vh,680px)] rounded-2xl border border-[#D4AF37]/40 shadow-2xl flex flex-col overflow-hidden relative"
+          >
+            {/* Sticky Header - never clipped, always pinned to top */}
+            <div className="flex items-start justify-between gap-3 p-4 sm:p-5 border-b border-[#DED3C5] bg-[#FAF7F2] shrink-0">
+              <div className="space-y-1 pr-2">
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#372921] text-[#FAF7F2] text-[10px] uppercase tracking-monumental font-semibold">
                   <ShieldCheck className="w-3 h-3 text-[#D4AF37]" />
                   <span>DPDP Act 2023 & Rules 2025</span>
                 </div>
-                <h2 id="dpdp-modal-heading" className="font-serif text-2xl sm:text-3xl text-[#372921]">
+                <h2 id="dpdp-modal-heading" className="font-serif text-xl sm:text-2xl text-[#372921] font-medium leading-tight">
                   {t.modalTitle}
                 </h2>
                 <p className="text-xs text-[#76695F] font-light leading-relaxed">
@@ -257,7 +300,7 @@ export default function DPDPConsentBanner() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
                   onClick={toggleLanguage}
@@ -269,7 +312,7 @@ export default function DPDPConsentBanner() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="p-1.5 text-[#76695F] hover:text-[#372921] cursor-pointer"
+                  className="p-1.5 text-[#76695F] hover:text-[#372921] hover:bg-black/5 rounded-full transition-colors cursor-pointer"
                   aria-label={t.close}
                 >
                   <X className="w-5 h-5" />
@@ -277,94 +320,100 @@ export default function DPDPConsentBanner() {
               </div>
             </div>
 
-            {/* Statutory Legal Badge */}
-            <div className="my-4 p-3 bg-[#F0EAE1] rounded-lg border border-[#DED3C5] text-[11px] text-[#503A2E] flex items-center gap-2">
-              <Lock className="w-3.5 h-3.5 text-[#9E5430] shrink-0" />
-              <span>{t.statutoryNotice}</span>
-            </div>
-
-            {/* Granular Purpose Toggles */}
-            <div className="space-y-4 my-5">
-              {/* 1. Essential / Legal Mandate (Locked) */}
-              <div className="p-4 bg-white rounded-xl border border-[#DED3C5] space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-serif text-base text-[#372921] font-medium">
-                    <FileText className="w-4 h-4 text-[#9E5430]" />
-                    <span>{t.essentialTitle}</span>
-                  </div>
-                  <span className="text-[10px] uppercase font-semibold tracking-wider bg-[#372921]/10 text-[#503A2E] px-2.5 py-0.5 rounded-full">
-                    {t.alwaysActive}
-                  </span>
-                </div>
-                <p className="text-xs text-[#76695F] leading-relaxed font-light">
-                  {t.essentialDesc}
-                </p>
+            {/* Scrollable Body - captures all wheel/touch interactions inside modal */}
+            <div
+              data-lenis-prevent="true"
+              className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4"
+            >
+              {/* Statutory Legal Badge */}
+              <div className="p-3 bg-[#F0EAE1] rounded-lg border border-[#DED3C5] text-[11px] text-[#503A2E] flex items-center gap-2">
+                <Lock className="w-3.5 h-3.5 text-[#9E5430] shrink-0" />
+                <span>{t.statutoryNotice}</span>
               </div>
 
-              {/* 2. WhatsApp Concierge & Order Transit */}
-              <div className="p-4 bg-white rounded-xl border border-[#DED3C5] space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-serif text-base text-[#372921] font-medium">
-                    <MessageCircle className="w-4 h-4 text-emerald-700" />
-                    <span>{t.conciergeTitle}</span>
+              {/* Granular Purpose Toggles */}
+              <div className="space-y-3">
+                {/* 1. Essential / Legal Mandate (Locked) */}
+                <div className="p-3.5 sm:p-4 bg-white rounded-xl border border-[#DED3C5] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-serif text-base text-[#372921] font-medium">
+                      <FileText className="w-4 h-4 text-[#9E5430]" />
+                      <span>{t.essentialTitle}</span>
+                    </div>
+                    <span className="text-[10px] uppercase font-semibold tracking-wider bg-[#372921]/10 text-[#503A2E] px-2.5 py-0.5 rounded-full">
+                      {t.alwaysActive}
+                    </span>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={conciergeConsent}
-                      onChange={(e) => setConciergeConsent(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-10 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#9E5430]"></div>
-                  </label>
+                  <p className="text-xs text-[#76695F] leading-relaxed font-light">
+                    {t.essentialDesc}
+                  </p>
                 </div>
-                <p className="text-xs text-[#76695F] leading-relaxed font-light">
-                  {t.conciergeDesc}
-                </p>
+
+                {/* 2. WhatsApp Concierge & Order Transit */}
+                <div className="p-3.5 sm:p-4 bg-white rounded-xl border border-[#DED3C5] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-serif text-base text-[#372921] font-medium">
+                      <MessageCircle className="w-4 h-4 text-emerald-700" />
+                      <span>{t.conciergeTitle}</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={conciergeConsent}
+                        onChange={(e) => setConciergeConsent(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-10 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#9E5430]"></div>
+                    </label>
+                  </div>
+                  <p className="text-xs text-[#76695F] leading-relaxed font-light">
+                    {t.conciergeDesc}
+                  </p>
+                </div>
+
+                {/* 3. Anonymous Atelier Analytics */}
+                <div className="p-3.5 sm:p-4 bg-white rounded-xl border border-[#DED3C5] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-serif text-base text-[#372921] font-medium">
+                      <BarChart3 className="w-4 h-4 text-[#D4AF37]" />
+                      <span>{t.analyticsTitle}</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={analyticsConsent}
+                        onChange={(e) => setAnalyticsConsent(e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-10 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#9E5430]"></div>
+                    </label>
+                  </div>
+                  <p className="text-xs text-[#76695F] leading-relaxed font-light">
+                    {t.analyticsDesc}
+                  </p>
+                </div>
               </div>
 
-              {/* 3. Anonymous Atelier Analytics */}
-              <div className="p-4 bg-white rounded-xl border border-[#DED3C5] space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-serif text-base text-[#372921] font-medium">
-                    <BarChart3 className="w-4 h-4 text-[#D4AF37]" />
-                    <span>{t.analyticsTitle}</span>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={analyticsConsent}
-                      onChange={(e) => setAnalyticsConsent(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-10 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#9E5430]"></div>
-                  </label>
-                </div>
-                <p className="text-xs text-[#76695F] leading-relaxed font-light">
-                  {t.analyticsDesc}
-                </p>
+              {/* DPO SLA Footer Note inside scroll area */}
+              <div className="pt-2 text-[11px] text-[#76695F] flex items-center justify-between flex-wrap gap-2">
+                <span>{t.dpoContact}</span>
+                <Link
+                  href="/privacy"
+                  onClick={() => setShowModal(false)}
+                  className="text-[#9E5430] hover:underline font-medium inline-flex items-center gap-1"
+                >
+                  <span>{t.privacyLink}</span>
+                  <ExternalLink className="w-3 h-3" />
+                </Link>
               </div>
             </div>
 
-            {/* DPO SLA Footer */}
-            <div className="pt-3 pb-2 text-[11px] text-[#76695F] border-t border-[#DED3C5] flex items-center justify-between flex-wrap gap-2">
-              <span>{t.dpoContact}</span>
-              <Link
-                href="/privacy"
-                onClick={() => setShowModal(false)}
-                className="text-[#9E5430] hover:underline font-medium inline-flex items-center gap-1"
-              >
-                <span>{t.privacyLink}</span>
-                <ExternalLink className="w-3 h-3" />
-              </Link>
-            </div>
-
-            {/* Action Bar */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#DED3C5]">
+            {/* Sticky Action Footer - always visible */}
+            <div className="flex items-center justify-end gap-3 p-4 sm:p-5 border-t border-[#DED3C5] bg-[#FAF7F2] shrink-0">
               <button
                 type="button"
                 onClick={() => saveConsent(true, false)}
-                className="px-4 py-2.5 text-xs text-[#503A2E] hover:text-[#372921] font-medium transition-colors cursor-pointer"
+                className="px-4 py-2 text-xs text-[#503A2E] hover:text-[#372921] font-medium transition-colors cursor-pointer"
               >
                 {t.essentialOnly}
               </button>
