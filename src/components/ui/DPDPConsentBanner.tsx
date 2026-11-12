@@ -28,13 +28,13 @@ const STORAGE_KEY = 'kalajay_dpdp_consent_v1';
 
 const STRINGS = {
   en: {
-    bannerTitle: 'Patron Privacy & Statutory DPDP Notice',
+    bannerTitle: 'Patron Privacy & DPDP Notice',
     bannerText:
-      'In compliance with India’s Digital Personal Data Protection Act (DPDP Act, 2023) and DPDP Rules (2025), Kalajay respects your sovereignty over your personal data. We process only minimal data strictly required for handcrafting, tax invoicing, and artisan transit.',
-    acceptAll: 'Accept All & Honour Craft',
-    customize: 'Manage Consent Preferences',
+      'In compliance with India’s DPDP Act (2023), we process minimal data strictly required for crafting, tax invoicing, and transit.',
+    acceptAll: 'Accept All',
+    customize: 'Preferences',
     essentialOnly: 'Essential Only',
-    privacyLink: 'Read Full DPDP Policy',
+    privacyLink: 'Policy',
     modalTitle: 'Data Principal Consent Preferences',
     modalSubtitle:
       'Manage how Kalajay Craft House processes your personal information. You may modify or withdraw your affirmative consent at any time.',
@@ -57,13 +57,13 @@ const STRINGS = {
     dpoContact: 'Grievance Officer: privacy@kalajay.in · SLA: 48h acknowledgment',
   },
   hi: {
-    bannerTitle: 'संरक्षक गोपनीयता एवं सांविधिक DPDP सूचना',
+    bannerTitle: 'संरक्षक गोपनीयता (DPDP सूचना)',
     bannerText:
-      'भारत के डिजिटल व्यक्तिगत डेटा संरक्षण अधिनियम (DPDP अधिनियम, 2023) और DPDP नियम (2025) के अनुपालन में, कलाजय आपके व्यक्तिगत डेटा की संप्रभुता का सम्मान करता है। हम केवल हस्तशिल्प, कर चालान और कारीगर पारगमन के लिए आवश्यक न्यूनतम डेटा ही संसाधित करते हैं।',
-    acceptAll: 'सभी स्वीकार करें',
-    customize: 'वरीयताएँ प्रबंधित करें',
+      'DPDP अधिनियम (2023) के तहत हम केवल ऑर्डर, बिलिंग और डिलीवरी हेतु आवश्यक न्यूनतम डेटा संसाधित करते हैं।',
+    acceptAll: 'सभी स्वीकारें',
+    customize: 'वरीयताएँ',
     essentialOnly: 'केवल आवश्यक',
-    privacyLink: 'पूर्ण DPDP नीति पढ़ें',
+    privacyLink: 'नीति',
     modalTitle: 'डेटा स्वामी सहमति प्राथमिकताएँ',
     modalSubtitle:
       'कलाजय क्राफ्ट हाउस आपके व्यक्तिगत विवरण को कैसे संसाधित करता है, इसे प्रबंधित करें। आप किसी भी समय अपनी सहमति संशोधित या वापस ले सकते हैं।',
@@ -169,26 +169,26 @@ export default function DPDPConsentBanner() {
         </div>
       )}
 
-      {/* Floating Bottom Statutory Banner */}
+      {/* Floating Bottom Statutory Banner (Refined, Compact Luxury Badge) */}
       {showBanner && !showModal && (
         <aside
           role="region"
           aria-label="Data Privacy and DPDP Consent Banner"
-          className="fixed bottom-4 sm:bottom-6 left-4 right-4 sm:left-6 sm:right-auto sm:max-w-xl z-40 bg-[#372921]/95 text-[#F7F3EC] backdrop-blur-md p-5 sm:p-6 rounded-2xl border border-[#D4AF37]/35 shadow-[0_20px_50px_rgba(0,0,0,0.35)] animate-fade-in"
+          className="fixed bottom-3 sm:bottom-6 left-3 sm:left-6 z-40 w-auto max-w-[calc(100vw-84px)] sm:max-w-[380px] bg-[#372921]/95 text-[#F7F3EC] backdrop-blur-md p-3 sm:p-3.5 rounded-xl border border-[#D4AF37]/35 shadow-[0_12px_36px_rgba(0,0,0,0.35)] animate-fade-in"
         >
-          <div className="flex items-start justify-between gap-3 mb-2">
-            <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center text-[#D4AF37]">
-                <ShieldCheck className="w-3.5 h-3.5" />
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="w-4.5 h-4.5 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center text-[#D4AF37] shrink-0">
+                <ShieldCheck className="w-2.5 h-2.5" />
               </span>
-              <h2 className="font-serif text-sm sm:text-base text-[#F7F3EC] font-normal tracking-wide">
+              <h2 className="font-serif text-[11.5px] sm:text-xs text-[#F7F3EC] font-normal tracking-wide leading-none truncate">
                 {t.bannerTitle}
               </h2>
             </div>
             <button
               type="button"
               onClick={toggleLanguage}
-              className="text-[10px] text-[#D4AF37] hover:text-[#F7F3EC] flex items-center gap-1 border border-[#D4AF37]/30 px-2 py-0.5 rounded-full transition-colors cursor-pointer"
+              className="text-[9px] text-[#D4AF37] hover:text-[#F7F3EC] flex items-center gap-1 border border-[#D4AF37]/30 px-1.5 py-0.5 rounded-full transition-colors cursor-pointer shrink-0"
               title="Toggle English / Hindi"
             >
               <Languages className="w-2.5 h-2.5" />
@@ -196,36 +196,36 @@ export default function DPDPConsentBanner() {
             </button>
           </div>
 
-          <p className="text-xs text-[#DED3C5] font-light leading-relaxed mb-4">
+          <p className="text-[10.5px] sm:text-[11px] text-[#DED3C5] font-light leading-snug mb-2">
             {t.bannerText}{' '}
             <Link
               href="/privacy"
-              className="text-[#D4AF37] hover:underline font-normal inline-flex items-center gap-0.5"
+              className="text-[#D4AF37] hover:underline font-normal inline-flex items-center gap-0.5 whitespace-nowrap"
             >
               <span>{t.privacyLink}</span>
-              <ExternalLink className="w-2.5 h-2.5 inline" />
+              <ExternalLink className="w-2 h-2 inline" />
             </Link>
           </p>
 
-          <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[#DED3C5]/15 text-xs">
+          <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-[#DED3C5]/15 text-xs">
             <button
               type="button"
               onClick={() => saveConsent(false, true)}
-              className="px-4 py-2 bg-[#D4AF37] hover:bg-[#C29D26] text-[#372921] font-semibold rounded-full uppercase tracking-refined text-[11px] transition-all shadow-xs cursor-pointer"
+              className="px-2.5 py-1 bg-[#D4AF37] hover:bg-[#C29D26] text-[#372921] font-semibold rounded-full uppercase tracking-wider text-[9px] transition-all shadow-xs cursor-pointer whitespace-nowrap"
             >
               {t.acceptAll}
             </button>
             <button
               type="button"
               onClick={() => saveConsent(true, false)}
-              className="px-3.5 py-2 bg-transparent hover:bg-white/10 text-[#F7F3EC] border border-[#DED3C5]/30 rounded-full uppercase tracking-refined text-[11px] transition-all cursor-pointer"
+              className="px-2 py-1 bg-transparent hover:bg-white/10 text-[#F7F3EC] border border-[#DED3C5]/30 rounded-full uppercase tracking-wider text-[9px] transition-all cursor-pointer whitespace-nowrap"
             >
               {t.essentialOnly}
             </button>
             <button
               type="button"
               onClick={() => setShowModal(true)}
-              className="px-3 py-2 text-[#DED3C5] hover:text-[#F7F3EC] underline underline-offset-4 text-[11px] transition-colors cursor-pointer ml-auto"
+              className="px-1.5 py-0.5 text-[#DED3C5] hover:text-[#F7F3EC] underline underline-offset-2 text-[9px] transition-colors cursor-pointer ml-auto whitespace-nowrap"
             >
               {t.customize}
             </button>
