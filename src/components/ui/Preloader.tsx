@@ -4,34 +4,35 @@ import React, { useEffect, useState } from 'react';
 import { BIG_ELEPHANT_SRC, SMALL_ELEPHANT_SRC, FLOWER_SRC } from './loaderAssets';
 
 export default function Preloader() {
-  const [shouldShow, setShouldShow] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
 
   useEffect(() => {
     try {
       const seen = sessionStorage.getItem('kalajay_preloader_seen');
-      if (!seen) {
-        setShouldShow(true);
-
-        // Preloader runs for exactly 2.5s as requested by user,
-        // then smoothly fades out
-        const timer1 = setTimeout(() => {
-          setFadeOut(true);
-        }, 2500);
-
-        // Remove from DOM at 3.1s (after 600ms curtain transition)
-        const timer2 = setTimeout(() => {
-          sessionStorage.setItem('kalajay_preloader_seen', 'true');
-          setShouldShow(false);
-        }, 3100);
-
-        return () => {
-          clearTimeout(timer1);
-          clearTimeout(timer2);
-        };
+      if (seen) {
+        setDismissed(true);
+        return;
       }
+
+      // Preloader runs for exactly 2.5s as requested by user,
+      // then smoothly fades out
+      const timer1 = setTimeout(() => {
+        setFadeOut(true);
+      }, 2500);
+
+      // Remove from DOM at 3.1s (after 600ms curtain transition)
+      const timer2 = setTimeout(() => {
+        sessionStorage.setItem('kalajay_preloader_seen', 'true');
+        setDismissed(true);
+      }, 3100);
+
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+      };
     } catch {
-      // Storage restricted contexts fallback
+      setDismissed(true);
     }
   }, []);
 
@@ -40,13 +41,14 @@ export default function Preloader() {
       sessionStorage.setItem('kalajay_preloader_seen', 'true');
     } catch {}
     setFadeOut(true);
-    setTimeout(() => setShouldShow(false), 250);
+    setTimeout(() => setDismissed(true), 250);
   };
 
-  if (!shouldShow) return null;
+  if (dismissed) return null;
 
   return (
     <div
+      id="kalajay-preloader"
       className={`fixed inset-0 z-50 bg-[#F7F3EC] flex flex-col items-center justify-center select-none ${
         fadeOut ? 'opacity-0 -translate-y-4 pointer-events-none' : 'opacity-100 translate-y-0'
       }`}

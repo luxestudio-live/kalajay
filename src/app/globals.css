@@ -4,6 +4,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Zero-FOUC Preloader veil: hides preloader immediately if already seen */
+html.preloader-skipped #kalajay-preloader {
+  display: none !important;
+}
+
 :root {
   --font-serif: 'Cormorant Garamond', Georgia, serif;
   --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;

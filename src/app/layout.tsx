@@ -104,6 +104,19 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="bg-canvas text-ink antialiased">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                if (sessionStorage.getItem('kalajay_preloader_seen') || window.location.pathname.startsWith('/admin')) {
+                  document.documentElement.classList.add('preloader-skipped');
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-screen flex flex-col bg-canvas text-ink selection:bg-champagne selection:text-plum">
         <AuthProvider>
           <CartProvider>
