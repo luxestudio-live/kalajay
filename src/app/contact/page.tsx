@@ -170,8 +170,9 @@ export default function ContactPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-ink-light font-medium mb-1">Your Full Name</label>
+                    <label htmlFor="contact-name" className="block text-ink-light font-medium mb-1">Your Full Name</label>
                     <input
+                      id="contact-name"
                       type="text"
                       required
                       placeholder="e.g. Radhika Kapoor"
@@ -181,8 +182,9 @@ export default function ContactPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-ink-light font-medium mb-1">Email Address</label>
+                    <label htmlFor="contact-email" className="block text-ink-light font-medium mb-1">Email Address</label>
                     <input
+                      id="contact-email"
                       type="email"
                       required
                       placeholder="radhika@example.com"
@@ -195,8 +197,9 @@ export default function ContactPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-ink-light font-medium mb-1">Phone Number (Optional)</label>
+                    <label htmlFor="contact-phone" className="block text-ink-light font-medium mb-1">Phone Number (Optional)</label>
                     <input
+                      id="contact-phone"
                       type="tel"
                       placeholder="+91 98765 43210"
                       value={phone}
@@ -205,8 +208,9 @@ export default function ContactPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-ink-light font-medium mb-1">Subject</label>
+                    <label htmlFor="contact-subject" className="block text-ink-light font-medium mb-1">Subject</label>
                     <select
+                      id="contact-subject"
                       value={subject}
                       onChange={e => setSubject(e.target.value)}
                       className="w-full px-3.5 py-3 bg-canvas border border-border-medium rounded-sm text-plum text-xs focus:outline-none focus:border-rosewood cursor-pointer"
@@ -222,8 +226,9 @@ export default function ContactPage() {
                 </div>
 
                 <div>
-                  <label className="block text-ink-light font-medium mb-1">How can we help you?</label>
+                  <label htmlFor="contact-message" className="block text-ink-light font-medium mb-1">How can we help you?</label>
                   <textarea
+                    id="contact-message"
                     required
                     rows={5}
                     placeholder="Tell us about the piece you have in mind, target dates, or your inquiry details..."

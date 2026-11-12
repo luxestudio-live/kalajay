@@ -980,23 +980,27 @@ export default function FinanceView() {
                         </span>
                       </td>
 
-                      <td className="py-3 px-4 text-right space-x-1 whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => openEditSlabModal(slab)}
-                          className="p-1.5 rounded-lg text-[#76695F] hover:text-[#9E5430] hover:bg-[#F7F3EC] transition-colors cursor-pointer"
-                          title="Edit Tax Slab"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteSlab(slab)}
-                          className="p-1.5 rounded-lg text-[#76695F] hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
-                          title="Archive/Delete Tax Slab"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                      <td className="py-3 px-4 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1 justify-end">
+                          <button
+                            type="button"
+                            onClick={() => openEditSlabModal(slab)}
+                            className="p-1.5 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-[#76695F] hover:text-[#9E5430] hover:bg-[#F7F3EC] transition-colors cursor-pointer"
+                            title="Edit Tax Slab"
+                            aria-label={`Edit tax slab ${slab.hsnCode}`}
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteSlab(slab)}
+                            className="p-1.5 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-[#76695F] hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="Archive/Delete Tax Slab"
+                            aria-label={`Archive tax slab ${slab.hsnCode}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

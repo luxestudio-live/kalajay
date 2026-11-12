@@ -52,11 +52,12 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   }).slice(0, 12);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true" aria-label="Search Collection">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-[#372921]/70 backdrop-blur-md transition-opacity"
         onClick={onClose}
+        aria-hidden="true"
       />
 
       <div className="min-h-screen px-4 text-center sm:p-0 flex items-start justify-center pt-16 sm:pt-24 relative z-10">
@@ -68,6 +69,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
               <input
                 ref={inputRef}
                 type="text"
+                aria-label="Search by piece name, bead type, crystal, category, or code"
                 placeholder="Search by piece name, bead type, crystal, category, or code (e.g. 'KJ-ORG-101')..."
                 value={query}
                 onChange={e => setQuery(e.target.value)}
@@ -77,7 +79,8 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                 <button
                   type="button"
                   onClick={() => setQuery('')}
-                  className="absolute right-3 p-1 text-ink-faint hover:text-ink"
+                  aria-label="Clear search query"
+                  className="absolute right-3 p-1 min-w-[32px] min-h-[32px] flex items-center justify-center text-ink-faint hover:text-ink cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>

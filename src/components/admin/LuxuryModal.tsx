@@ -95,7 +95,12 @@ export default function LuxuryModal({
   const IconComponent = iconConfig.icon;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#372921]/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="luxury-modal-title"
+      className="fixed inset-0 z-50 bg-[#372921]/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fade-in"
+    >
       <div
         className={`bg-white rounded-2xl border border-[#DED3C5] shadow-2xl w-full ${maxWidthClasses} overflow-hidden my-8 animate-scale-in`}
         onClick={e => e.stopPropagation()}
@@ -109,7 +114,7 @@ export default function LuxuryModal({
               <IconComponent className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <h3 className="font-serif text-base font-bold text-[#372921] truncate">
+              <h3 id="luxury-modal-title" className="font-serif text-base font-bold text-[#372921] truncate">
                 {title}
               </h3>
               {subtitle && (
@@ -122,7 +127,8 @@ export default function LuxuryModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-[#76695F] hover:text-[#372921] hover:bg-white transition-colors cursor-pointer shrink-0 ml-2"
+            aria-label="Close dialog"
+            className="p-1.5 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-[#76695F] hover:text-[#372921] hover:bg-white transition-colors cursor-pointer shrink-0 ml-2"
           >
             <X className="w-4 h-4" />
           </button>
@@ -141,7 +147,7 @@ export default function LuxuryModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-full border border-[#DED3C5] bg-white hover:bg-[#F7F3EC] text-[#76695F] hover:text-[#372921] text-xs font-semibold transition-colors cursor-pointer"
+              className="px-4 py-2 min-h-[36px] flex items-center justify-center rounded-full border border-[#DED3C5] bg-white hover:bg-[#F7F3EC] text-[#76695F] hover:text-[#372921] text-xs font-semibold transition-colors cursor-pointer"
             >
               {cancelLabel}
             </button>
@@ -154,7 +160,7 @@ export default function LuxuryModal({
                 if (onConfirm) onConfirm();
                 onClose();
               }}
-              className={`px-5 py-2 rounded-full text-white text-xs font-semibold transition-colors shadow-sm cursor-pointer ${
+              className={`px-5 py-2 min-h-[36px] flex items-center justify-center rounded-full text-white text-xs font-semibold transition-colors shadow-sm cursor-pointer ${
                 isDestructive
                   ? 'bg-rose-700 hover:bg-rose-800'
                   : 'bg-[#9E5430] hover:bg-[#874427]'

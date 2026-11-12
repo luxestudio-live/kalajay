@@ -1014,12 +1014,13 @@ export default function CmsView() {
                   <span className="text-[11px] text-[#76695F]">
                     CTA: <strong>{banner.ctaText}</strong> → {banner.ctaUrl}
                   </span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => handleOpenEditBanner(banner)}
-                      className="p-1.5 rounded-lg hover:bg-[#FAF8F5] text-[#76695F] hover:text-[#9E5430] cursor-pointer"
+                      className="p-1.5 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg hover:bg-[#FAF8F5] text-[#76695F] hover:text-[#9E5430] cursor-pointer"
                       title="Edit Banner"
+                      aria-label={`Edit banner ${banner.title}`}
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
@@ -1040,8 +1041,9 @@ export default function CmsView() {
                           },
                         });
                       }}
-                      className="p-1.5 rounded-lg hover:bg-rose-50 text-[#76695F] hover:text-rose-600 cursor-pointer"
+                      className="p-1.5 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg hover:bg-rose-50 text-[#76695F] hover:text-rose-600 cursor-pointer"
                       title="Delete Banner"
+                      aria-label={`Delete banner ${banner.title}`}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

@@ -865,8 +865,9 @@ export default function ProductionView() {
                                   <button
                                     type="button"
                                     onClick={() => handleAdvanceNextStage(wo)}
-                                    className="p-1 rounded-lg bg-[#FAF8F5] border border-[#DED3C5] hover:bg-[#9E5430] hover:text-white text-[#76695F] transition-colors cursor-pointer"
+                                    className="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center rounded-lg bg-[#FAF8F5] border border-[#DED3C5] hover:bg-[#9E5430] hover:text-white text-[#76695F] transition-colors cursor-pointer"
                                     title="Advance to next production stage"
+                                    aria-label={`Advance work order ${wo.id} to next stage`}
                                   >
                                     <ChevronRight className="w-4 h-4" />
                                   </button>
@@ -1473,8 +1474,9 @@ export default function ProductionView() {
                                 type="button"
                                 disabled={idx === 0}
                                 onClick={() => handleMoveStage(idx, 'up')}
-                                className="p-0.5 rounded text-[#76695F] hover:text-[#372921] hover:bg-[#F0E9DF] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                                className="p-1 rounded text-[#76695F] hover:text-[#372921] hover:bg-[#F0E9DF] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed min-w-[24px] min-h-[24px] flex items-center justify-center"
                                 title="Move Stage Up"
+                                aria-label={`Move ${st.label} up`}
                               >
                                 <ArrowUp className="w-3 h-3" />
                               </button>
@@ -1482,8 +1484,9 @@ export default function ProductionView() {
                                 type="button"
                                 disabled={idx === stages.length - 1}
                                 onClick={() => handleMoveStage(idx, 'down')}
-                                className="p-0.5 rounded text-[#76695F] hover:text-[#372921] hover:bg-[#F0E9DF] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                                className="p-1 rounded text-[#76695F] hover:text-[#372921] hover:bg-[#F0E9DF] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed min-w-[24px] min-h-[24px] flex items-center justify-center"
                                 title="Move Stage Down"
+                                aria-label={`Move ${st.label} down`}
                               >
                                 <ArrowDown className="w-3 h-3" />
                               </button>
@@ -1542,23 +1545,27 @@ export default function ProductionView() {
                           </span>
                         </td>
 
-                        <td className="py-3 px-4 text-right space-x-1 whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => openEditStageModal(st)}
-                            className="p-1.5 rounded-lg text-[#76695F] hover:text-[#9E5430] hover:bg-[#F7F3EC] transition-colors cursor-pointer"
-                            title="Edit Stage"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteStage(st)}
-                            className="p-1.5 rounded-lg text-[#76695F] hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
-                            title="Delete Stage"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                          <div className="inline-flex items-center gap-1 justify-end">
+                            <button
+                              type="button"
+                              onClick={() => openEditStageModal(st)}
+                              className="p-1.5 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-[#76695F] hover:text-[#9E5430] hover:bg-[#F7F3EC] transition-colors cursor-pointer"
+                              title="Edit Stage"
+                              aria-label={`Edit ${st.label}`}
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteStage(st)}
+                              className="p-1.5 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-[#76695F] hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
+                              title="Delete Stage"
+                              aria-label={`Delete ${st.label}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );

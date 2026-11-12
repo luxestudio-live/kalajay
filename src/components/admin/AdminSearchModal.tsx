@@ -92,11 +92,12 @@ export default function AdminSearchModal({ isOpen, onClose }: AdminSearchModalPr
     matchedUsers.length > 0;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true" aria-label="Global Admin Quick Search">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
         onClick={onClose}
+        aria-hidden="true"
       />
 
       <div className="min-h-full flex items-start justify-center p-4 sm:p-6 sm:pt-16">
@@ -107,6 +108,7 @@ export default function AdminSearchModal({ isOpen, onClose }: AdminSearchModalPr
             <input
               ref={inputRef}
               type="text"
+              aria-label="Search products by SKU, orders, work orders, staff, sections"
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search products by SKU, orders, work orders, staff, sections..."
@@ -116,7 +118,8 @@ export default function AdminSearchModal({ isOpen, onClose }: AdminSearchModalPr
               <button
                 type="button"
                 onClick={() => setQuery('')}
-                className="p-1 text-[#76695F] hover:text-[#372921]"
+                aria-label="Clear search query"
+                className="p-1 min-w-[32px] min-h-[32px] flex items-center justify-center text-[#76695F] hover:text-[#372921] cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>

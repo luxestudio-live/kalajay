@@ -42,6 +42,7 @@ export default function LoginClient() {
   const [resendTimer, setResendTimer] = useState(30);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [infoMsg, setInfoMsg] = useState('');
 
   // Email form state
   const [email, setEmail] = useState('');
@@ -340,11 +341,17 @@ export default function LoginClient() {
                 </button>
               </div>
 
-              {/* Error Notice */}
+              {/* Error / Info Notice */}
               {errorMsg && (
                 <div className="mt-4 p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs flex items-center gap-2 animate-fade-in">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-600 shrink-0" />
                   <span>{errorMsg}</span>
+                </div>
+              )}
+              {infoMsg && (
+                <div className="mt-4 p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2 animate-fade-in">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 shrink-0" />
+                  <span>{infoMsg}</span>
                 </div>
               )}
 
@@ -354,7 +361,7 @@ export default function LoginClient() {
                   {otpStep === 'phone' ? (
                     <form onSubmit={handleSendOtp} className="space-y-4 sm:space-y-5">
                       <div>
-                        <label className="text-xs uppercase tracking-refined font-semibold text-ink block mb-2">
+                        <label htmlFor="login-phone-number" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-2">
                           Your Mobile Number
                         </label>
                         <div className="flex items-center rounded-xl sm:rounded-2xl border border-border-medium bg-canvas focus-within:border-gold focus-within:ring-2 focus-within:ring-gold/20 transition-all overflow-hidden shadow-2xs">
@@ -363,6 +370,7 @@ export default function LoginClient() {
                             <span>+91</span>
                           </div>
                           <input
+                            id="login-phone-number"
                             type="tel"
                             inputMode="numeric"
                             autoComplete="tel-national"
@@ -460,6 +468,7 @@ export default function LoginClient() {
                                 type="text"
                                 inputMode="numeric"
                                 maxLength={1}
+                                aria-label={`Passcode digit ${idx + 1} of 6`}
                                 value={digit}
                                 onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
                                 onKeyDown={(e) => handleOtpKeyDown(idx, e)}
@@ -507,12 +516,13 @@ export default function LoginClient() {
               {authMethod === 'email' && (
                 <form onSubmit={handleEmailLogin} className="mt-5 sm:mt-6 space-y-4">
                   <div>
-                    <label className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
+                    <label htmlFor="login-email-input" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
                       Email Address
                     </label>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-ink-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
+                        id="login-email-input"
                         type="email"
                         required
                         inputMode="email"
@@ -527,12 +537,12 @@ export default function LoginClient() {
 
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-xs uppercase tracking-refined font-semibold text-ink">
+                      <label htmlFor="login-password-input" className="text-xs uppercase tracking-refined font-semibold text-ink">
                         Password
                       </label>
                       <button
                         type="button"
-                        onClick={() => alert('Password reset instructions sent to your email.')}
+                        onClick={() => setInfoMsg('Password reset instructions sent to your registered email.')}
                         className="text-[11px] text-gold-dark hover:underline cursor-pointer font-medium"
                       >
                         Forgot?
@@ -541,6 +551,7 @@ export default function LoginClient() {
                     <div className="relative">
                       <Lock className="w-4 h-4 text-ink-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
+                        id="login-password-input"
                         type={showPassword ? 'text' : 'password'}
                         required
                         autoComplete="current-password"
@@ -552,7 +563,8 @@ export default function LoginClient() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink min-w-[28px] min-h-[28px] flex items-center justify-center cursor-pointer"
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>

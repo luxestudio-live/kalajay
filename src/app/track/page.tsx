@@ -166,9 +166,12 @@ export default function TrackOrderPage() {
           <div className="mt-8 max-w-xl mx-auto">
             <form onSubmit={handleSearch} className="flex flex-col sm:flex-row items-center gap-3">
               <div className="relative w-full">
+                <label htmlFor="track-order-input" className="sr-only">Order Reference or Phone Number</label>
                 <Search className="w-4 h-4 text-ink-light absolute left-4 top-1/2 -translate-y-1/2" />
                 <input
+                  id="track-order-input"
                   type="text"
+                  aria-label="Order Reference or Phone Number"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Enter Order Reference (e.g. KJ-8924) or Phone"

@@ -108,8 +108,10 @@ export default function CollectionDetailClient({ slug: propSlug }: CollectionDet
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-ink-light">Sort by:</span>
+            <label htmlFor="collection-sort" className="text-ink-light cursor-pointer">Sort by:</label>
             <select
+              id="collection-sort"
+              aria-label="Sort collection pieces"
               value={sortOrder}
               onChange={e => setSortOrder(e.target.value)}
               className="bg-canvas border border-border-medium px-3 py-1.5 rounded-sm text-xs text-plum focus:outline-none focus:border-rosewood cursor-pointer"

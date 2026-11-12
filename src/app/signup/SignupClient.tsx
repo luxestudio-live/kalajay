@@ -280,12 +280,13 @@ export default function SignupClient() {
               {step === 'details' ? (
                 <form onSubmit={handleDetailsSubmit} className="mt-5 sm:mt-6 space-y-3.5 sm:space-y-4">
                   <div>
-                    <label className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
+                    <label htmlFor="signup-full-name" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
                       Full Legal Name *
                     </label>
                     <div className="relative">
                       <UserIcon className="w-4 h-4 text-ink-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
+                        id="signup-full-name"
                         type="text"
                         required
                         autoComplete="name"
@@ -299,7 +300,7 @@ export default function SignupClient() {
                   </div>
 
                   <div>
-                    <label className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
+                    <label htmlFor="signup-mobile-phone" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
                       Mobile Number (For Instant Passcode) *
                     </label>
                     <div className="flex items-center rounded-xl sm:rounded-2xl border border-border-medium bg-canvas focus-within:border-gold focus-within:ring-2 focus-within:ring-gold/20 transition-all overflow-hidden shadow-2xs">
@@ -308,6 +309,7 @@ export default function SignupClient() {
                         <span>+91</span>
                       </div>
                       <input
+                        id="signup-mobile-phone"
                         type="tel"
                         required
                         inputMode="numeric"
@@ -324,12 +326,13 @@ export default function SignupClient() {
                   </div>
 
                   <div>
-                    <label className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
+                    <label htmlFor="signup-email-addr" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
                       Email Address *
                     </label>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-ink-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
+                        id="signup-email-addr"
                         type="email"
                         required
                         inputMode="email"
@@ -344,7 +347,7 @@ export default function SignupClient() {
 
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-xs uppercase tracking-refined font-semibold text-ink">
+                      <label htmlFor="signup-bday" className="text-xs uppercase tracking-refined font-semibold text-ink">
                         Birthday (Optional)
                       </label>
                       <span className="text-[11px] text-gold-dark font-medium">For surprise birthday gift</span>
@@ -352,6 +355,7 @@ export default function SignupClient() {
                     <div className="relative">
                       <Calendar className="w-4 h-4 text-ink-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
+                        id="signup-bday"
                         type="text"
                         placeholder="DD / MM (e.g. 14 November)"
                         value={formData.birthday}
@@ -439,6 +443,7 @@ export default function SignupClient() {
                             type="text"
                             inputMode="numeric"
                             maxLength={1}
+                            aria-label={`Passcode digit ${idx + 1} of 6`}
                             value={digit}
                             onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
                             onKeyDown={(e) => handleOtpKeyDown(idx, e)}

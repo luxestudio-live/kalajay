@@ -188,8 +188,9 @@ export default function CartPage() {
 
               {/* Complimentary Gifting Card Option */}
               <div className="p-6 bg-canvas-subtle rounded-sm border border-border-subtle space-y-3">
-                <label className="flex items-center gap-3 cursor-pointer">
+                <label htmlFor="cart-gift-toggle" className="flex items-center gap-3 cursor-pointer">
                   <input
+                    id="cart-gift-toggle"
                     type="checkbox"
                     checked={isGift}
                     onChange={e => setIsGift(e.target.checked)}
@@ -203,10 +204,11 @@ export default function CartPage() {
 
                 {isGift && (
                   <div className="pt-2 animate-fade-in">
-                    <label className="text-[11px] text-ink-light block mb-1">
+                    <label htmlFor="cart-gift-note" className="text-[11px] text-ink-light block mb-1">
                       Recipient Name & Handwritten Message:
                     </label>
                     <textarea
+                      id="cart-gift-note"
                       rows={3}
                       placeholder="e.g. &apos;Happy Birthday Tara! May this handcrafted jewellery box hold all your sweetest memories. With love, Priya&apos;"
                       value={giftNote}
@@ -219,10 +221,11 @@ export default function CartPage() {
 
               {/* Order Notes for Maker */}
               <div className="p-6 bg-canvas-subtle rounded-sm border border-border-subtle space-y-2">
-                <label className="text-xs uppercase tracking-editorial text-plum font-bold block">
+                <label htmlFor="cart-order-instructions" className="text-xs uppercase tracking-editorial text-plum font-bold block">
                   Artisan Delivery Instructions / Craft House Notes
                 </label>
                 <textarea
+                  id="cart-order-instructions"
                   rows={2}
                   placeholder="Special instructions for our dispatch team (e.g. deliver after 4 PM, call on arrival, etc.)..."
                   value={orderNote}

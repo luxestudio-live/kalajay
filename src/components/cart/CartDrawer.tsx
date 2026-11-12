@@ -138,7 +138,7 @@ export default function CartDrawer() {
                         <button
                           type="button"
                           onClick={() => removeFromCart(item.key)}
-                          className="text-ink-faint hover:text-rosewood p-1 transition-colors"
+                          className="text-ink-faint hover:text-rosewood p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center rounded-md transition-colors cursor-pointer"
                           aria-label={`Remove ${item.name}`}
                         >
                           <Trash2 className="w-3.5 h-3.5" />

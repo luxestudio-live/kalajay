@@ -738,10 +738,11 @@ export default function AccountClient() {
             {isEditingProfile ? (
               <form onSubmit={handleProfileSave} className="space-y-5 bg-canvas-subtle p-6 rounded-2xl border border-border-gold">
                 <div>
-                  <label className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
+                  <label htmlFor="profile-full-name" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
                     Full Name
                   </label>
                   <input
+                    id="profile-full-name"
                     type="text"
                     required
                     value={profileForm.name}
@@ -751,10 +752,11 @@ export default function AccountClient() {
                 </div>
 
                 <div>
-                  <label className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
+                  <label htmlFor="profile-email-addr" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
                     Email Address
                   </label>
                   <input
+                    id="profile-email-addr"
                     type="email"
                     required
                     value={profileForm.email}
@@ -764,10 +766,11 @@ export default function AccountClient() {
                 </div>
 
                 <div>
-                  <label className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
+                  <label htmlFor="profile-phone-num" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
                     Mobile Number
                   </label>
                   <input
+                    id="profile-phone-num"
                     type="tel"
                     required
                     value={profileForm.phone}
@@ -778,10 +781,11 @@ export default function AccountClient() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
+                    <label htmlFor="profile-bday" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
                       Birthday (Celebration Gift)
                     </label>
                     <input
+                      id="profile-bday"
                       type="text"
                       placeholder="DD / MM (e.g. 14 November)"
                       value={profileForm.birthday}
@@ -791,10 +795,11 @@ export default function AccountClient() {
                   </div>
 
                   <div>
-                    <label className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
+                    <label htmlFor="profile-anniv" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
                       Anniversary (Optional)
                     </label>
                     <input
+                      id="profile-anniv"
                       type="text"
                       placeholder="DD / MM (e.g. 26 February)"
                       value={profileForm.anniversary}
@@ -805,10 +810,11 @@ export default function AccountClient() {
                 </div>
 
                 <div>
-                  <label className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
+                  <label htmlFor="profile-palette-pref" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
                     Signature Bead Palette Preference
                   </label>
                   <select
+                    id="profile-palette-pref"
                     value={profileForm.preferredPalette}
                     onChange={(e) => setProfileForm({ ...profileForm, preferredPalette: e.target.value })}
                     className="w-full px-4 py-3 bg-canvas border border-border-medium rounded-xl text-xs sm:text-sm text-ink focus:outline-none focus:border-gold"
@@ -921,10 +927,11 @@ export default function AccountClient() {
               </div>
 
               <div>
-                <label className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
+                <label htmlFor="addr-recipient-name" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
                   Recipient Full Name *
                 </label>
                 <input
+                  id="addr-recipient-name"
                   type="text"
                   required
                   value={newAddress.fullName}
@@ -934,10 +941,11 @@ export default function AccountClient() {
               </div>
 
               <div>
-                <label className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
+                <label htmlFor="addr-recipient-phone" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
                   Recipient Contact Phone *
                 </label>
                 <input
+                  id="addr-recipient-phone"
                   type="tel"
                   required
                   value={newAddress.phone}
@@ -947,10 +955,11 @@ export default function AccountClient() {
               </div>
 
               <div>
-                <label className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
+                <label htmlFor="addr-street" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
                   Street Address & House / Flat No. *
                 </label>
                 <input
+                  id="addr-street"
                   type="text"
                   required
                   placeholder="e.g. B-402, Signature Palms, Linking Road"
@@ -962,10 +971,11 @@ export default function AccountClient() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
+                  <label htmlFor="addr-city" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
                     City *
                   </label>
                   <input
+                    id="addr-city"
                     type="text"
                     required
                     value={newAddress.city}
@@ -975,10 +985,11 @@ export default function AccountClient() {
                 </div>
 
                 <div>
-                  <label className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
+                  <label htmlFor="addr-pincode" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
                     Pincode *
                   </label>
                   <input
+                    id="addr-pincode"
                     type="text"
                     required
                     maxLength={6}
@@ -990,10 +1001,11 @@ export default function AccountClient() {
               </div>
 
               <div>
-                <label className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
+                <label htmlFor="addr-state" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
                   State *
                 </label>
                 <input
+                  id="addr-state"
                   type="text"
                   required
                   value={newAddress.state}

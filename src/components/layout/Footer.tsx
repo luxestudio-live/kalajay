@@ -65,6 +65,7 @@ export default function Footer() {
                   <input
                     type="email"
                     required
+                    aria-label="Email address for The Kalajay Gazette newsletter"
                     placeholder="Enter your email address"
                     value={email}
                     onChange={e => setEmail(e.target.value)}

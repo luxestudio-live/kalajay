@@ -165,7 +165,7 @@ export default function SupportView() {
                   key={ticket.id}
                   onClick={() => setSelectedTicketId(ticket.id)}
                   className={`p-4 cursor-pointer transition-colors ${
-                    isSelected ? 'bg-[#FAF4ED] border-l-4 border-l-[#9E5430]' : 'hover:bg-[#FFFCF7]'
+                    isSelected ? 'bg-[#F4ECE3] ring-1 ring-inset ring-[#9E5430]/30 shadow-2xs' : 'hover:bg-[#FFFCF7]'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">

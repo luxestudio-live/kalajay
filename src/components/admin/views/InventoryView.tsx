@@ -421,8 +421,9 @@ export default function InventoryView() {
                           type="button"
                           onClick={() => handleOpenAdjust(item.sku)}
                           disabled={!canAdjustStock}
-                          className="px-2.5 py-1 rounded bg-[#F7F3EC] hover:bg-[#EAE2D8] text-[11px] text-[#9E5430] font-semibold transition-colors cursor-pointer"
+                          className="px-2.5 py-1.5 rounded-lg bg-[#F7F3EC] hover:bg-[#EAE2D8] text-[11px] text-[#9E5430] font-semibold transition-colors cursor-pointer min-h-[32px] flex items-center"
                           title="Log Stock Adjustment"
+                          aria-label={`Adjust stock for ${item.name}`}
                         >
                           Adjust
                         </button>
@@ -432,8 +433,9 @@ export default function InventoryView() {
                             setEditingItem({ ...item });
                             setEditModalOpen(true);
                           }}
-                          className="p-1 rounded hover:bg-[#F0E9DF] text-[#76695F] hover:text-[#372921] transition-colors cursor-pointer"
+                          className="p-2 min-w-[36px] min-h-[36px] rounded-lg hover:bg-[#F0E9DF] text-[#76695F] hover:text-[#372921] transition-colors cursor-pointer flex items-center justify-center"
                           title="Edit Item Details"
+                          aria-label={`Edit ${item.name}`}
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
@@ -443,8 +445,9 @@ export default function InventoryView() {
                             setDeletingItem(item);
                             setDeleteModalOpen(true);
                           }}
-                          className="p-1 rounded hover:bg-rose-50 text-[#76695F] hover:text-rose-600 transition-colors cursor-pointer"
+                          className="p-2 min-w-[36px] min-h-[36px] rounded-lg hover:bg-rose-50 text-[#76695F] hover:text-rose-600 transition-colors cursor-pointer flex items-center justify-center"
                           title="Archive / Remove Item"
+                          aria-label={`Archive ${item.name}`}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

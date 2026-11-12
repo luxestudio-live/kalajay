@@ -160,10 +160,10 @@ export default function CustomOrdersView() {
         </div>
         <div className="bg-white p-4 rounded-xl border border-[#DED3C5] shadow-xs">
           <span className="text-[11px] text-[#76695F] uppercase tracking-wider font-semibold">Proof Approved</span>
-          <div className="font-serif text-2xl text-purple-600 font-bold mt-1">
+          <div className="font-serif text-2xl text-[#9E5430] font-bold mt-1">
             {customRequests.filter(r => r.status === 'proof_approved').length}
           </div>
-          <span className="text-[10px] text-purple-700">Ready for loom run</span>
+          <span className="text-[10px] text-[#874427]">Ready for loom run</span>
         </div>
         <div className="bg-white p-4 rounded-xl border border-[#DED3C5] shadow-xs">
           <span className="text-[11px] text-[#76695F] uppercase tracking-wider font-semibold">Avg Bespoke Realization</span>

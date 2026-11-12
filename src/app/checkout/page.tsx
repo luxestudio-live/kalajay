@@ -126,8 +126,9 @@ export default function CheckoutPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-sans">
                 <div>
-                  <label className="block text-ink-light font-medium mb-1">Email Address</label>
+                  <label htmlFor="checkout-email" className="block text-ink-light font-medium mb-1">Email Address</label>
                   <input
+                    id="checkout-email"
                     type="email"
                     required
                     placeholder="you@domain.com"
@@ -137,8 +138,9 @@ export default function CheckoutPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-ink-light font-medium mb-1">Mobile Number (For WhatsApp Tracking)</label>
+                  <label htmlFor="checkout-phone" className="block text-ink-light font-medium mb-1">Mobile Number (For WhatsApp Tracking)</label>
                   <input
+                    id="checkout-phone"
                     type="tel"
                     required
                     placeholder="+91 98765 43210"
@@ -159,8 +161,9 @@ export default function CheckoutPage() {
 
               <div className="space-y-4 text-xs font-sans">
                 <div>
-                  <label className="block text-ink-light font-medium mb-1">Full Name of Recipient</label>
+                  <label htmlFor="checkout-recipient-name" className="block text-ink-light font-medium mb-1">Full Name of Recipient</label>
                   <input
+                    id="checkout-recipient-name"
                     type="text"
                     required
                     placeholder="e.g. Radhika Kapoor"
@@ -171,8 +174,9 @@ export default function CheckoutPage() {
                 </div>
 
                 <div>
-                  <label className="block text-ink-light font-medium mb-1">Street Address, Apartment, Suite</label>
+                  <label htmlFor="checkout-address" className="block text-ink-light font-medium mb-1">Street Address, Apartment, Suite</label>
                   <input
+                    id="checkout-address"
                     type="text"
                     required
                     placeholder="e.g. Apartment 14B, Sea Green Mansions, Worli Sea Face"
@@ -184,8 +188,9 @@ export default function CheckoutPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-ink-light font-medium mb-1">City</label>
+                    <label htmlFor="checkout-city" className="block text-ink-light font-medium mb-1">City</label>
                     <input
+                      id="checkout-city"
                       type="text"
                       required
                       placeholder="e.g. Mumbai"
@@ -195,8 +200,9 @@ export default function CheckoutPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-ink-light font-medium mb-1">State</label>
+                    <label htmlFor="checkout-state" className="block text-ink-light font-medium mb-1">State</label>
                     <select
+                      id="checkout-state"
                       value={stateName}
                       onChange={e => setStateName(e.target.value)}
                       className="w-full px-3.5 py-3 bg-[#FFFCF7] border border-[#DED3C5] hover:border-[#A99583] rounded-sm text-[#372921] focus:outline-none focus:border-[#9E5430] cursor-pointer transition-colors"
@@ -213,8 +219,9 @@ export default function CheckoutPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-ink-light font-medium mb-1">PIN Code</label>
+                    <label htmlFor="checkout-pincode" className="block text-ink-light font-medium mb-1">PIN Code</label>
                     <input
+                      id="checkout-pincode"
                       type="text"
                       required
                       placeholder="400018"
@@ -236,12 +243,14 @@ export default function CheckoutPage() {
 
               <div className="space-y-3 text-xs font-sans">
                 <label
+                  htmlFor="pay-upi"
                   className={`p-4 rounded-sm border flex items-center justify-between cursor-pointer transition-all ${
                     paymentMethod === 'upi' ? 'border-rosewood bg-blush/20 ring-1 ring-rosewood' : 'border-border-subtle'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <input
+                      id="pay-upi"
                       type="radio"
                       name="payment"
                       checked={paymentMethod === 'upi'}
@@ -257,12 +266,14 @@ export default function CheckoutPage() {
                 </label>
 
                 <label
+                  htmlFor="pay-card"
                   className={`p-4 rounded-sm border flex items-center justify-between cursor-pointer transition-all ${
                     paymentMethod === 'card' ? 'border-rosewood bg-blush/20 ring-1 ring-rosewood' : 'border-border-subtle'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <input
+                      id="pay-card"
                       type="radio"
                       name="payment"
                       checked={paymentMethod === 'card'}
@@ -278,12 +289,14 @@ export default function CheckoutPage() {
                 </label>
 
                 <label
+                  htmlFor="pay-whatsapp"
                   className={`p-4 rounded-sm border flex items-center justify-between cursor-pointer transition-all ${
                     paymentMethod === 'whatsapp' ? 'border-rosewood bg-blush/20 ring-1 ring-rosewood' : 'border-border-subtle'
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <input
+                      id="pay-whatsapp"
                       type="radio"
                       name="payment"
                       checked={paymentMethod === 'whatsapp'}

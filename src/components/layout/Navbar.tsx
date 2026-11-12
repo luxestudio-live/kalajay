@@ -197,12 +197,12 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
               </div>
 
               {/* Action Icons */}
-              <div className="flex items-center gap-1.5 sm:gap-3.5 md:gap-4 pl-1">
+              <div className="flex items-center gap-1 sm:gap-2 pl-1">
                 <button
                   type="button"
                   onClick={onOpenSearch}
                   aria-label="Search Collection"
-                  className="p-2 text-[#372921] hover:text-[#9E5430] transition-colors focus:outline-none"
+                  className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 text-[#372921] hover:text-[#9E5430] transition-colors focus:outline-none cursor-pointer"
                 >
                   <Search className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
@@ -211,7 +211,7 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                 <Link
                   href="/wishlist"
                   aria-label="Saved Pieces (Wishlist)"
-                  className="p-2 text-[#372921] hover:text-[#9E5430] transition-colors focus:outline-none"
+                  className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 text-[#372921] hover:text-[#9E5430] transition-colors focus:outline-none"
                   title="Saved Pieces (Wishlist)"
                 >
                   <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -221,12 +221,12 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                 <Link
                   href={user ? '/account' : '/login'}
                   aria-label={user ? `Patron Account: ${user.name}` : 'Sign In'}
-                  className="relative flex items-center justify-center p-2 text-[#372921] hover:text-[#9E5430] transition-colors focus:outline-none group"
+                  className="relative min-w-[44px] min-h-[44px] flex items-center justify-center p-2 text-[#372921] hover:text-[#9E5430] transition-colors focus:outline-none group"
                   title={user ? `Signed in as ${user.name} (${user.tier})` : 'Sign In / Register'}
                 >
                   <User className="w-4 h-4 sm:w-5 sm:h-5" />
                   {user && (
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#9E5430] ring-1 ring-[#F7F3EC]" />
+                    <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#9E5430] ring-1 ring-[#F7F3EC]" />
                   )}
                 </Link>
 
@@ -234,11 +234,11 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                   type="button"
                   onClick={openCart}
                   aria-label="Shopping Bag"
-                  className="relative flex items-center justify-center p-2 text-[#372921] hover:text-[#9E5430] transition-colors focus:outline-none"
+                  className="relative min-w-[44px] min-h-[44px] flex items-center justify-center p-2 text-[#372921] hover:text-[#9E5430] transition-colors focus:outline-none cursor-pointer"
                 >
                   <ShoppingBag className="w-5 h-5" />
                   {totalCount > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#372921] text-[#F7F3EC] text-[11px] font-bold flex items-center justify-center shadow-sm">
+                    <span className="absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#372921] text-[#F7F3EC] text-[11px] font-bold flex items-center justify-center shadow-sm">
                       {totalCount}
                     </span>
                   )}
@@ -277,7 +277,8 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                 <button
                   type="button"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="p-2 text-ink hover:text-rosewood focus:outline-none"
+                  aria-label="Close Navigation Menu"
+                  className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-ink hover:text-rosewood focus:outline-none cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>

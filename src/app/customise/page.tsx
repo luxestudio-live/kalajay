@@ -424,17 +424,19 @@ export default function CustomisePage() {
                     <button
                       type="button"
                       onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                      className="w-7 h-7 flex items-center justify-center text-ink hover:text-rosewood"
+                      aria-label="Decrease quantity"
+                      className="w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center text-ink hover:text-rosewood transition-colors cursor-pointer"
                     >
                       -
                     </button>
-                    <span className="w-8 text-center text-xs font-bold text-plum">
+                    <span className="w-10 text-center text-xs font-bold text-plum">
                       {quantity}
                     </span>
                     <button
                       type="button"
                       onClick={() => setQuantity(q => q + 1)}
-                      className="w-7 h-7 flex items-center justify-center text-ink hover:text-rosewood"
+                      aria-label="Increase quantity"
+                      className="w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center text-ink hover:text-rosewood transition-colors cursor-pointer"
                     >
                       +
                     </button>
