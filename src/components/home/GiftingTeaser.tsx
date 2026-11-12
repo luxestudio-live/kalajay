@@ -112,8 +112,18 @@ export default function GiftingTeaser() {
                 <span>Open Hamper Builder</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
-              <p className="text-xs text-ink-muted">
-                Or WhatsApp us directly at <span className="font-semibold text-ink">+91 97405 40847</span>
+              <p className="text-xs text-ink-muted flex items-center gap-1.5 flex-wrap">
+                <span>Or WhatsApp us directly at</span>
+                <a
+                  href="https://wa.me/919740540847?text=Hello%20Kalajay!%20I%20am%20exploring%20your%20curated%20celebration%20hampers."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-ink hover:text-emerald-700 underline underline-offset-4 decoration-emerald-600/40 hover:decoration-emerald-700 inline-flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Chat on WhatsApp (+91 97405 40847)"
+                >
+                  <img src="/whatsapp.png" alt="WhatsApp" className="w-3.5 h-3.5 object-contain inline" />
+                  <span>+91 97405 40847</span>
+                </a>
               </p>
             </div>
           </div>

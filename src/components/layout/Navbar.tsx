@@ -419,7 +419,16 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                 “Small wonders. Beautifully made.”
               </p>
               <p>Handcrafted with love in our studios.</p>
-              <p className="mt-2 text-ink font-semibold">+91 97405 40847</p>
+              <a
+                href="https://wa.me/919740540847?text=Hello%20Kalajay%20Craft%20House!"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 text-ink hover:text-emerald-700 font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Chat on WhatsApp (+91 97405 40847)"
+              >
+                <img src="/whatsapp.png" alt="WhatsApp" className="w-3.5 h-3.5 object-contain" />
+                <span>+91 97405 40847</span>
+              </a>
             </div>
           </div>
         </div>
