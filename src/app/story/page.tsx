@@ -174,14 +174,15 @@ export default function StoryPage() {
                     <p className="text-xs text-rosewood">Master Loom Weaver · Bihar Craft House</p>
                   </div>
                 </div>
-                <div className="pt-1">
-                  <span className="font-serif text-4xl sm:text-5xl text-rosewood font-normal leading-none block -mb-1 select-none" aria-hidden="true">
+                <blockquote className="text-xs sm:text-sm text-ink-muted italic font-light leading-relaxed">
+                  <span className="font-serif text-xl sm:text-2xl text-rosewood font-normal select-none mr-0.5 inline" aria-hidden="true">
                     &ldquo;
                   </span>
-                  <blockquote className="text-xs sm:text-sm text-ink-muted italic font-light leading-relaxed">
-                    When I weave a bridal box, I know it will sit on someone’s dresser for ten years. My hands give it strength. Kalajay gave me the independence to educate both my daughters.&rdquo;
-                  </blockquote>
-                </div>
+                  When I weave a bridal box, I know it will sit on someone’s dresser for ten years. My hands give it strength. Kalajay gave me the independence to educate both my daughters.
+                  <span className="font-serif text-xl sm:text-2xl text-rosewood font-normal select-none ml-0.5 inline" aria-hidden="true">
+                    &rdquo;
+                  </span>
+                </blockquote>
               </div>
 
               <div className="p-8 rounded-[28px] bg-canvas-subtle border border-border-subtle space-y-4">
@@ -198,14 +199,15 @@ export default function StoryPage() {
                     <p className="text-xs text-rosewood">Curation &amp; Quality Lead · Mumbai Studio</p>
                   </div>
                 </div>
-                <div className="pt-1">
-                  <span className="font-serif text-4xl sm:text-5xl text-rosewood font-normal leading-none block -mb-1 select-none" aria-hidden="true">
+                <blockquote className="text-xs sm:text-sm text-ink-muted italic font-light leading-relaxed">
+                  <span className="font-serif text-xl sm:text-2xl text-rosewood font-normal select-none mr-0.5 inline" aria-hidden="true">
                     &ldquo;
                   </span>
-                  <blockquote className="text-xs sm:text-sm text-ink-muted italic font-light leading-relaxed">
-                    Every parcel leaving Mumbai is wrapped as if it’s our own sister’s wedding favour. The wax seal, the cotton dust bag, the personalized card—it’s our love letter to you.&rdquo;
-                  </blockquote>
-                </div>
+                  Every parcel leaving Mumbai is wrapped as if it’s our own sister’s wedding favour. The wax seal, the cotton dust bag, the personalized card—it’s our love letter to you.
+                  <span className="font-serif text-xl sm:text-2xl text-rosewood font-normal select-none ml-0.5 inline" aria-hidden="true">
+                    &rdquo;
+                  </span>
+                </blockquote>
               </div>
             </div>
           </article>
