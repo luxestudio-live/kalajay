@@ -169,7 +169,8 @@ const NAV_GROUPS: NavGroup[] = [
     icon: Landmark,
     items: [
       { id: 'finance.overview', label: 'Financial Summary' },
-      { id: 'finance.gst', label: 'Tax & GST Reports' },
+      { id: 'finance.offline', label: 'Offline & Studio Sales' },
+      { id: 'finance.gst', label: 'Tax & GST Slabs (HSN)' },
     ],
   },
   {

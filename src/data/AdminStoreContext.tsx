@@ -18,6 +18,8 @@ import {
   SupportTicket,
   CouponItem,
   AuditLogItem,
+  TaxSlab,
+  OfflineOrder,
 } from './adminTypes';
 import { ADMIN_MODULE_DEFINITIONS, SEED_ROLES } from './adminPermissions';
 import {
@@ -34,6 +36,8 @@ import {
   SEED_SUPPORT_TICKETS,
   SEED_COUPONS,
   SEED_AUDIT_LOGS,
+  SEED_TAX_SLABS,
+  SEED_OFFLINE_ORDERS,
 } from './adminSeedData';
 
 interface AdminStoreContextType {
@@ -127,6 +131,16 @@ interface AdminStoreContextType {
   createCoupon: (coupon: Omit<CouponItem, 'id' | 'usageCount'>) => void;
   toggleCouponStatus: (id: string) => void;
 
+  // Finance, GST & Offline Orders
+  taxSlabs: TaxSlab[];
+  createTaxSlab: (slab: Omit<TaxSlab, 'id' | 'taxableTurnover' | 'taxCollected'>) => TaxSlab;
+  updateTaxSlab: (id: string, updates: Partial<TaxSlab>) => void;
+  deleteTaxSlab: (id: string) => void;
+
+  offlineOrders: OfflineOrder[];
+  createOfflineOrder: (order: Omit<OfflineOrder, 'id' | 'createdAt'>) => OfflineOrder;
+  updateOfflineOrderStatus: (orderId: string, paymentStatus: OfflineOrder['paymentStatus']) => void;
+
   // Audit Logs
   auditLogs: AuditLogItem[];
   logAction: (action: string, module: AdminModuleId, details: string) => void;
@@ -171,6 +185,8 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
   );
   const [coupons, setCoupons] = useState<CouponItem[]>(SEED_COUPONS);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>(SEED_AUDIT_LOGS);
+  const [taxSlabs, setTaxSlabs] = useState<TaxSlab[]>(SEED_TAX_SLABS);
+  const [offlineOrders, setOfflineOrders] = useState<OfflineOrder[]>(SEED_OFFLINE_ORDERS);
 
   // 2. Load from LocalStorage if available on mount
   useEffect(() => {
@@ -199,6 +215,8 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
         if (parsed.supportTickets) setSupportTickets(parsed.supportTickets);
         if (parsed.coupons) setCoupons(parsed.coupons);
         if (parsed.auditLogs) setAuditLogs(parsed.auditLogs);
+        if (parsed.taxSlabs) setTaxSlabs(parsed.taxSlabs);
+        if (parsed.offlineOrders) setOfflineOrders(parsed.offlineOrders);
       }
     } catch {
       // safe fallback to in-memory state
@@ -225,6 +243,8 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
           supportTickets,
           coupons,
           auditLogs,
+          taxSlabs,
+          offlineOrders,
           ...updated,
         })
       );
@@ -706,6 +726,119 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     saveState({ coupons: next });
   };
 
+  // Tax Slabs (HSN) Management
+  const createTaxSlab = (slabData: Omit<TaxSlab, 'id' | 'taxableTurnover' | 'taxCollected'>): TaxSlab => {
+    const newSlab: TaxSlab = {
+      ...slabData,
+      id: `slab-${Date.now().toString().slice(-4)}`,
+      taxableTurnover: 0,
+      taxCollected: 0,
+    };
+    const next = [...taxSlabs, newSlab];
+    setTaxSlabs(next);
+    saveState({ taxSlabs: next });
+    logAction('CREATE_TAX_SLAB', 'finance', `Created tax slab ${newSlab.hsnCode} (${newSlab.gstRate}% GST)`);
+    return newSlab;
+  };
+
+  const updateTaxSlab = (id: string, updates: Partial<TaxSlab>) => {
+    const next = taxSlabs.map(s => (s.id === id ? { ...s, ...updates } : s));
+    setTaxSlabs(next);
+    saveState({ taxSlabs: next });
+    logAction('UPDATE_TAX_SLAB', 'finance', `Updated tax slab ID: ${id}`);
+  };
+
+  const deleteTaxSlab = (id: string) => {
+    const target = taxSlabs.find(s => s.id === id);
+    const next = taxSlabs.filter(s => s.id !== id);
+    setTaxSlabs(next);
+    saveState({ taxSlabs: next });
+    logAction('DELETE_TAX_SLAB', 'finance', `Archived/Removed tax slab ${target?.hsnCode || id}`);
+  };
+
+  // Offline Orders & Studio Sales
+  const createOfflineOrder = (orderData: Omit<OfflineOrder, 'id' | 'createdAt'>): OfflineOrder => {
+    const newId = `KJ-OFF-2026-${String(offlineOrders.length + 1).padStart(3, '0')}`;
+    const newOrder: OfflineOrder = {
+      ...orderData,
+      id: newId,
+      createdAt: new Date().toISOString(),
+    };
+    const nextOffline = [newOrder, ...offlineOrders];
+    setOfflineOrders(nextOffline);
+
+    // Update tax slab turnover & tax collected
+    const matchedSlab = taxSlabs.find(s => s.hsnCode === newOrder.hsnCode);
+    let nextTaxSlabs = taxSlabs;
+    if (matchedSlab) {
+      nextTaxSlabs = taxSlabs.map(s => {
+        if (s.id === matchedSlab.id) {
+          return {
+            ...s,
+            taxableTurnover: s.taxableTurnover + newOrder.taxableAmount,
+            taxCollected: s.taxCollected + (newOrder.cgst + newOrder.sgst + newOrder.igst),
+          };
+        }
+        return s;
+      });
+      setTaxSlabs(nextTaxSlabs);
+    }
+
+    // Reflect into master orders
+    const companionAdminOrder: AdminOrder = {
+      id: newOrder.id,
+      customerName: newOrder.customerName,
+      customerEmail: newOrder.customerEmail || 'concierge@kalajay.in',
+      customerPhone: newOrder.customerPhone,
+      items: newOrder.items.map(it => ({
+        productId: it.productId,
+        name: it.name,
+        sku: it.sku,
+        price: it.price,
+        quantity: it.quantity,
+        image: 'https://www.kalajay.in/v2/p3-2.jpg',
+      })),
+      subtotal: newOrder.subtotal,
+      discount: newOrder.discount,
+      shipping: 0,
+      tax: newOrder.cgst + newOrder.sgst + newOrder.igst,
+      total: newOrder.total,
+      paymentStatus: newOrder.paymentStatus === 'paid' ? 'paid' : 'pending',
+      paymentMethod: (newOrder.paymentMethod === 'Direct UPI QR' ? 'UPI Instant' : 'WhatsApp Direct') as AdminOrder['paymentMethod'],
+      fulfillmentStatus: 'delivered',
+      shippingAddress: {
+        addressLine: newOrder.location,
+        city: 'Mumbai',
+        state: 'Maharashtra',
+        pincode: '400018',
+      },
+      timeline: [
+        { title: `Offline Sale Recorded (${newOrder.channelLabel})`, timestamp: new Date().toISOString().slice(0, 16).replace('T', ' ') },
+        { title: 'Tax Invoice Handed / Sent to Patron', timestamp: new Date().toISOString().slice(0, 16).replace('T', ' ') },
+      ],
+      artisanNote: `Offline studio transaction recorded by ${newOrder.recordedBy}. Invoice: ${newOrder.invoiceNumber}`,
+      createdAt: newOrder.createdAt,
+    };
+    const nextOrders = [companionAdminOrder, ...orders];
+    setOrders(nextOrders);
+
+    saveState({
+      offlineOrders: nextOffline,
+      taxSlabs: nextTaxSlabs,
+      orders: nextOrders,
+    });
+
+    logAction('RECORD_OFFLINE_ORDER', 'finance', `Recorded offline sale ${newOrder.invoiceNumber} (₹${newOrder.total}) via ${newOrder.channelLabel}`);
+    return newOrder;
+  };
+
+  const updateOfflineOrderStatus = (orderId: string, paymentStatus: OfflineOrder['paymentStatus']) => {
+    const next = offlineOrders.map(o => (o.id === orderId ? { ...o, paymentStatus } : o));
+    setOfflineOrders(next);
+    saveState({ offlineOrders: next });
+    logAction('UPDATE_OFFLINE_PAYMENT', 'finance', `Updated offline order ${orderId} payment status to ${paymentStatus}`);
+  };
+
   // Reset demo data to fresh seed state
   const resetDemoData = () => {
     if (typeof window !== 'undefined') {
@@ -725,6 +858,8 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     setSupportTickets(SEED_SUPPORT_TICKETS);
     setCoupons(SEED_COUPONS);
     setAuditLogs(SEED_AUDIT_LOGS);
+    setTaxSlabs(SEED_TAX_SLABS);
+    setOfflineOrders(SEED_OFFLINE_ORDERS);
     setActiveRoleId('role-super-admin');
     setActiveModule('dashboard');
     setActiveSubPage('dashboard.overview');
@@ -781,6 +916,13 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
         coupons,
         createCoupon,
         toggleCouponStatus,
+        taxSlabs,
+        createTaxSlab,
+        updateTaxSlab,
+        deleteTaxSlab,
+        offlineOrders,
+        createOfflineOrder,
+        updateOfflineOrderStatus,
         auditLogs,
         logAction,
         resetDemoData,

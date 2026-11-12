@@ -275,3 +275,56 @@ export interface AuditLogItem {
   timestamp: string;
 }
 
+export interface TaxSlab {
+  id: string;
+  hsnCode: string;
+  category: string;
+  description: string;
+  gstRate: number; // e.g. 3.0, 5.0, 12.0, 18.0
+  cgstRate: number;
+  sgstRate: number;
+  igstRate: number;
+  taxableTurnover: number;
+  taxCollected: number;
+  effectiveFrom: string;
+  status: 'active' | 'archived';
+  notes?: string;
+}
+
+export interface OfflineOrderItem {
+  productId: string;
+  name: string;
+  sku: string;
+  hsnCode: string;
+  price: number;
+  quantity: number;
+  total: number;
+}
+
+export interface OfflineOrder {
+  id: string;
+  invoiceNumber: string;
+  channel: 'studio_walkin' | 'exhibition_popup' | 'whatsapp_direct' | 'private_trunk_show' | 'b2b_consignment';
+  channelLabel: string;
+  location: string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail?: string;
+  items: OfflineOrderItem[];
+  subtotal: number;
+  discount: number;
+  taxableAmount: number;
+  hsnCode: string;
+  gstRate: number;
+  cgst: number;
+  sgst: number;
+  igst: number;
+  total: number;
+  paymentMethod: 'Cash on Counter' | 'Studio POS (Card Terminal)' | 'Direct UPI QR' | 'Bank NEFT/RTGS';
+  paymentStatus: 'paid' | 'partial' | 'credit';
+  receiptIssued: boolean;
+  notes?: string;
+  recordedBy: string;
+  createdAt: string;
+}
+
