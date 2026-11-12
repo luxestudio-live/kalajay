@@ -13,9 +13,9 @@ export default function Preloader() {
       if (!seen) {
         setShouldShow(true);
 
-        // Smooth progress count up over 1.8 seconds
+        // Smooth progress count up over 2.4 seconds
         const startTime = Date.now();
-        const duration = 1800;
+        const duration = 2400;
         const progressInterval = setInterval(() => {
           const elapsed = Date.now() - startTime;
           const nextVal = Math.min(100, Math.round((elapsed / duration) * 100));
@@ -25,16 +25,17 @@ export default function Preloader() {
           }
         }, 30);
 
-        // Hold full view comfortably until 2.2s, then start graceful curtain lift / fade
+        // Hold complete assembled emblem until exactly 2.5s as requested by user,
+        // then initiate the graceful curtain lift / fade
         const timer1 = setTimeout(() => {
           setFadeOut(true);
-        }, 2200);
+        }, 2500);
 
-        // Remove completely at 2.9s after smooth 700ms transition
+        // Remove completely from DOM after smooth 650ms fade
         const timer2 = setTimeout(() => {
           sessionStorage.setItem('kalajay_preloader_seen', 'true');
           setShouldShow(false);
-        }, 2900);
+        }, 3150);
 
         return () => {
           clearInterval(progressInterval);
@@ -43,7 +44,7 @@ export default function Preloader() {
         };
       }
     } catch {
-      // Ignore storage errors in restricted contexts
+      // Storage restricted contexts fallback
     }
   }, []);
 
@@ -64,122 +65,227 @@ export default function Preloader() {
       }`}
       aria-hidden="true"
     >
-      {/* Editorial Frame Borders (subtle luxury hairline border) */}
-      <div className="absolute inset-4 sm:inset-6 border border-[#EAE2D8] pointer-events-none rounded-xl" />
+      {/* Editorial Frame Borders (luxury hairline border) */}
+      <div className="absolute inset-4 sm:inset-6 border border-[#EAE2D8] pointer-events-none rounded-2xl" />
 
       {/* Skip control */}
       <button
         type="button"
         onClick={handleSkip}
-        className="absolute top-7 right-7 sm:top-9 sm:right-9 z-10 text-[11px] text-[#685B52] hover:text-[#372921] tracking-editorial uppercase px-3.5 py-1.5 rounded-full border border-[#EAE2D8] hover:border-[#9E5430] transition-all duration-300 bg-[#F7F3EC]/80 backdrop-blur-xs cursor-pointer"
+        className="absolute top-7 right-7 sm:top-9 sm:right-9 z-10 text-[11px] text-[#76695F] hover:text-[#372921] tracking-widest uppercase px-3.5 py-1.5 rounded-full border border-[#EAE2D8] hover:border-[#9E5430] transition-all duration-300 bg-[#F7F3EC]/80 backdrop-blur-xs cursor-pointer font-sans"
       >
         Skip
       </button>
 
-      <div className="relative z-10 text-center px-6 max-w-md flex flex-col items-center">
+      <div className="relative z-10 text-center px-6 max-w-md flex flex-col items-center select-none">
         {/* Craft House Heritage Badge */}
-        <div className="mb-3.5 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F0E9DF] border border-[#DED3C5] text-[10px] uppercase tracking-monumental text-[#9E5430] font-sans font-medium animate-fade-in">
+        <div className="mb-2 sm:mb-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F0E9DF] border border-[#DED3C5] text-[10px] uppercase tracking-monumental text-[#9E5430] font-sans font-medium animate-badge-fade">
           <span>The Craft House</span>
           <span className="w-1 h-1 rounded-full bg-[#9E5430]" />
           <span>Bihar & Mumbai</span>
         </div>
 
-        {/* Brand Logo */}
-        <div className="mb-3 transition-transform duration-1000 ease-out select-none">
+        {/* Animated Favicon Assembly Stage */}
+        <div className="relative w-64 h-64 sm:w-72 sm:h-72 my-1 select-none flex items-center justify-center">
+          {/* Layer 1: Mother Elephant entering majestically from the left */}
           <img
-            src="/logo.png"
-            alt="Kalajay — A World of Little Wonders"
-            className="h-20 sm:h-24 w-auto object-contain mx-auto"
+            src="/loader/big_elephant_full.png"
+            alt="Big Elephant"
+            loading="eager"
+            decoding="sync"
+            className="absolute inset-0 w-full h-full object-contain pointer-events-none animate-walk-big"
+          />
+
+          {/* Layer 2: Baby Elephant trotting playfully from the right */}
+          <img
+            src="/loader/small_elephant_full.png"
+            alt="Small Elephant"
+            loading="eager"
+            decoding="sync"
+            className="absolute inset-0 w-full h-full object-contain pointer-events-none animate-walk-small"
+          />
+
+          {/* Aura / Sparkle behind the lotus when the elephants meet */}
+          <div className="absolute left-[65%] top-[35%] -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-radial from-[#9E5430]/30 to-transparent pointer-events-none animate-sparkle-pulse" />
+
+          {/* Layer 3: The Lotus Flower descending and blossoming right above them */}
+          <img
+            src="/loader/flower_full.png"
+            alt="Lotus Crown"
+            loading="eager"
+            decoding="sync"
+            className="absolute inset-0 w-full h-full object-contain pointer-events-none animate-bloom-flower"
           />
         </div>
 
-        {/* Animated Thread SVG */}
-        <div className="relative w-52 sm:w-64 h-6 mx-auto my-2 overflow-visible flex items-center justify-center">
-          <svg
-            className="w-full h-full overflow-visible"
-            viewBox="0 0 240 16"
-            fill="none"
-          >
-            {/* Background hairline guide path */}
-            <path
-              d="M 0,8 Q 60,0 120,8 T 240,8"
-              stroke="#EAE2D8"
-              strokeWidth="1"
-              strokeLinecap="round"
-            />
-            {/* Animated drawing terracotta thread */}
-            <path
-              d="M 0,8 Q 60,0 120,8 T 240,8"
-              stroke="#9E5430"
-              strokeWidth="2"
-              strokeLinecap="round"
-              className="animate-[threadDraw_1.4s_cubic-bezier(0.16,1,0.3,1)_forwards]"
-              style={{
-                strokeDasharray: 240,
-                strokeDashoffset: 240,
-              }}
-            />
-            {/* Central Dark Cacao bead with glowing pulse */}
-            <circle
-              cx="120"
-              cy="8"
-              r="4"
-              fill="#372921"
-              className="animate-[beadPop_1.2s_cubic-bezier(0.16,1,0.3,1)_forwards]"
-            />
-            <circle
-              cx="120"
-              cy="8"
-              r="7"
-              stroke="#9E5430"
-              strokeWidth="1"
-              className="opacity-40 animate-ping"
-              style={{ animationDuration: '2.5s' }}
-            />
-          </svg>
+        {/* Brand Wordmark & Tagline: Fades up in harmony with assembled emblem */}
+        <div className="mt-1 flex flex-col items-center animate-brand-fade">
+          <h2 className="font-serif text-2xl sm:text-[28px] tracking-[0.24em] text-[#372921] font-medium uppercase mb-1">
+            KALAJAY
+          </h2>
+          <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.32em] text-[#8C7A6B] font-sans font-medium">
+            A World of Little Wonders
+          </p>
         </div>
 
-        {/* Brand Slogan */}
-        <p className="text-xs uppercase tracking-monumental text-[#372921] font-sans font-medium opacity-90 mt-2 mb-4">
-          A World of Little Wonders
-        </p>
-
-        {/* Subtle Artisan Progress Meter */}
-        <div className="flex items-center gap-3 text-[11px] text-[#76695F] font-mono tracking-widest mt-1">
-          <div className="w-24 sm:w-32 h-[2px] bg-[#EAE2D8] rounded-full overflow-hidden">
+        {/* Refined Progress Line */}
+        <div className="flex items-center gap-3 text-[10px] text-[#8C7A6B] font-mono tracking-widest mt-4 opacity-80">
+          <div className="w-28 sm:w-36 h-[2px] bg-[#EAE2D8] rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-[#9E5430]/50 via-[#9E5430] to-[#874427] transition-all duration-100 ease-out rounded-full"
+              className="h-full bg-gradient-to-r from-[#C27448] via-[#9E5430] to-[#874427] transition-all duration-100 ease-out rounded-full"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <span className="w-8 text-left text-[#685B52]">{progress}%</span>
+          <span className="w-7 text-left">{progress}%</span>
         </div>
       </div>
 
       <style jsx>{`
-        @keyframes threadDraw {
+        /* Stride Choreography */
+        .animate-badge-fade {
+          opacity: 0;
+          animation: badgeFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.05s forwards;
+        }
+
+        .animate-walk-big {
+          opacity: 0;
+          animation: walkBigElephant 1.05s cubic-bezier(0.25, 1, 0.35, 1) 0.1s forwards;
+        }
+
+        .animate-walk-small {
+          opacity: 0;
+          animation: walkSmallElephant 1.05s cubic-bezier(0.25, 1, 0.35, 1) 0.1s forwards;
+        }
+
+        .animate-bloom-flower {
+          opacity: 0;
+          transform: translateY(-28px) scale(0.35);
+          transform-origin: 65% 35%;
+          animation: bloomFlower 0.65s cubic-bezier(0.34, 1.45, 0.64, 1) 1.08s forwards;
+        }
+
+        .animate-sparkle-pulse {
+          opacity: 0;
+          transform: translate(-50%, -50%) scale(0.2);
+          animation: sparklePulse 0.7s ease-out 1.25s forwards;
+        }
+
+        .animate-brand-fade {
+          opacity: 0;
+          transform: translateY(10px);
+          animation: brandFadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) 1.35s forwards;
+        }
+
+        @keyframes badgeFadeIn {
           0% {
-            strokeDashoffset: 240;
+            opacity: 0;
+            transform: translateY(-8px);
           }
           100% {
-            strokeDashoffset: 0;
+            opacity: 1;
+            transform: translateY(0);
           }
         }
-        @keyframes beadPop {
-          0%, 40% {
-            transform: scale(0);
+
+        @keyframes walkBigElephant {
+          0% {
             opacity: 0;
-            transform-origin: 120px 8px;
+            transform: translateX(-180px) translateY(0);
           }
-          70% {
-            transform: scale(1.3);
+          30% {
             opacity: 1;
-            transform-origin: 120px 8px;
+            transform: translateX(-110px) translateY(-3px);
+          }
+          60% {
+            opacity: 1;
+            transform: translateX(-45px) translateY(0);
+          }
+          85% {
+            opacity: 1;
+            transform: translateX(4px) translateY(-1px);
           }
           100% {
-            transform: scale(1);
             opacity: 1;
-            transform-origin: 120px 8px;
+            transform: translateX(0) translateY(0);
+          }
+        }
+
+        @keyframes walkSmallElephant {
+          0% {
+            opacity: 0;
+            transform: translateX(180px) translateY(0);
+          }
+          25% {
+            opacity: 1;
+            transform: translateX(120px) translateY(-4px);
+          }
+          55% {
+            opacity: 1;
+            transform: translateX(50px) translateY(0);
+          }
+          85% {
+            opacity: 1;
+            transform: translateX(-4px) translateY(-2px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateX(0) translateY(0);
+          }
+        }
+
+        @keyframes bloomFlower {
+          0% {
+            opacity: 0;
+            transform: translateY(-28px) scale(0.35);
+          }
+          65% {
+            opacity: 1;
+            transform: translateY(2px) scale(1.1);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes sparklePulse {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.2);
+          }
+          50% {
+            opacity: 0.8;
+            transform: translate(-50%, -50%) scale(1.3);
+          }
+          100% {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(1.8);
+          }
+        }
+
+        @keyframes brandFadeUp {
+          0% {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .animate-walk-big,
+          .animate-walk-small,
+          .animate-bloom-flower,
+          .animate-brand-fade,
+          .animate-badge-fade {
+            animation: none !important;
+            opacity: 1 !important;
+            transform: none !important;
+          }
+          .animate-sparkle-pulse {
+            display: none !important;
           }
         }
       `}</style>
