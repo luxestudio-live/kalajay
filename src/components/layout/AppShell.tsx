@@ -13,6 +13,7 @@ import CustomCursor from '../ui/CustomCursor';
 import Preloader from '../ui/Preloader';
 import PageTransitionCurtain from '../ui/PageTransitionCurtain';
 import PWAInstallPrompt from '../ui/PWAInstallPrompt';
+import DPDPConsentBanner from '../ui/DPDPConsentBanner';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -43,6 +44,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <CartDrawer />
       <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
       <PWAInstallPrompt />
+      <DPDPConsentBanner />
 
       {/* Floating Artisan WhatsApp Concierge */}
       <a

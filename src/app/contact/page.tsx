@@ -245,6 +245,10 @@ export default function ContactPage() {
                   <Send className="w-3.5 h-3.5" />
                   <span>Transmit Note to Studio</span>
                 </button>
+
+                <p className="text-[11px] text-ink-light text-center leading-relaxed pt-1">
+                  <strong>DPDP Notice:</strong> Your correspondence details are processed solely to respond to your specific studio inquiry in accordance with the DPDP Act 2023. We never distribute inquiry data to marketing brokers.
+                </p>
               </form>
             )}
           </div>

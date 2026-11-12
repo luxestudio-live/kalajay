@@ -175,8 +175,24 @@ export default function Footer() {
               </li>
               <li>
                 <Link href="/privacy" className="hover:text-[#F7F3EC] transition-colors">
-                  Privacy Policy
+                  Privacy Policy (DPDP 2023)
                 </Link>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.dispatchEvent(new CustomEvent('open-dpdp-preferences'));
+                    }
+                  }}
+                  className="hover:text-[#F7F3EC] transition-colors text-left flex items-center gap-1.5 cursor-pointer text-[#DED3C5]"
+                >
+                  <span>Data Privacy Preferences</span>
+                  <span className="text-[9px] uppercase tracking-wider bg-[#9E5430]/30 text-[#D4AF37] px-1.5 py-0.2 rounded-xs border border-[#D4AF37]/30">
+                    DPDP
+                  </span>
+                </button>
               </li>
               <li>
                 <Link href="/terms" className="hover:text-[#F7F3EC] transition-colors">
@@ -244,8 +260,13 @@ export default function Footer() {
 
         {/* Bottom Credits & Copyright */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-[#DED3C5] font-sans gap-4 border-t border-[#DED3C5]/15">
-          <div>
-            © {new Date().getFullYear()} Kalajay Handcrafted. All rights reserved.
+          <div className="space-y-0.5">
+            <div>
+              © {new Date().getFullYear()} Kalajay Creations Private Limited. All rights reserved.
+            </div>
+            <div className="text-[11px] text-[#DED3C5]/70">
+              Compliant with DPDP Act, 2023 &amp; DPDP Rules, 2025 · Consumer Protection (E-Commerce) Rules, 2020
+            </div>
           </div>
           <div className="flex items-center gap-1.5">
             <span>Handmade with</span>

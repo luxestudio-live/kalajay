@@ -46,6 +46,11 @@ export default function SignupClient() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  // DPDP Act 2023 Statutory Consent States
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const [dpdpConsent, setDpdpConsent] = useState(false);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
+
   const otpInputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
@@ -73,6 +78,14 @@ export default function SignupClient() {
     }
     if (!formData.email.includes('@')) {
       setErrorMsg('Please enter a valid email address.');
+      return;
+    }
+    if (!ageConfirmed) {
+      setErrorMsg('Please confirm you are 18 years of age or older (or have parental authorization) per Section 9 of the DPDP Act 2023.');
+      return;
+    }
+    if (!dpdpConsent) {
+      setErrorMsg('Please confirm affirmative consent for personal data processing under the DPDP Act 2023 to proceed.');
       return;
     }
 
@@ -362,6 +375,65 @@ export default function SignupClient() {
                         onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
                         className="w-full pl-10 pr-3.5 sm:pr-4 py-3 sm:py-3.5 bg-canvas border border-border-medium rounded-xl sm:rounded-2xl text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-all shadow-2xs"
                       />
+                    </div>
+                  </div>
+
+                  {/* DPDP Act 2023 Statutory Consent Section */}
+                  <div className="p-3.5 sm:p-4 bg-canvas-subtle rounded-xl border border-border-subtle space-y-3 text-xs text-ink">
+                    <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-monumental text-gold-dark font-semibold">
+                      <ShieldCheck className="w-3.5 h-3.5 text-gold" />
+                      <span>DPDP Act 2023 Statutory Consent</span>
+                    </div>
+
+                    {/* Section 9 Age Confirmation */}
+                    <div className="flex items-start gap-2.5">
+                      <input
+                        type="checkbox"
+                        id="signup-dpdp-age"
+                        required
+                        checked={ageConfirmed}
+                        onChange={(e) => setAgeConfirmed(e.target.checked)}
+                        className="mt-0.5 rounded text-gold focus:ring-gold cursor-pointer"
+                      />
+                      <label htmlFor="signup-dpdp-age" className="text-xs text-ink cursor-pointer leading-relaxed">
+                        I confirm that I am <strong>18 years of age or older</strong> (or have verifiable parental authorization to join the patron circle) in compliance with Section 9 of the DPDP Act, 2023. <span className="text-rose-600">*</span>
+                      </label>
+                    </div>
+
+                    {/* Section 5 & 6 Data Processing Consent */}
+                    <div className="flex items-start gap-2.5">
+                      <input
+                        type="checkbox"
+                        id="signup-dpdp-consent"
+                        required
+                        checked={dpdpConsent}
+                        onChange={(e) => setDpdpConsent(e.target.checked)}
+                        className="mt-0.5 rounded text-gold focus:ring-gold cursor-pointer"
+                      />
+                      <label htmlFor="signup-dpdp-consent" className="text-xs text-ink cursor-pointer leading-relaxed">
+                        I consent to the collection and processing of my personal data for membership, GST billing, and courier delivery per Kalajay&apos;s{' '}
+                        <Link href="/privacy" target="_blank" className="text-rosewood underline font-medium">
+                          Privacy Policy
+                        </Link>{' '}
+                        and{' '}
+                        <Link href="/terms" target="_blank" className="text-rosewood underline font-medium">
+                          Terms
+                        </Link>. <span className="text-rose-600">*</span>
+                      </label>
+                    </div>
+
+                    {/* Unbundled Optional Concierge Updates */}
+                    <div className="flex items-start gap-2.5 pt-1 border-t border-border-subtle">
+                      <input
+                        type="checkbox"
+                        id="signup-dpdp-marketing"
+                        checked={marketingOptIn}
+                        onChange={(e) => setMarketingOptIn(e.target.checked)}
+                        className="mt-0.5 rounded text-gold focus:ring-gold cursor-pointer"
+                      />
+                      <label htmlFor="signup-dpdp-marketing" className="text-[11px] text-ink-muted cursor-pointer leading-relaxed">
+                        (Optional) Receive intimate artisanal loom dispatches, new release alerts, and birthday charms via WhatsApp and email.
+                      </label>
                     </div>
                   </div>
 

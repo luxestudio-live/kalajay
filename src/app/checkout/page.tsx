@@ -312,7 +312,7 @@ export default function CheckoutPage() {
                 </label>
               </div>
 
-              <div className="pt-2">
+              <div className="pt-2 space-y-3">
                 <button
                   type="submit"
                   className="w-full py-4 bg-[#372921] hover:bg-[#503A2E] text-[#F7F3EC] text-xs uppercase tracking-monumental font-semibold rounded-full transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
@@ -320,6 +320,14 @@ export default function CheckoutPage() {
                   <ShieldCheck className="w-4 h-4" />
                   <span>Place Order & Confirm Handcraft · {formatINR(total)}</span>
                 </button>
+
+                {/* DPDP Act 2023 Transaction Notice */}
+                <div className="p-3 bg-canvas rounded-sm border border-border-subtle flex items-start gap-2.5 text-[11px] text-ink-muted leading-relaxed">
+                  <Lock className="w-3.5 h-3.5 text-rosewood shrink-0 mt-0.5" />
+                  <p>
+                    <strong>Statutory DPDP Notice:</strong> Your shipping destination and contact details are processed strictly for handcraft loom allocation, GST tax invoicing (Sec 36, CGST Act 2017), and in-house courier transit. Payments are secured via 256-bit encrypted, PCI-DSS Level 1 RBI-compliant gateways.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
