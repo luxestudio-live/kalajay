@@ -96,7 +96,7 @@ const SEED_ACTIVITY_ALERTS: ActivityAlert[] = [
     type: 'info',
     category: 'shipping',
     title: 'Shipment Dispatched: Order #KJ-88218',
-    description: 'BlueDart courier scanned package BD-78902144 at Mumbai Central Hub for Bengaluru delivery.',
+    description: 'Kalajay in-house dispatch team processed package KJ-DISP-78902144 at Mumbai Atelier for Bengaluru delivery.',
     timestamp: '3 hours ago',
     actionLabel: 'Track Shipment',
     actionModule: 'shipping',
@@ -401,7 +401,7 @@ export default function DashboardView() {
                 </h2>
               </div>
               <p className="text-xs text-[#76695F] mt-1">
-                Real-time operational event feed across storefront checkouts, Bihar loom runs, quality inspections, and courier dispatches.
+                Real-time operational event feed across storefront checkouts, Bihar loom runs, quality inspections, and in-house atelier dispatches.
               </p>
             </div>
 

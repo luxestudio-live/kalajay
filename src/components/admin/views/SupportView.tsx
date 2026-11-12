@@ -23,7 +23,7 @@ import { SupportTicket } from '@/data/adminTypes';
 const CANNED_RESPONSES = [
   {
     title: 'Wax Seal Dispatch Notice',
-    text: 'Namaste! Your bespoke piece has completed final quality inspection in our atelier and is being wax-sealed in our signature presentation box. You will receive BlueDart AWB tracking shortly.',
+    text: 'Namaste! Your bespoke piece has completed final quality inspection in our atelier and is being wax-sealed in our signature presentation box. You will receive your Kalajay in-house dispatch tracking code shortly.',
   },
   {
     title: 'Loom Craft Progress Update',
@@ -35,7 +35,7 @@ const CANNED_RESPONSES = [
   },
   {
     title: 'Address Update Confirmation',
-    text: 'Namaste! We have successfully updated your delivery destination in our courier manifest prior to label generation. Your package will reach your new address seamlessly.',
+    text: 'Namaste! We have successfully updated your delivery destination in our atelier dispatch manifest prior to label generation. Your package will reach your new address seamlessly.',
   },
 ];
 

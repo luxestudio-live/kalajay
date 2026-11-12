@@ -48,7 +48,7 @@ export default function TermsPage() {
         <section className="space-y-3">
           <h2 className="font-serif text-2xl text-plum font-normal">4. Consumer Privacy & Communications</h2>
           <p>
-            We collect personal contact information (name, delivery address, phone number, email) solely for fulfilling orders, dispatching real-time courier tracking updates, and providing direct WhatsApp customer support. We never sell, rent, or lease customer data to third-party marketing brokers.
+            We collect personal contact information (name, delivery address, phone number, email) solely for fulfilling orders, dispatching real-time dispatch and delivery tracking updates, and providing direct WhatsApp customer support. We never sell, rent, or lease customer data to third-party marketing brokers.
           </p>
         </section>
 

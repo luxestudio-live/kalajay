@@ -51,7 +51,7 @@ export default function PrivacyPage() {
           </p>
           <ul className="list-disc pl-5 space-y-1 text-ink-light">
             <li><strong>Patron Identification:</strong> Full name, billing and physical delivery addresses.</li>
-            <li><strong>Communication Coordinates:</strong> Mobile number for OTP authentication and courier transit dispatch, and email address for digital tax invoices.</li>
+            <li><strong>Communication Coordinates:</strong> Mobile number for OTP authentication and direct atelier transit dispatch, and email address for digital tax invoices.</li>
             <li><strong>Bespoke Custom Specifications:</strong> Colorway selections, monogram initials, or wedding gift notes provided during customization.</li>
           </ul>
         </section>
@@ -74,7 +74,7 @@ export default function PrivacyPage() {
         <section className="space-y-3">
           <h2 className="font-serif text-2xl text-plum font-normal flex items-center gap-2.5">
             <Bell className="w-4 h-4 text-rosewood" />
-            <span>3. WhatsApp &amp; Courier Transit Updates</span>
+            <span>3. WhatsApp &amp; Atelier Transit Updates</span>
           </h2>
           <p>
             Because each Kalajay treasure is individually tensioned and hand-strung, we provide transparent craft progress updates via WhatsApp and SMS:
@@ -82,7 +82,7 @@ export default function PrivacyPage() {
           <ul className="list-disc pl-5 space-y-1 text-ink-light">
             <li>Instant confirmation upon order booking.</li>
             <li>Notification when bead stringing commences on our artisan looms.</li>
-            <li>Wax-sealed packaging verification and BlueDart / Delhivery tracking link upon dispatch.</li>
+            <li>Wax-sealed packaging verification and Kalajay in-house dispatch tracking link upon dispatch.</li>
           </ul>
           <p className="text-[11px] text-ink-light">
             You may opt out of WhatsApp dispatch alerts at any time by replying &quot;STOP&quot; to our craft house line.

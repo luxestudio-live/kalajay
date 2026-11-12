@@ -173,7 +173,7 @@ export default function OrdersView() {
                 Customer Orders &amp; Sales
               </h1>
               <p className="text-xs text-[#76695F] mt-0.5">
-                Multi-status order tracking from Bihar loom allocation to Mumbai wax-seal packaging and BlueDart delivery.
+                Multi-status order tracking from Bihar loom allocation to Mumbai wax-seal packaging and in-house atelier direct dispatch.
               </p>
             </div>
 

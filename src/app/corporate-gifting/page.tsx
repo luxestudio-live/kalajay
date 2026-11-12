@@ -127,7 +127,7 @@ export default function CorporateGiftingPage() {
               <div className="text-xs text-ink space-y-1 pt-2 border-t border-border-subtle">
                 <p>• Lead Time: 4 to 6 weeks</p>
                 <p>• Custom bespoke pricing schedule</p>
-                <p>• Multi-city direct courier routing</p>
+                <p>• Multi-city direct atelier dispatch</p>
               </div>
             </div>
           </div>

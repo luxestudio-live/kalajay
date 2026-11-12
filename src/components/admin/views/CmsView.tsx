@@ -116,7 +116,7 @@ const INITIAL_FAQS: FaqItem[] = [
     id: 'faq-3',
     category: 'Shipping & Fulfilment',
     question: 'What are the delivery charges and timelines?',
-    answer: 'We offer complimentary express delivery across India on all orders above ₹599. Every order is packaged in a wax-sealed gift box and dispatched within 48 hours via BlueDart Express or Delhivery.',
+    answer: 'We offer complimentary express delivery across India on all orders above ₹599. Every order is packaged in a wax-sealed gift box and dispatched within 48 hours via our dedicated in-house Kalajay Atelier delivery team.',
     order: 3,
   },
   {
@@ -187,7 +187,7 @@ const INITIAL_SEO: SeoPageConfig[] = [
     route: '/faq',
     pageName: 'Frequently Asked Questions',
     title: 'FAQs & Product Care Guide | Kalajay Handcrafted Luxuries',
-    description: 'Frequently asked questions regarding loom craft timelines, Czech beads, BlueDart shipping, custom bridal orders, and heirloom care advice.',
+    description: 'Frequently asked questions regarding loom craft timelines, Czech beads, in-house atelier delivery, custom bridal orders, and heirloom care advice.',
     canonicalUrl: 'https://kalajay.theluxestudio.in/faq',
     ogImage: 'https://kalajay.theluxestudio.in/og-faq.jpg',
     allowIndexing: true,

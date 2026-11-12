@@ -41,7 +41,7 @@ const REASON_TILES: Array<{
   { id: 'count_variance', label: 'Physical Count Variance', desc: 'Routine periodic cycle count disparity' },
   { id: 'craft_defect', label: 'Artisan Tension Defect', desc: 'Wire tension or glass bead defect during loom inspection' },
   { id: 'photo_sample', label: 'Studio & PR Sample', desc: 'Transferred for editorial campaign or bridal preview' },
-  { id: 'damage_transit', label: 'Transit / Courier Damage', desc: 'Damaged in transit between Bihar Hub & Mumbai' },
+  { id: 'damage_transit', label: 'Atelier Transit Damage', desc: 'Damaged during inter-hub transit between Bihar Hub & Mumbai' },
   { id: 'artisan_return', label: 'Artisan Loom Restock', desc: 'Master artisan completed extra pieces for batch' },
   { id: 'shrinkage', label: 'Ledger Shrinkage', desc: 'Unaccounted atelier loss requiring audit review' },
 ];

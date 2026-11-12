@@ -27,23 +27,23 @@ export default function ShippingView() {
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#9E5430]/10 text-[#9E5430] text-[10.5px] uppercase tracking-wider font-semibold mb-1">
             <Truck className="w-3.5 h-3.5" />
-            <span>Logistics &amp; Courier Integration</span>
+            <span>In-House Dispatch &amp; Logistics</span>
           </div>
           <h1 className="font-serif text-2xl sm:text-3xl text-[#372921] font-semibold">
             Shipping &amp; Fulfilment
           </h1>
           <p className="text-xs sm:text-sm text-[#76695F] mt-1">
-            Manage BlueDart and Delhivery courier pickups, AWB generation, delivery exceptions, and Pan-India tracking.
+            Manage in-house atelier dispatch, Kalajay self-managed delivery fleet, consignment generation, and Pan-India tracking.
           </p>
         </div>
 
         <button
           type="button"
-          onClick={() => alert('Courier API Manifest: Generating live BlueDart pickup manifest...')}
+          onClick={() => alert('Atelier Dispatch: Generating Kalajay in-house delivery manifest...')}
           className="px-4 py-2 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer self-start sm:self-auto"
         >
           <Plus className="w-3.5 h-3.5" />
-          <span>Generate Courier Manifest</span>
+          <span>Generate Dispatch Manifest</span>
         </button>
       </div>
 
@@ -80,8 +80,8 @@ export default function ShippingView() {
             <table className="w-full text-left text-xs border-collapse">
               <thead className="bg-[#F7F3EC] text-[#76695F] border-b border-[#DED3C5] text-[10.5px] uppercase tracking-wider font-semibold">
                 <tr>
-                  <th className="py-3 px-4">Order ID &amp; AWB Tracking</th>
-                  <th className="py-3 px-4">Courier Partner</th>
+                  <th className="py-3 px-4">Order ID &amp; Consignment Ref</th>
+                  <th className="py-3 px-4">Dispatch Handler</th>
                   <th className="py-3 px-4">Recipient &amp; Pincode</th>
                   <th className="py-3 px-4">Dispatch Timestamp</th>
                   <th className="py-3 px-4">Transit Milestone</th>
@@ -94,7 +94,7 @@ export default function ShippingView() {
                     <td className="py-3 px-4">
                       <strong className="text-[#372921] font-bold block">Order #{s.id}</strong>
                       <span className="text-[10.5px] text-[#9E5430] font-mono font-semibold">
-                        AWB: {s.trackingAwb}
+                        Consignment: {s.trackingAwb}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-[#372921] font-medium">
@@ -123,10 +123,10 @@ export default function ShippingView() {
                     <td className="py-3 px-4 text-right">
                       <button
                         type="button"
-                        onClick={() => alert(`Printing thermal shipping label for AWB ${s.trackingAwb}`)}
+                        onClick={() => alert(`Printing thermal dispatch label for Consignment ${s.trackingAwb}`)}
                         className="text-[11px] text-[#9E5430] hover:underline font-semibold"
                       >
-                        Print AWB
+                        Print Label
                       </button>
                     </td>
                   </tr>

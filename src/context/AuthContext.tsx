@@ -154,11 +154,11 @@ const DEFAULT_ORDERS: Order[] = [
         description: 'Inspected under calibrated light, packed with canvas dust bag and wax seal.',
       },
       {
-        title: 'Dispatched via Express Courier',
+        title: 'Dispatched via Kalajay Atelier Team',
         location: 'Mumbai Hub',
         date: 'Expected 03 Nov',
         completed: false,
-        description: 'Dispatched via BlueDart Air Priority (AWB: BD-8849201948).',
+        description: 'Dispatched via Kalajay In-House Direct Dispatch (Consignment: KJ-DISP-8849201948).',
       },
       {
         title: 'Delivered to Doorstep',

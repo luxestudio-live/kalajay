@@ -11,7 +11,7 @@ export default function ShippingReturnsPage() {
   const faqs = [
     {
       q: 'How do I track my order once it has been dispatched?',
-      a: 'As soon as your parcel is packed and handed to our courier partner in Mumbai, we send an automated tracking link directly to your WhatsApp number and email address with live milestone updates.'
+      a: 'As soon as your parcel is packed and handed to our in-house atelier dispatch team in Mumbai, we send an automated tracking link directly to your WhatsApp number and email address with live milestone updates.'
     },
     {
       q: 'What if my parcel arrives with visible exterior damage?',
@@ -233,7 +233,7 @@ export default function ShippingReturnsPage() {
               </span>
               <h4 className="font-serif text-3xl text-plum font-normal">Free Shipping</h4>
               <p className="text-xs text-ink-light mt-1">
-                Complimentary insured courier delivery across all 19,000+ serviceable Indian pin codes.
+                Complimentary insured direct delivery across all 19,000+ serviceable Indian pin codes.
               </p>
             </div>
 
@@ -243,7 +243,7 @@ export default function ShippingReturnsPage() {
               </span>
               <h4 className="font-serif text-3xl text-plum font-normal">Flat ₹79</h4>
               <p className="text-xs text-ink-light mt-1">
-                Nominal subsidized courier fee covering padded protective transit and live tracking.
+                Nominal subsidized delivery fee covering padded protective transit and live tracking.
               </p>
             </div>
           </div>

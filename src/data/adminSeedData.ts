@@ -500,7 +500,7 @@ export const SEED_WORK_ORDERS: WorkOrder[] = [
     priority: 'normal',
     qcPassed: true,
     materialAllocated: true,
-    notes: 'QC sign-off complete. Dispatched via express courier to Mumbai Atelier for packaging.',
+    notes: 'QC sign-off complete. Dispatched via Kalajay Atelier transport to Mumbai Studio for wax packaging.',
   },
 ];
 
@@ -540,8 +540,8 @@ export const SEED_ORDERS: AdminOrder[] = [
       { title: 'Assigned to Master Artisan Renu Devi (Loom A2)', timestamp: '2026-11-12 09:00', note: 'Estimated 14 craft hours' },
     ],
     artisanNote: 'Renu Devi has threaded the foundation perimeter; facet alignment is immaculate.',
-    courier: 'BlueDart Express',
-    trackingAwb: 'BD-78902144',
+    courier: 'Kalajay Direct Dispatch',
+    trackingAwb: 'KJ-DISP-78902144',
     createdAt: '2026-11-11T14:10:00Z',
   },
   {
@@ -585,10 +585,10 @@ export const SEED_ORDERS: AdminOrder[] = [
       { title: 'Order Confirmed', timestamp: '2026-11-09 11:20' },
       { title: 'Artisan Weaving & QC Completed', timestamp: '2026-11-10 17:00' },
       { title: 'Wax-Sealed in Mumbai Studio', timestamp: '2026-11-11 10:30' },
-      { title: 'Picked up by Delhivery Courier', timestamp: '2026-11-11 15:45' },
+      { title: 'Handed to Kalajay Atelier Dispatch Team', timestamp: '2026-11-11 15:45' },
     ],
-    courier: 'Delhivery Surface',
-    trackingAwb: 'DEL-99082341',
+    courier: 'Kalajay In-House Logistics',
+    trackingAwb: 'KJ-DISP-99082341',
     createdAt: '2026-11-09T11:20:00Z',
   },
   {
@@ -625,8 +625,8 @@ export const SEED_ORDERS: AdminOrder[] = [
       { title: 'Crafted & Dispatched', timestamp: '2026-11-07 14:00' },
       { title: 'Delivered to Patron', timestamp: '2026-11-09 16:15' },
     ],
-    courier: 'BlueDart Express',
-    trackingAwb: 'BD-55441290',
+    courier: 'Kalajay Direct Dispatch',
+    trackingAwb: 'KJ-DISP-55441290',
     createdAt: '2026-11-06T09:30:00Z',
   },
 ];
@@ -716,7 +716,7 @@ export const SEED_SUPPORT_TICKETS: SupportTicket[] = [
       {
         sender: 'concierge',
         senderName: 'Pooja Nair (Kalajay Concierge)',
-        text: 'Namaste Radhika! We have located your order in our pre-dispatch queue. Please share the complete Pune address and pincode, and we will update the courier manifest before label generation.',
+        text: 'Namaste Radhika! We have located your order in our pre-dispatch queue. Please share the complete Pune address and pincode, and we will update the dispatch manifest before label generation.',
         timestamp: '2026-11-11 18:15',
       },
     ],

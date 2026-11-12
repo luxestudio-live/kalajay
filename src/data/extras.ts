@@ -171,7 +171,7 @@ export const FAQS = [
   },
   {
     q: 'What is your shipping policy across India?',
-    a: 'We offer free delivery across all Indian postal pincodes for orders above ₹599. For orders below ₹599, a flat delivery fee of ₹79 is applied at checkout. Express priority courier dispatch is available on request.'
+    a: 'We offer free delivery across all Indian postal pincodes for orders above ₹599. For orders below ₹599, a flat delivery fee of ₹79 is applied at checkout. Express priority atelier dispatch is available on request.'
   },
   {
     q: 'Can I customise the colours or dimensions of a piece?',

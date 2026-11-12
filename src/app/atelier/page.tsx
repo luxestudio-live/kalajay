@@ -88,7 +88,7 @@ export default function AtelierPage() {
             <div className="pt-2 text-[11px] text-ink-light space-y-1">
               <p>• Three-Point Quality Verification</p>
               <p>• Bespoke Calligraphy Gift Cards</p>
-              <p>• Safe Pan-India Courier Dispatch</p>
+              <p>• Safe Pan-India Atelier Dispatch</p>
             </div>
           </div>
         </section>

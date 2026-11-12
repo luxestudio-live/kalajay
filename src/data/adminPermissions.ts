@@ -190,7 +190,7 @@ export const ADMIN_MODULE_DEFINITIONS: ModulePermissionDef[] = [
       {
         id: 'shipping.shipments',
         name: 'Shipments & Dispatch',
-        description: 'Delhivery, BlueDart, and courier pickups, AWB labels, and tracking.',
+        description: 'Kalajay in-house dispatch, self-managed deliveries, consignment labels, and tracking.',
         supportedActions: ['view', 'create', 'edit', 'export'],
       },
       {
@@ -436,7 +436,7 @@ export const SEED_ROLES: AdminRole[] = [
   {
     id: 'role-fulfilment-agent',
     name: 'Fulfilment & Dispatch Agent',
-    description: 'Generates courier manifests, prints AWB labels, manages packaging and order transit.',
+    description: 'Generates in-house dispatch manifests, prints consignment labels, manages packaging and order transit.',
     isSystem: true,
     userCount: 4,
     permissions: {

@@ -75,19 +75,19 @@ export default function SettingsStoreView() {
         showToast('ERP Handshake successful: 69 finished goods & 5 raw materials reconciled.');
       } else if (seamName === 'courier') {
         setTestResult({
-          seam: 'BlueDart / Delhivery Courier API (PROPOSED)',
+          seam: 'Kalajay In-House Atelier Dispatch & Logistics',
           status: 'ok',
-          message: 'HTTP 201 Created — AWB generation & manifest booking contract valid.',
+          message: 'HTTP 201 Created — In-house consignment generation & dispatch manifest booking valid.',
           payload: {
-            carrier: 'BlueDart Express',
-            contract_service: 'Apex Direct (Surface & Air)',
+            carrier: 'Kalajay In-House Logistics Team',
+            contract_service: 'Atelier White-Glove Delivery (Pan-India Direct)',
             manifest_pincode_origin: '400018',
             rate_card: 'Luxury Fragile Standard (Wax-Sealed Box)',
-            mock_awb_generated: 'BD-78902144',
+            mock_awb_generated: 'KJ-DISP-78902144',
           },
         });
-        logAction('SIMULATE_COURIER_HANDSHAKE', 'settings', 'Simulated courier manifest handshake');
-        showToast('Courier API test passed: BlueDart & Delhivery dispatch contracts verified.');
+        logAction('SIMULATE_COURIER_HANDSHAKE', 'settings', 'Simulated in-house atelier dispatch handshake');
+        showToast('In-House Logistics test passed: Kalajay atelier dispatch manifest contracts verified.');
       } else if (seamName === 'razorpay') {
         setTestResult({
           seam: 'Payment Gateway Webhook Verification (PROPOSED)',
@@ -143,7 +143,7 @@ export default function SettingsStoreView() {
             Store Identity &amp; System Integration Seams
           </h1>
           <p className="text-xs sm:text-sm text-[#76695F] mt-1">
-            Registered business compliance, and future integration contracts for Master ERP, BlueDart, Razorpay, and WhatsApp Cloud API.
+            Registered business compliance, and integration contracts for Master ERP, In-House Dispatch, Razorpay, and WhatsApp Cloud API.
           </p>
         </div>
 
@@ -242,34 +242,34 @@ export default function SettingsStoreView() {
               </div>
             </div>
 
-            {/* SEAM 2: COURIER LOGISTICS */}
+            {/* SEAM 2: IN-HOUSE ATELIER LOGISTICS */}
             <div className="bg-white p-5 rounded-2xl border border-[#DED3C5] shadow-xs flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between pb-3 border-b border-[#EAE2D8]">
                   <div className="flex items-center gap-2">
                     <Truck className="w-4 h-4 text-[#9E5430]" />
                     <h3 className="font-serif text-sm font-semibold text-[#372921]">
-                      2. BlueDart &amp; Delhivery Logistics Seam
+                      2. Kalajay In-House Logistics &amp; Dispatch Seam
                     </h3>
                   </div>
                   <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">
-                    Carrier API
+                    Self-Managed Logistics
                   </span>
                 </div>
 
                 <div className="py-3 space-y-2 text-xs">
                   <p className="text-[#76695F] text-[11px] leading-relaxed">
-                    Automated shipment manifest booking, thermal AWB generation, pickup coordination, and webhook event listeners for live customer order timeline transitions.
+                    Self-managed shipment manifest booking, custom consignment generation, direct atelier team coordination, and live patron timeline milestone transitions.
                   </p>
                   <div className="p-2.5 rounded-lg bg-[#FAF8F5] border border-[#EAE2D8] font-mono text-[10.5px] text-[#372921]">
-                    POST /api/v1/logistics/bluedart/manifest<br />
-                    POST /api/v1/logistics/webhook/transit-milestone
+                    POST /api/v1/logistics/in-house/manifest<br />
+                    POST /api/v1/logistics/dispatch/milestone
                   </div>
                 </div>
               </div>
 
               <div className="pt-3 border-t border-[#EAE2D8] flex items-center justify-between">
-                <span className="text-[10.5px] text-[#76695F]">Carrier: BlueDart Apex</span>
+                <span className="text-[10.5px] text-[#76695F]">Carrier: Kalajay Direct (In-House Team)</span>
                 <button
                   type="button"
                   disabled={testingSeam === 'courier'}

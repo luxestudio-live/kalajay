@@ -55,8 +55,8 @@ const KNOWN_ORDERS: Record<string, SimulatedOrder> = {
     customerName: 'Sonali Sharma',
     city: 'Mumbai, Maharashtra',
     artisanNote: 'Hand-strung with tensioned 8-cord crystal fiber. Inspected in morning natural light by Sunita Devi.',
-    awbNumber: 'BD-84729103IN',
-    courier: 'BlueDart Express Air',
+    awbNumber: 'KJ-DISP-84729103',
+    courier: 'Kalajay In-House Direct Dispatch',
   },
   'KJ-7710': {
     orderId: 'KJ-7710',
@@ -75,8 +75,8 @@ const KNOWN_ORDERS: Record<string, SimulatedOrder> = {
     customerName: 'Ananya Verma',
     city: 'New Delhi',
     artisanNote: 'Structural frame reinforced with brass core. Wax-sealed with Kalajay insignia.',
-    awbNumber: 'DL-99381024IN',
-    courier: 'Delhivery Surface Premium',
+    awbNumber: 'KJ-DISP-99381024',
+    courier: 'Kalajay Atelier Direct Delivery',
   },
   'KJ-6502': {
     orderId: 'KJ-6502',
@@ -96,7 +96,7 @@ const KNOWN_ORDERS: Record<string, SimulatedOrder> = {
     city: 'Bengaluru, Karnataka',
     artisanNote: 'Currently on the artisan loom. 420 faceted glass beads threaded and tensioned.',
     awbNumber: 'Pending Craft House Dispatch',
-    courier: 'Scheduled via BlueDart',
+    courier: 'Scheduled via Kalajay Atelier Team',
   },
 };
 
@@ -131,8 +131,8 @@ export default function TrackOrderPage() {
         customerName: 'Valued Patron',
         city: 'India Destination',
         artisanNote: 'Individual bead sequence verified and calibrated for tension.',
-        awbNumber: 'AWB-' + Math.floor(10000000 + Math.random() * 90000000) + 'IN',
-        courier: 'Express Courier Air',
+        awbNumber: 'KJ-DISP-' + Math.floor(10000000 + Math.random() * 90000000),
+        courier: 'Kalajay In-House Direct Dispatch',
       });
       setError(false);
     }
@@ -309,9 +309,9 @@ export default function TrackOrderPage() {
                     )}
                     <span className="text-[10px] uppercase tracking-refined font-bold font-mono">Stage 03</span>
                   </div>
-                  <h4 className="font-serif text-base text-plum font-normal">Courier Transit</h4>
+                  <h4 className="font-serif text-base text-plum font-normal">Atelier Direct Transit</h4>
                   <p className="text-[11px] text-ink-muted leading-relaxed mt-1 font-light">
-                    Dispatched via {activeOrder.courier}. AWB: <strong className="text-plum font-mono">{activeOrder.awbNumber}</strong>
+                    Dispatched via {activeOrder.courier}. Ref: <strong className="text-plum font-mono">{activeOrder.awbNumber}</strong>
                   </p>
                   <span className="text-[10px] font-mono block mt-2 text-rosewood">
                     {getStepActive(activeOrder.status, 3) ? '● Out for Delivery' : '○ Scheduled for Dispatch'}
@@ -356,7 +356,7 @@ export default function TrackOrderPage() {
             {/* Direct WhatsApp Concierge Help */}
             <div className="pt-4 border-t border-border-subtle flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
               <span className="text-ink-muted font-light">
-                Need to amend delivery address or check live courier coordinates?
+                Need to amend delivery address or check live dispatch coordinates?
               </span>
               <a
                 href={`https://wa.me/919740540847?text=Hello%20Kalajay%2C%20I%20am%20inquiring%20about%20Order%20${activeOrder.orderId}`}

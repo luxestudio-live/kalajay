@@ -561,7 +561,7 @@ export default function AccountClient() {
                         {/* Interactive Step Timeline */}
                         <div>
                           <h4 className="text-xs uppercase tracking-refined font-semibold text-ink mb-4">
-                            Milestone Dispatch Chronicle (BlueDart Air: {order.awbNumber})
+                            Milestone Dispatch Chronicle (Kalajay In-House Dispatch: {order.awbNumber})
                           </h4>
                           <div className="space-y-4 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-border-medium">
                             {order.trackingSteps.map((step, idx) => (
