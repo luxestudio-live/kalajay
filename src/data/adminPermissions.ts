@@ -180,6 +180,12 @@ export const ADMIN_MODULE_DEFINITIONS: ModulePermissionDef[] = [
         description: 'Bead tension, knot concealment, and structural balance sign-off.',
         supportedActions: ['view', 'approve', 'edit'],
       },
+      {
+        id: 'production.stages',
+        name: 'Craft Pipeline Stages',
+        description: 'Configure, reorder, add, and edit artisan loom stages and action workflows.',
+        supportedActions: ['view', 'create', 'edit', 'delete'],
+      },
     ],
   },
   {
@@ -430,6 +436,7 @@ export const SEED_ROLES: AdminRole[] = [
       'dashboard.activity': ['view'],
       'production.work_orders': ['view', 'create', 'edit', 'approve', 'export'],
       'production.qc': ['view', 'approve', 'edit'],
+      'production.stages': ['view', 'create', 'edit', 'delete'],
       'inventory.master': ['view', 'adjust_stock'],
       'inventory.materials': ['view', 'create', 'edit'],
       'inventory.low_stock': ['view'],

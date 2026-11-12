@@ -293,6 +293,7 @@ export default function CmsView() {
     setActiveSubPage,
     logAction,
     can,
+    showModal,
   } = useAdminStore();
 
   // Active subpage to internal tab mapper
@@ -451,11 +452,19 @@ export default function CmsView() {
   };
 
   const handleDeleteFaq = (id: string) => {
-    if (confirm('Are you sure you want to delete this FAQ question?')) {
-      setFaqs(prev => prev.filter(f => f.id !== id));
-      logAction('DELETE_FAQ', 'cms', `Deleted FAQ #${id}`);
-      showToast('FAQ removed');
-    }
+    showModal({
+      title: 'Remove FAQ Question',
+      message: 'Are you sure you want to delete this FAQ question from the public help accordion? This change takes effect immediately in the preview store.',
+      icon: 'warning',
+      confirmLabel: 'Delete FAQ',
+      cancelLabel: 'Keep Question',
+      isDestructive: true,
+      onConfirm: () => {
+        setFaqs(prev => prev.filter(f => f.id !== id));
+        logAction('DELETE_FAQ', 'cms', `Deleted FAQ #${id}`);
+        showToast('FAQ removed');
+      },
+    });
   };
 
   const handleSavePolicies = (e: React.FormEvent) => {
@@ -520,11 +529,19 @@ export default function CmsView() {
   };
 
   const handleDeleteMedia = (id: string) => {
-    if (confirm('Are you sure you want to delete this media asset?')) {
-      setMediaAssets(prev => prev.filter(m => m.id !== id));
-      logAction('DELETE_MEDIA_ASSET', 'cms', `Deleted media asset #${id}`);
-      showToast('Media asset removed from gallery');
-    }
+    showModal({
+      title: 'Remove Media Asset',
+      message: 'Are you sure you want to delete this media asset from the boutique brand library?',
+      icon: 'warning',
+      confirmLabel: 'Delete Asset',
+      cancelLabel: 'Keep Asset',
+      isDestructive: true,
+      onConfirm: () => {
+        setMediaAssets(prev => prev.filter(m => m.id !== id));
+        logAction('DELETE_MEDIA_ASSET', 'cms', `Deleted media asset #${id}`);
+        showToast('Media asset removed from gallery');
+      },
+    });
   };
 
   // --- Artisan Handlers ---
@@ -586,11 +603,19 @@ export default function CmsView() {
   };
 
   const handleDeleteArtisan = (id: string) => {
-    if (confirm('Are you sure you want to delete this artisan profile?')) {
-      setArtisans(prev => prev.filter(a => a.id !== id));
-      logAction('DELETE_ARTISAN', 'cms', `Deleted artisan profile #${id}`);
-      showToast('Artisan profile removed');
-    }
+    showModal({
+      title: 'Remove Master Artisan Profile',
+      message: 'Are you sure you want to remove this master artisan story from the public Our Story page?',
+      icon: 'warning',
+      confirmLabel: 'Delete Profile',
+      cancelLabel: 'Keep Profile',
+      isDestructive: true,
+      onConfirm: () => {
+        setArtisans(prev => prev.filter(a => a.id !== id));
+        logAction('DELETE_ARTISAN', 'cms', `Deleted artisan profile #${id}`);
+        showToast('Artisan profile removed');
+      },
+    });
   };
 
   // --- Page Inventory Handlers ---
@@ -1001,11 +1026,19 @@ export default function CmsView() {
                     <button
                       type="button"
                       onClick={() => {
-                        if (confirm(`Delete banner "${banner.title}"?`)) {
-                          deleteBanner(banner.id);
-                          logAction('DELETE_BANNER', 'cms', `Deleted banner: ${banner.title}`);
-                          showToast('Banner removed');
-                        }
+                        showModal({
+                          title: 'Delete Marquee Banner',
+                          message: `Are you sure you want to permanently remove banner "${banner.title}"?`,
+                          icon: 'warning',
+                          confirmLabel: 'Delete Banner',
+                          cancelLabel: 'Cancel',
+                          isDestructive: true,
+                          onConfirm: () => {
+                            deleteBanner(banner.id);
+                            logAction('DELETE_BANNER', 'cms', `Deleted banner: ${banner.title}`);
+                            showToast('Banner removed');
+                          },
+                        });
                       }}
                       className="p-1.5 rounded-lg hover:bg-rose-50 text-[#76695F] hover:text-rose-600 cursor-pointer"
                       title="Delete Banner"

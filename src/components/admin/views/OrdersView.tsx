@@ -377,11 +377,11 @@ export default function OrdersView() {
                 <select
                   value={selectedProductSku}
                   onChange={e => setSelectedProductSku(e.target.value)}
-                  className="w-full bg-[#FAF8F5] border border-[#DED3C5] rounded-lg p-2.5 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                  className="w-full max-w-full truncate text-ellipsis bg-[#FAF8F5] border border-[#DED3C5] rounded-lg p-2.5 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
                 >
                   {PRODUCTS.map(p => (
-                    <option key={p.code} value={p.code}>
-                      {p.name} — ₹{p.price.toLocaleString('en-IN')} ({p.category})
+                    <option key={p.code} value={p.code} className="truncate">
+                      [{p.code}] {p.name.length > 28 ? p.name.slice(0, 28) + '…' : p.name} · ₹{p.price.toLocaleString('en-IN')}
                     </option>
                   ))}
                 </select>

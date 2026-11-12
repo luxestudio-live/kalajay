@@ -57,6 +57,7 @@ export default function InventoryView() {
     can,
     activeSubPage,
     setActiveSubPage,
+    showModal,
   } = useAdminStore();
 
   const activeTab: 'master' | 'low_stock' | 'adjustments' | 'raw_materials' =
@@ -167,7 +168,11 @@ export default function InventoryView() {
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSkuData.sku || !newSkuData.name) {
-      alert('Please provide both SKU code and item name.');
+      showModal({
+        title: 'Validation Incomplete',
+        message: 'Please provide both an inventory SKU code and item name before registering this master asset.',
+        icon: 'warning',
+      });
       return;
     }
     const computedAvailable = Math.max(0, newSkuData.onHand - newSkuData.reserved);
@@ -575,11 +580,11 @@ export default function InventoryView() {
                       const target = inventory.find(i => i.sku === e.target.value);
                       if (target) setNewQty(target.onHand);
                     }}
-                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3.5 py-2.5 text-xs text-[#372921] font-medium focus:outline-none focus:border-[#9E5430] focus:ring-1 focus:ring-[#9E5430] transition-colors appearance-none cursor-pointer"
+                    className="w-full max-w-full truncate text-ellipsis bg-white border border-[#DED3C5] rounded-xl pl-3.5 pr-9 py-2.5 text-xs text-[#372921] font-medium focus:outline-none focus:border-[#9E5430] focus:ring-1 focus:ring-[#9E5430] transition-colors appearance-none cursor-pointer"
                   >
                     {inventory.map(item => (
-                      <option key={item.sku} value={item.sku}>
-                        {item.name} ({item.sku}) · In Stock: {item.onHand} {item.unit}
+                      <option key={item.sku} value={item.sku} className="truncate">
+                        [{item.sku}] {item.name.length > 30 ? item.name.slice(0, 30) + '…' : item.name} · {item.onHand} {item.unit}
                       </option>
                     ))}
                   </select>

@@ -26,6 +26,11 @@ import {
   Sparkle,
   Calendar,
   Warehouse,
+  Edit2,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  HelpCircle,
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
 import { WorkOrder } from '@/data/adminTypes';
@@ -134,12 +139,15 @@ export default function ProductionView() {
     activeSubPage,
     setActiveSubPage,
     logAction,
+    showModal,
   } = useAdminStore();
 
   const isQcView = activeSubPage === 'production.qc';
+  const isStagesView = activeSubPage === 'production.stages';
 
   // Configurable Pipeline Stages
   const [stages, setStages] = useState<ProductionStageDef[]>(DEFAULT_STAGES);
+  const [editingStage, setEditingStage] = useState<ProductionStageDef | null>(null);
 
   // Load custom stages from localStorage
   useEffect(() => {
@@ -251,21 +259,81 @@ export default function ProductionView() {
     showToast(`Work order issued for ${prod.name} (${prodQty} pcs) to ${artisanName}.`, 'success');
   };
 
-  // Submit Custom Stage Creation
-  const handleCreateCustomStage = (e: React.FormEvent) => {
+  // Open Add Stage Modal
+  const openAddStageModal = () => {
+    setEditingStage(null);
+    setCustomStageName('');
+    setCustomStagePercent(50);
+    setCustomStageColor('bg-indigo-100 text-indigo-800 border-indigo-200');
+    setCustomStageDesc('');
+    setCustomStageModalOpen(true);
+  };
+
+  // Open Edit Stage Modal
+  const openEditStageModal = (stage: ProductionStageDef) => {
+    setEditingStage(stage);
+    const rawName = stage.badgeLabel || stage.label.replace(/^\d+\.\s*/, '');
+    setCustomStageName(rawName);
+    setCustomStagePercent(stage.percent);
+    setCustomStageColor(stage.color);
+    setCustomStageDesc(stage.description);
+    setCustomStageModalOpen(true);
+  };
+
+  // Submit Stage (Create or Update)
+  const handleSaveCustomStage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!customStageName.trim()) {
-      alert('Please enter a stage name.');
+      showModal({
+        title: 'Validation Notice',
+        subtitle: 'Craft Stage Configuration',
+        icon: 'warning',
+        message: 'Please provide a stage title (e.g. "Framing", "Hand Knotting", "Monogram Threading").',
+        confirmLabel: 'Understood',
+      });
       return;
     }
+
     const cleanId = customStageName
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '_')
       .replace(/(^_|_$)/g, '');
 
-    // Check if ID already exists
+    if (editingStage) {
+      // Editing existing stage
+      const updated = stages.map(s => {
+        if (s.id === editingStage.id) {
+          const prefix = s.label.match(/^\d+\./)?.[0] || '1.';
+          return {
+            ...s,
+            label: `${prefix} ${customStageName.trim()}`,
+            badgeLabel: customStageName.trim().toUpperCase(),
+            color: customStageColor,
+            percent: Math.min(100, Math.max(5, customStagePercent)),
+            description: customStageDesc || s.description,
+          };
+        }
+        return s;
+      });
+      saveStages(updated);
+      setCustomStageModalOpen(false);
+      setEditingStage(null);
+      logAction('EDIT_PRODUCTION_STAGE', 'production', `Updated production stage: ${customStageName.trim()}`);
+      showToast(`Stage "${customStageName.trim()}" updated successfully!`, 'success');
+      setCustomStageName('');
+      setCustomStageDesc('');
+      return;
+    }
+
+    // Creating new stage: check duplicate
     if (stages.some(s => s.id === cleanId)) {
-      alert('A stage with a similar name already exists. Please choose a different name.');
+      showModal({
+        title: 'Duplicate Identifier',
+        subtitle: 'Craft Stage Configuration',
+        icon: 'warning',
+        message: 'A pipeline stage with a similar name already exists. Please choose a distinct title.',
+        confirmLabel: 'Understood',
+      });
       return;
     }
 
@@ -292,12 +360,84 @@ export default function ProductionView() {
       nextStages = [...stages, newStageDef];
     }
 
-    saveStages(nextStages);
+    // Renumber properly
+    const renumbered = nextStages.map((s, idx) => ({
+      ...s,
+      label: `${idx + 1}. ${s.label.replace(/^\d+\.\s*/, '')}`,
+    }));
+
+    saveStages(renumbered);
     setCustomStageModalOpen(false);
     logAction('ADD_PRODUCTION_STAGE', 'production', `Added custom production stage action: ${newStageDef.label}`);
     showToast(`Custom stage "${newStageDef.label}" added to production pipeline!`, 'success');
     setCustomStageName('');
     setCustomStageDesc('');
+  };
+
+  // Delete Stage Action
+  const handleDeleteStage = (stageToDelete: ProductionStageDef) => {
+    showModal({
+      title: 'Delete Pipeline Stage',
+      subtitle: 'Craft Stage Configuration',
+      icon: 'danger',
+      message: `Are you sure you want to delete stage "${stageToDelete.label}" from the production pipeline? Any active work orders in this stage will be safely reassigned to the initial Loom Threading stage.`,
+      confirmLabel: 'Delete Stage',
+      cancelLabel: 'Keep Stage',
+      isDestructive: true,
+      onConfirm: () => {
+        const remainingStages = stages.filter(s => s.id !== stageToDelete.id);
+        const fallbackStage = remainingStages[0]?.id || 'loom_threading';
+        workOrders.forEach(w => {
+          if (w.stage === stageToDelete.id) {
+            updateWorkOrderStage(w.id, fallbackStage as any);
+          }
+        });
+
+        // Renumber remaining stages
+        const renumbered = remainingStages.map((s, idx) => ({
+          ...s,
+          label: `${idx + 1}. ${s.label.replace(/^\d+\.\s*/, '')}`,
+        }));
+        saveStages(renumbered);
+        logAction('DELETE_PRODUCTION_STAGE', 'production', `Deleted stage: ${stageToDelete.label}`);
+        showToast(`Stage "${stageToDelete.label}" has been removed.`, 'info');
+      },
+    });
+  };
+
+  // Move Stage Up / Down in sequence
+  const handleMoveStage = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= stages.length) return;
+
+    const next = [...stages];
+    const temp = next[index];
+    next[index] = next[targetIndex];
+    next[targetIndex] = temp;
+
+    const renumbered = next.map((s, idx) => ({
+      ...s,
+      label: `${idx + 1}. ${s.label.replace(/^\d+\.\s*/, '')}`,
+    }));
+    saveStages(renumbered);
+    showToast(`Reordered stage sequence.`, 'info');
+  };
+
+  // Reset to Pristine Default Stages
+  const handleResetStages = () => {
+    showModal({
+      title: 'Reset Craft Pipeline Stages',
+      subtitle: 'Default Atelier Workflow',
+      icon: 'warning',
+      message: 'Are you sure you want to reset all pipeline stages back to the standard 5 handcraft milestones (Loom Threading, Bead Weaving, Frame & Mirror Fitting, Quality Inspection, and Wax-Sealed)?',
+      confirmLabel: 'Reset to Defaults',
+      cancelLabel: 'Cancel',
+      isDestructive: true,
+      onConfirm: () => {
+        saveStages(DEFAULT_STAGES);
+        showToast('Craft pipeline stages reset to pristine defaults.', 'success');
+      },
+    });
   };
 
   // Run QC Audit Submit
@@ -376,12 +516,12 @@ export default function ProductionView() {
       )}
 
       {/* 0. SUBPAGE NAVIGATION TABS (Two-Way Sync with Sidebar) */}
-      <div className="flex items-center gap-1 border-b border-[#DED3C5] text-xs pb-1">
+      <div className="flex items-center gap-1 border-b border-[#DED3C5] text-xs pb-1 overflow-x-auto">
         <button
           type="button"
           onClick={() => setActiveSubPage('production.work_orders')}
-          className={`px-3.5 py-2 rounded-t-lg font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
-            !isQcView
+          className={`px-3.5 py-2 rounded-t-lg font-medium transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+            !isQcView && !isStagesView
               ? 'bg-white border-t-2 border-t-[#9E5430] border-x border-[#DED3C5] text-[#9E5430] font-semibold'
               : 'text-[#76695F] hover:text-[#372921]'
           }`}
@@ -393,7 +533,7 @@ export default function ProductionView() {
         <button
           type="button"
           onClick={() => setActiveSubPage('production.qc')}
-          className={`px-3.5 py-2 rounded-t-lg font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+          className={`px-3.5 py-2 rounded-t-lg font-medium transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
             isQcView
               ? 'bg-white border-t-2 border-t-[#9E5430] border-x border-[#DED3C5] text-[#9E5430] font-semibold'
               : 'text-[#76695F] hover:text-[#372921]'
@@ -407,12 +547,25 @@ export default function ProductionView() {
             </span>
           )}
         </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubPage('production.stages')}
+          className={`px-3.5 py-2 rounded-t-lg font-medium transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+            isStagesView
+              ? 'bg-white border-t-2 border-t-[#9E5430] border-x border-[#DED3C5] text-[#9E5430] font-semibold'
+              : 'text-[#76695F] hover:text-[#372921]'
+          }`}
+        >
+          <Sliders className="w-3.5 h-3.5" />
+          <span>Craft Pipeline Stages ({stages.length})</span>
+        </button>
       </div>
 
       {/* =========================================================================
           VIEW A: WORK ORDERS & ATELIER LOOMS
           ========================================================================= */}
-      {!isQcView && (
+      {!isQcView && !isStagesView && (
         <div className="space-y-6">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#DED3C5]">
@@ -433,7 +586,7 @@ export default function ProductionView() {
               {/* Add Custom Stage Action Button */}
               <button
                 type="button"
-                onClick={() => setCustomStageModalOpen(true)}
+                onClick={openAddStageModal}
                 className="px-3.5 py-2 rounded-full border border-[#DED3C5] bg-white hover:bg-[#F7F3EC] text-[#372921] text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
                 title="Add a custom stage or action to the production pipeline"
               >
@@ -563,12 +716,22 @@ export default function ProductionView() {
                 {/* Quick Add Custom Stage button on tab bar */}
                 <button
                   type="button"
-                  onClick={() => setCustomStageModalOpen(true)}
+                  onClick={openAddStageModal}
                   className="px-2.5 py-1.5 rounded-lg border border-dashed border-[#9E5430] text-[#9E5430] hover:bg-[#9E5430]/10 text-xs font-semibold whitespace-nowrap cursor-pointer flex items-center gap-1"
                   title="Add another custom stage to this rail"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Add Stage</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveSubPage('production.stages')}
+                  className="px-2.5 py-1.5 rounded-lg border border-[#DED3C5] bg-white hover:bg-[#F7F3EC] text-[#76695F] hover:text-[#372921] text-xs font-medium whitespace-nowrap cursor-pointer flex items-center gap-1"
+                  title="Manage, edit, reorder, and delete pipeline stages"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  <span>Manage Pipeline</span>
                 </button>
               </div>
 
@@ -687,7 +850,7 @@ export default function ProductionView() {
                                       showToast(`Work order ${wo.id} stage changed to ${getStageDef(e.target.value).label}`);
                                     }
                                   }}
-                                  className="bg-[#F7F3EC] border border-[#DED3C5] rounded-lg px-2.5 py-1 text-[11px] font-semibold text-[#372921] focus:outline-none focus:border-[#9E5430] cursor-pointer"
+                                  className="bg-[#F7F3EC] border border-[#DED3C5] rounded-lg px-2.5 py-1 text-[11px] font-semibold text-[#372921] focus:outline-none focus:border-[#9E5430] cursor-pointer max-w-[155px] truncate text-ellipsis"
                                 >
                                   {stages.map(st => (
                                     <option key={st.id} value={st.id}>
@@ -755,7 +918,7 @@ export default function ProductionView() {
             <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
               <button
                 type="button"
-                onClick={() => setCustomStageModalOpen(true)}
+                onClick={openAddStageModal}
                 className="px-3.5 py-2 rounded-full border border-[#DED3C5] bg-white hover:bg-[#F7F3EC] text-[#372921] text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
               >
                 <Sliders className="w-3.5 h-3.5 text-[#9E5430]" />
@@ -1175,7 +1338,240 @@ export default function ProductionView() {
       )}
 
       {/* =========================================================================
-          MODAL 1: ADD CUSTOM PRODUCTION STAGE ACTION
+          VIEW C: CRAFT PIPELINE STAGES & ACTION WORKFLOWS (FULL CRUD)
+          ========================================================================= */}
+      {isStagesView && (
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#DED3C5]">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#9E5430]/10 text-[#9E5430] text-[10.5px] uppercase tracking-wider font-semibold mb-1">
+                <Sliders className="w-3.5 h-3.5" />
+                <span>Atelier Workflow &amp; Milestones</span>
+              </div>
+              <h1 className="font-serif text-2xl sm:text-3xl text-[#372921] font-semibold">
+                Craft Pipeline Stages &amp; Actions
+              </h1>
+              <p className="text-xs sm:text-sm text-[#76695F] mt-1">
+                Configure custom hand-loom milestones, progress thresholds, tension calibration steps, and QC inspection gates.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+              <button
+                type="button"
+                onClick={openAddStageModal}
+                className="px-4 py-2 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Craft Stage</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResetStages}
+                className="px-3.5 py-2 rounded-full border border-[#DED3C5] bg-white hover:bg-[#F7F3EC] text-[#76695F] hover:text-[#372921] text-xs font-medium transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset to Defaults</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Operational Metrics */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-white rounded-2xl border border-[#DED3C5] p-4 shadow-2xs">
+              <span className="text-[10.5px] uppercase tracking-wider text-[#76695F] font-bold block">
+                Total Pipeline Stages
+              </span>
+              <span className="font-serif text-2xl font-bold text-[#372921] mt-1 block">
+                {stages.length} Milestones
+              </span>
+              <span className="text-[10px] text-[#76695F] block mt-0.5">
+                Active in handcraft runs
+              </span>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#DED3C5] p-4 shadow-2xs">
+              <span className="text-[10.5px] uppercase tracking-wider text-[#76695F] font-bold block">
+                Core System Stages
+              </span>
+              <span className="font-serif text-2xl font-bold text-emerald-800 mt-1 block">
+                5 Standard Gates
+              </span>
+              <span className="text-[10px] text-[#76695F] block mt-0.5">
+                Loom to Wax-Seal
+              </span>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#DED3C5] p-4 shadow-2xs">
+              <span className="text-[10.5px] uppercase tracking-wider text-[#76695F] font-bold block">
+                Custom Added Stages
+              </span>
+              <span className="font-serif text-2xl font-bold text-[#9E5430] mt-1 block">
+                {stages.filter(s => s.isCustom).length} Artisan Actions
+              </span>
+              <span className="text-[10px] text-[#76695F] block mt-0.5">
+                Bespoke atelier steps
+              </span>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-[#DED3C5] p-4 shadow-2xs">
+              <span className="text-[10.5px] uppercase tracking-wider text-[#76695F] font-bold block">
+                Active Work Orders
+              </span>
+              <span className="font-serif text-2xl font-bold text-[#372921] mt-1 block">
+                {workOrders.length} In-Flight
+              </span>
+              <span className="text-[10px] text-[#76695F] block mt-0.5">
+                Across all loom hubs
+              </span>
+            </div>
+          </div>
+
+          {/* Interactive Stages Management Table */}
+          <div className="bg-white rounded-2xl border border-[#DED3C5] shadow-xs overflow-hidden">
+            <div className="p-4 border-b border-[#DED3C5] bg-[#F7F3EC] flex items-center justify-between">
+              <div>
+                <h3 className="font-serif text-base font-semibold text-[#372921]">
+                  Pipeline Sequence &amp; Operational Actions
+                </h3>
+                <p className="text-xs text-[#76695F] mt-0.5">
+                  Reorder execution sequence, modify completion percentages, and edit artisan instructions.
+                </p>
+              </div>
+              <span className="text-xs text-[#76695F] font-mono">
+                {stages.length} Configured Milestones
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#FAF8F5] text-[#76695F] border-b border-[#DED3C5] text-[10.5px] uppercase tracking-wider font-semibold">
+                  <tr>
+                    <th className="py-3 px-4 text-center">Seq / Order</th>
+                    <th className="py-3 px-4">Stage Name &amp; Badge</th>
+                    <th className="py-3 px-4">Progress %</th>
+                    <th className="py-3 px-4">Operational Scope / Instructions</th>
+                    <th className="py-3 px-4 text-center">Active Orders</th>
+                    <th className="py-3 px-4 text-center">Stage Type</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EAE2D8]">
+                  {stages.map((st, idx) => {
+                    const activeCount = workOrders.filter(w => w.stage === st.id).length;
+                    return (
+                      <tr key={st.id} className="hover:bg-[#FFFCF7] transition-colors">
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="font-mono font-bold text-xs text-[#372921] w-5">
+                              #{idx + 1}
+                            </span>
+                            <div className="flex flex-col gap-0.5">
+                              <button
+                                type="button"
+                                disabled={idx === 0}
+                                onClick={() => handleMoveStage(idx, 'up')}
+                                className="p-0.5 rounded text-[#76695F] hover:text-[#372921] hover:bg-[#F0E9DF] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                                title="Move Stage Up"
+                              >
+                                <ArrowUp className="w-3 h-3" />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={idx === stages.length - 1}
+                                onClick={() => handleMoveStage(idx, 'down')}
+                                className="p-0.5 rounded text-[#76695F] hover:text-[#372921] hover:bg-[#F0E9DF] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                                title="Move Stage Down"
+                              >
+                                <ArrowDown className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="py-3 px-4">
+                          <strong className="text-[#372921] text-xs block font-bold mb-1">
+                            {st.label}
+                          </strong>
+                          <span
+                            className={`inline-block text-[9.5px] uppercase font-bold px-2.5 py-0.5 rounded-full border ${st.color}`}
+                          >
+                            {st.badgeLabel}
+                          </span>
+                        </td>
+
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-xs text-[#372921] w-8">
+                              {st.percent}%
+                            </span>
+                            <div className="w-20 bg-[#EAE2D8] h-1.5 rounded-full overflow-hidden">
+                              <div
+                                className="bg-[#9E5430] h-full rounded-full transition-all"
+                                style={{ width: `${st.percent}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="py-3 px-4 text-[#76695F] max-w-sm">
+                          <p className="line-clamp-2 leading-relaxed">{st.description}</p>
+                        </td>
+
+                        <td className="py-3 px-4 text-center">
+                          {activeCount > 0 ? (
+                            <span className="inline-flex items-center gap-1 font-mono font-bold text-xs bg-[#9E5430]/10 text-[#9E5430] px-2.5 py-0.5 rounded-full">
+                              {activeCount} {activeCount === 1 ? 'Batch' : 'Batches'}
+                            </span>
+                          ) : (
+                            <span className="text-[#A99583] text-[11px] font-mono">0</span>
+                          )}
+                        </td>
+
+                        <td className="py-3 px-4 text-center">
+                          <span
+                            className={`inline-block text-[9.5px] uppercase font-bold px-2 py-0.5 rounded-full ${
+                              st.isCustom
+                                ? 'bg-indigo-100 text-indigo-800'
+                                : 'bg-stone-200 text-stone-700'
+                            }`}
+                          >
+                            {st.isCustom ? 'Custom' : 'Core System'}
+                          </span>
+                        </td>
+
+                        <td className="py-3 px-4 text-right space-x-1 whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => openEditStageModal(st)}
+                            className="p-1.5 rounded-lg text-[#76695F] hover:text-[#9E5430] hover:bg-[#F7F3EC] transition-colors cursor-pointer"
+                            title="Edit Stage"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteStage(st)}
+                            className="p-1.5 rounded-lg text-[#76695F] hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="Delete Stage"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 1: ADD / EDIT PRODUCTION STAGE ACTION
           ========================================================================= */}
       {customStageModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
@@ -1187,19 +1583,22 @@ export default function ProductionView() {
                   Atelier Pipeline Configuration
                 </span>
                 <h3 className="font-serif text-lg font-bold text-[#372921] mt-0.5">
-                  Add Custom Stage Action
+                  {editingStage ? 'Edit Craft Pipeline Stage' : 'Add Custom Stage Action'}
                 </h3>
               </div>
               <button
                 type="button"
-                onClick={() => setCustomStageModalOpen(false)}
+                onClick={() => {
+                  setCustomStageModalOpen(false);
+                  setEditingStage(null);
+                }}
                 className="p-1.5 rounded-full hover:bg-[#EAE2D8] text-[#76695F] hover:text-[#372921]"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateCustomStage} className="p-6 space-y-4 text-xs">
+            <form onSubmit={handleSaveCustomStage} className="p-6 space-y-4 text-xs">
               <div>
                 <label className="block text-xs font-semibold text-[#372921] mb-1">
                   Stage Action Name <span className="text-[#9E5430]">*</span>
@@ -1225,7 +1624,7 @@ export default function ProductionView() {
                   <input
                     type="number"
                     min={5}
-                    max={95}
+                    max={100}
                     value={customStagePercent}
                     onChange={e => setCustomStagePercent(Number(e.target.value))}
                     className="w-full bg-white border border-[#DED3C5] rounded-xl px-3.5 py-2 text-xs font-mono text-[#372921] focus:outline-none focus:border-[#9E5430]"
@@ -1239,13 +1638,15 @@ export default function ProductionView() {
                   <select
                     value={customStageColor}
                     onChange={e => setCustomStageColor(e.target.value)}
-                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430] truncate"
                   >
                     <option value="bg-indigo-100 text-indigo-800 border-indigo-200">Indigo (Speciality)</option>
                     <option value="bg-amber-100 text-amber-800 border-amber-200">Amber (Artisan Craft)</option>
                     <option value="bg-emerald-100 text-emerald-800 border-emerald-200">Emerald (Inspection / Finishing)</option>
                     <option value="bg-purple-100 text-purple-800 border-purple-200">Purple (Hardware / Framing)</option>
                     <option value="bg-rose-100 text-rose-800 border-rose-200">Rose (Bridal / Custom)</option>
+                    <option value="bg-[#9E5430]/10 text-[#9E5430] border-[#9E5430]/30">Terracotta (Wax Seal)</option>
+                    <option value="bg-stone-100 text-stone-800 border-stone-200">Stone (Neutral)</option>
                   </select>
                 </div>
               </div>
@@ -1280,8 +1681,11 @@ export default function ProductionView() {
               <div className="pt-4 border-t border-[#EAE2D8] flex items-center justify-between">
                 <button
                   type="button"
-                  onClick={() => setCustomStageModalOpen(false)}
-                  className="px-4 py-2 rounded-full border border-[#DED3C5] text-[#76695F] hover:bg-white text-xs font-semibold"
+                  onClick={() => {
+                    setCustomStageModalOpen(false);
+                    setEditingStage(null);
+                  }}
+                  className="px-4 py-2 rounded-full border border-[#DED3C5] text-[#76695F] hover:bg-white text-xs font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1290,7 +1694,7 @@ export default function ProductionView() {
                   className="px-5 py-2.5 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white text-xs font-semibold shadow-sm flex items-center gap-1.5 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Add Stage to Pipeline</span>
+                  <span>{editingStage ? 'Save Stage Changes' : 'Add Stage to Pipeline'}</span>
                 </button>
               </div>
             </form>
@@ -1330,11 +1734,11 @@ export default function ProductionView() {
                 <select
                   value={prodSku}
                   onChange={e => setProdSku(e.target.value)}
-                  className="w-full bg-white border border-[#DED3C5] rounded-xl px-3.5 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                  className="w-full max-w-full truncate text-ellipsis bg-white border border-[#DED3C5] rounded-xl px-3.5 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
                 >
                   {PRODUCTS.map(p => (
-                    <option key={p.code} value={p.code}>
-                      {p.name} ({p.code}) · ₹{p.price.toLocaleString('en-IN')}
+                    <option key={p.code} value={p.code} className="truncate">
+                      [{p.code}] {p.name.length > 30 ? p.name.slice(0, 30) + '…' : p.name} · ₹{p.price.toLocaleString('en-IN')}
                     </option>
                   ))}
                 </select>

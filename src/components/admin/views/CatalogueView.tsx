@@ -71,7 +71,7 @@ const SEED_REVIEWS: ReviewItem[] = [
 ];
 
 export default function CatalogueView() {
-  const { can, activeSubPage, setActiveSubPage, logAction } = useAdminStore();
+  const { can, activeSubPage, setActiveSubPage, logAction, showModal } = useAdminStore();
 
   const activeTab: 'products' | 'collections' | 'reviews' =
     activeSubPage === 'catalogue.collections'
@@ -142,7 +142,11 @@ export default function CatalogueView() {
   const handleCreateProduct = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProduct.name || !newProduct.code) {
-      alert('Please fill in title and SKU.');
+      showModal({
+        title: 'Validation Incomplete',
+        message: 'Please provide both a product title and SKU code before publishing to the boutique catalogue.',
+        icon: 'warning',
+      });
       return;
     }
     const slug = newProduct.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');

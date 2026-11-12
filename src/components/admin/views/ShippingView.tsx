@@ -15,7 +15,7 @@ import {
 import { useAdminStore } from '@/data/AdminStoreContext';
 
 export default function ShippingView() {
-  const { orders, activeSubPage, setActiveSubPage } = useAdminStore();
+  const { orders, activeSubPage, setActiveSubPage, showModal } = useAdminStore();
   const activeTab: 'shipments' | 'rules' = activeSubPage === 'shipping.rules' ? 'rules' : 'shipments';
 
   const shipments = orders.filter(o => o.fulfillmentStatus === 'shipped' || o.fulfillmentStatus === 'delivered');
@@ -39,7 +39,13 @@ export default function ShippingView() {
 
         <button
           type="button"
-          onClick={() => alert('Atelier Dispatch: Generating Kalajay in-house delivery manifest...')}
+          onClick={() =>
+            showModal({
+              title: 'Kalajay In-House Dispatch Manifest',
+              message: 'Generated Atelier Dispatch Manifest #KLJ-DISP-2026-BHR. All active consignments queued for handover to Kalajay in-house logistics fleet.',
+              icon: 'success',
+            })
+          }
           className="px-4 py-2 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer self-start sm:self-auto"
         >
           <Plus className="w-3.5 h-3.5" />
@@ -123,8 +129,14 @@ export default function ShippingView() {
                     <td className="py-3 px-4 text-right">
                       <button
                         type="button"
-                        onClick={() => alert(`Printing thermal dispatch label for Consignment ${s.trackingAwb}`)}
-                        className="text-[11px] text-[#9E5430] hover:underline font-semibold"
+                        onClick={() =>
+                          showModal({
+                            title: 'Thermal Dispatch Label',
+                            message: `Generated 4x6" thermal barcoded dispatch label for Kalajay in-house delivery fleet (Consignment #${s.trackingAwb}). Handcrafted item destination: ${s.shippingAddress.city}, ${s.shippingAddress.state}.`,
+                            icon: 'info',
+                          })
+                        }
+                        className="text-[11px] text-[#9E5430] hover:underline font-semibold cursor-pointer"
                       >
                         Print Label
                       </button>

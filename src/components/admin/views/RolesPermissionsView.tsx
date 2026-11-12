@@ -22,7 +22,7 @@ import { ADMIN_MODULE_DEFINITIONS } from '@/data/adminPermissions';
 import { AdminRole, PermissionAction } from '@/data/adminTypes';
 
 export default function RolesPermissionsView() {
-  const { allRoles, createRole, updateRole, deleteRole, switchRole, can } = useAdminStore();
+  const { allRoles, createRole, updateRole, deleteRole, switchRole, can, showModal } = useAdminStore();
 
   const [activeTab, setActiveTab] = useState<'directory' | 'editor'>('directory');
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
@@ -147,7 +147,11 @@ export default function RolesPermissionsView() {
   const handleSaveRole = (e: React.FormEvent) => {
     e.preventDefault();
     if (!roleName.trim()) {
-      alert('Please enter a valid role name.');
+      showModal({
+        title: 'Validation Incomplete',
+        message: 'Please enter a valid role name for this access policy specification.',
+        icon: 'warning',
+      });
       return;
     }
 

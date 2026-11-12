@@ -70,6 +70,7 @@ export default function FinanceView() {
     offlineOrders,
     createOfflineOrder,
     updateOfflineOrderStatus,
+    showModal,
   } = useAdminStore();
 
   const activeTab: 'overview' | 'offline' | 'gst' =
@@ -138,11 +139,19 @@ export default function FinanceView() {
   const handleCreateOfflineOrder = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCustName.trim()) {
-      alert('Please enter the patron name.');
+      showModal({
+        title: 'Patron Name Required',
+        message: 'Please provide the patron or client name for this studio sale invoice.',
+        icon: 'warning',
+      });
       return;
     }
     if (!newCustPhone.trim()) {
-      alert('Please enter a valid patron contact phone number.');
+      showModal({
+        title: 'Contact Required',
+        message: 'Please provide a valid patron contact phone number or WhatsApp handle for digital receipt dispatch.',
+        icon: 'warning',
+      });
       return;
     }
 
@@ -280,11 +289,19 @@ export default function FinanceView() {
   const handleSaveTaxSlab = (e: React.FormEvent) => {
     e.preventDefault();
     if (!slabHsn.trim() || slabHsn.trim() === 'HSN') {
-      alert('Please enter a valid HSN or SAC code.');
+      showModal({
+        title: 'HSN / SAC Code Required',
+        message: 'Please enter a valid 4-to-8 digit HSN or SAC classification code for GST compliance.',
+        icon: 'warning',
+      });
       return;
     }
     if (!slabCategory.trim()) {
-      alert('Please enter a category classification name.');
+      showModal({
+        title: 'Category Name Required',
+        message: 'Please enter a category classification name for this tax rate entry.',
+        icon: 'warning',
+      });
       return;
     }
 
@@ -324,10 +341,18 @@ export default function FinanceView() {
   };
 
   const handleDeleteSlab = (slab: TaxSlab) => {
-    if (confirm(`Are you sure you want to archive / delete tax slab ${slab.hsnCode} (${slab.category})?`)) {
-      deleteTaxSlab(slab.id);
-      showToast(`Archived tax slab ${slab.hsnCode}`);
-    }
+    showModal({
+      title: 'Archive Tax Slab',
+      message: `Are you sure you want to archive or remove tax slab ${slab.hsnCode} (${slab.category})? Historical invoices and tax ledger filings will preserve this rate for audit continuity.`,
+      icon: 'warning',
+      confirmLabel: 'Archive Slab',
+      cancelLabel: 'Cancel',
+      isDestructive: true,
+      onConfirm: () => {
+        deleteTaxSlab(slab.id);
+        showToast(`Archived tax slab ${slab.hsnCode}`);
+      },
+    });
   };
 
   // --- Interactive Tax Estimator Widget State ---
@@ -1192,11 +1217,11 @@ export default function FinanceView() {
                     <select
                       value={selectedProductSku}
                       onChange={e => handleProductChange(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-white border border-[#DED3C5] focus:outline-none focus:border-[#9E5430]"
+                      className="w-full max-w-full truncate text-ellipsis px-3 py-2 rounded-lg bg-white border border-[#DED3C5] focus:outline-none focus:border-[#9E5430]"
                     >
                       {PRODUCTS.map(p => (
-                        <option key={p.code} value={p.code}>
-                          {p.name} ({p.code}) — ₹{p.price.toLocaleString('en-IN')}
+                        <option key={p.code} value={p.code} className="truncate">
+                          [{p.code}] {p.name.length > 28 ? p.name.slice(0, 28) + '…' : p.name} — ₹{p.price.toLocaleString('en-IN')}
                         </option>
                       ))}
                       <option value="custom">★ Bespoke / Custom Atelier Piece</option>
@@ -1521,7 +1546,11 @@ export default function FinanceView() {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => alert(`Printing official tax invoice ${viewingInvoice.invoiceNumber}...`)}
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.print();
+                    }
+                  }}
                   className="px-3 py-1.5 rounded-lg bg-[#9E5430] hover:bg-[#874427] text-white text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
                 >
                   <Printer className="w-3.5 h-3.5" />

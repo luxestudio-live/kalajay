@@ -141,6 +141,32 @@ interface AdminStoreContextType {
   createOfflineOrder: (order: Omit<OfflineOrder, 'id' | 'createdAt'>) => OfflineOrder;
   updateOfflineOrderStatus: (orderId: string, paymentStatus: OfflineOrder['paymentStatus']) => void;
 
+  // Global Luxury Modal / Dialog System (Replaces browser alert and confirm)
+  globalModal: {
+    isOpen: boolean;
+    title: string;
+    subtitle?: string;
+    icon?: 'info' | 'success' | 'warning' | 'danger' | 'shield';
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    onConfirm?: () => void;
+    isDestructive?: boolean;
+    maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  } | null;
+  showModal: (config: {
+    title: string;
+    subtitle?: string;
+    icon?: 'info' | 'success' | 'warning' | 'danger' | 'shield';
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    onConfirm?: () => void;
+    isDestructive?: boolean;
+    maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  }) => void;
+  closeModal: () => void;
+
   // Audit Logs
   auditLogs: AuditLogItem[];
   logAction: (action: string, module: AdminModuleId, details: string) => void;
@@ -187,6 +213,21 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>(SEED_AUDIT_LOGS);
   const [taxSlabs, setTaxSlabs] = useState<TaxSlab[]>(SEED_TAX_SLABS);
   const [offlineOrders, setOfflineOrders] = useState<OfflineOrder[]>(SEED_OFFLINE_ORDERS);
+
+  // Global Luxury Modal / Dialog State
+  const [globalModal, setGlobalModal] = useState<AdminStoreContextType['globalModal']>(null);
+
+  const showModal = (config: Parameters<AdminStoreContextType['showModal']>[0]) => {
+    setGlobalModal({
+      isOpen: true,
+      confirmLabel: 'Acknowledge',
+      ...config,
+    });
+  };
+
+  const closeModal = () => {
+    setGlobalModal(null);
+  };
 
   // 2. Load from LocalStorage if available on mount
   useEffect(() => {
@@ -404,7 +445,13 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
   const toggleUserStatus = (userId: string) => {
     // Safeguard: cannot deactivate final Super Admin
     if (userId === 'KJ-ADM-001') {
-      alert('Safeguard Alert: The primary Super Admin account cannot be deactivated.');
+      showModal({
+        title: 'Security Safeguard Notice',
+        subtitle: 'Protected Super Admin Account',
+        icon: 'shield',
+        message: 'The primary Super Admin account for Soumya (Founder) is protected and cannot be deactivated to ensure permanent platform access.',
+        confirmLabel: 'Understood',
+      });
       return;
     }
     const nextUsers = users.map(u => {
@@ -863,7 +910,13 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     setActiveRoleId('role-super-admin');
     setActiveModule('dashboard');
     setActiveSubPage('dashboard.overview');
-    alert('Kalajay Management Console demo state has been reset to pristine seed defaults.');
+    showModal({
+      title: 'Console Reset Complete',
+      subtitle: 'Seed Defaults Restored',
+      icon: 'success',
+      message: 'The Kalajay Management Console demo state has been reset to pristine seed defaults across inventory, loom work orders, and tax ledgers.',
+      confirmLabel: 'Continue to Console',
+    });
   };
 
   return (
@@ -923,6 +976,9 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
         offlineOrders,
         createOfflineOrder,
         updateOfflineOrderStatus,
+        globalModal,
+        showModal,
+        closeModal,
         auditLogs,
         logAction,
         resetDemoData,

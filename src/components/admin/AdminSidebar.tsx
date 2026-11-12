@@ -115,6 +115,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: 'production.work_orders', label: 'Work Orders & Looms' },
       { id: 'production.qc', label: 'Quality Control (QC)' },
+      { id: 'production.stages', label: 'Craft Pipeline Stages' },
     ],
   },
   {

@@ -8,6 +8,7 @@ import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
 import AdminSearchModal from '@/components/admin/AdminSearchModal';
 import AccessDenied from '@/components/admin/AccessDenied';
+import LuxuryModal from '@/components/admin/LuxuryModal';
 
 // View Components
 import DashboardView from '@/components/admin/views/DashboardView';
@@ -37,6 +38,8 @@ function AdminConsoleInner() {
     setActiveModule,
     setActiveSubPage,
     isPageAccessible,
+    globalModal,
+    closeModal,
   } = useAdminStore();
 
   const searchParams = useSearchParams();
@@ -154,6 +157,26 @@ function AdminConsoleInner() {
         isOpen={searchModalOpen}
         onClose={() => setSearchModalOpen(false)}
       />
+
+      {/* GLOBAL LUXURY MODAL / DIALOG (Replaces all browser alert/confirm) */}
+      {globalModal && (
+        <LuxuryModal
+          isOpen={globalModal.isOpen}
+          onClose={closeModal}
+          title={globalModal.title}
+          subtitle={globalModal.subtitle}
+          icon={globalModal.icon}
+          confirmLabel={globalModal.confirmLabel}
+          cancelLabel={globalModal.cancelLabel}
+          onConfirm={globalModal.onConfirm}
+          isDestructive={globalModal.isDestructive}
+          maxWidth={globalModal.maxWidth}
+        >
+          <p className="text-xs text-[#372921] leading-relaxed">
+            {globalModal.message}
+          </p>
+        </LuxuryModal>
+      )}
     </div>
   );
 }

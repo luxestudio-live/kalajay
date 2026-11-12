@@ -141,7 +141,7 @@ const SEED_PATRONS: PatronProfile[] = [
 ];
 
 export default function CustomersView() {
-  const { logAction } = useAdminStore();
+  const { logAction, showModal } = useAdminStore();
   const [patrons, setPatrons] = useState<PatronProfile[]>(SEED_PATRONS);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTier, setSelectedTier] = useState<string>('all');
@@ -169,26 +169,34 @@ export default function CustomersView() {
   };
 
   const handleRightToBeForgotten = (patron: PatronProfile) => {
-    if (confirm(`Right to be Forgotten (DPDP Act):\nAre you sure you wish to anonymize the personal identity records for ${patron.name}? Legal transaction invoices must be retained for 7 years under Indian tax law, but marketing profile and communication consent will be purged.`)) {
-      setPatrons(prev =>
-        prev.map(p =>
-          p.id === patron.id
-            ? {
-                ...p,
-                name: 'Anonymized Patron (DPDP Ref #' + p.id + ')',
-                email: 'redacted@privacy.kalajay.in',
-                phone: '+91 XXXXX XXXXX',
-                conciergeNotes: '[Purged per patron erasure request under Digital Personal Data Protection Act 2023]',
-              }
-            : p
-        )
-      );
-      if (activePatron?.id === patron.id) {
-        setActivePatron(null);
-      }
-      logAction('DPDP_RIGHT_TO_BE_FORGOTTEN', 'customers', `Anonymized patron identity for ${patron.id}`);
-      showToast(`Personal identifiers for ${patron.id} successfully anonymized per DPDP Act.`);
-    }
+    showModal({
+      title: 'Right to be Forgotten (DPDP Act)',
+      message: `Are you sure you wish to anonymize the personal identity records for ${patron.name}? Legal transaction invoices must be retained for 7 years under Indian tax law, but marketing profile and communication consent will be purged immediately.`,
+      icon: 'shield',
+      confirmLabel: 'Anonymize Patron',
+      cancelLabel: 'Cancel',
+      isDestructive: true,
+      onConfirm: () => {
+        setPatrons(prev =>
+          prev.map(p =>
+            p.id === patron.id
+              ? {
+                  ...p,
+                  name: 'Anonymized Patron (DPDP Ref #' + p.id + ')',
+                  email: 'redacted@privacy.kalajay.in',
+                  phone: '+91 XXXXX XXXXX',
+                  conciergeNotes: '[Purged per patron erasure request under Digital Personal Data Protection Act 2023]',
+                }
+              : p
+          )
+        );
+        if (activePatron?.id === patron.id) {
+          setActivePatron(null);
+        }
+        logAction('DPDP_RIGHT_TO_BE_FORGOTTEN', 'customers', `Anonymized patron identity for ${patron.id}`);
+        showToast(`Personal identifiers for ${patron.id} successfully anonymized per DPDP Act.`);
+      },
+    });
   };
 
   return (
