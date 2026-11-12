@@ -151,7 +151,8 @@ export interface WorkOrder {
     | 'bead_weaving'
     | 'mirror_fitting'
     | 'quality_inspection'
-    | 'wax_sealed';
+    | 'wax_sealed'
+    | (string & {});
   targetDate: string;
   actualDate?: string;
   priority: 'normal' | 'high' | 'bridal_express';
