@@ -78,30 +78,36 @@ export default function Preloader() {
           <span>Bihar & Mumbai</span>
         </div>
 
-        {/* Animated Favicon Canvas Stage */}
-        <div className="relative w-64 h-64 sm:w-72 sm:h-72 my-1 flex items-center justify-center overflow-visible">
+        {/* Animated Favicon Canvas Stage: Stacked absolute layers on 512x512 shared coordinate */}
+        <div className="relative w-64 h-64 sm:w-72 sm:h-72 my-1 select-none">
           {/* Layer 1: Big Elephant (Glides smoothly from left on GPU compositor) */}
           <img
             src={BIG_ELEPHANT_SRC}
             alt=""
-            className="emblem-layer layer-big"
+            loading="eager"
+            decoding="sync"
+            className="absolute inset-0 w-full h-full object-contain pointer-events-none layer-big"
           />
 
           {/* Layer 2: Small Elephant (Glides smoothly from right on GPU compositor) */}
           <img
             src={SMALL_ELEPHANT_SRC}
             alt=""
-            className="emblem-layer layer-small"
+            loading="eager"
+            decoding="sync"
+            className="absolute inset-0 w-full h-full object-contain pointer-events-none layer-small"
           />
 
           {/* Lotus Flower Glow Aura */}
-          <div className="flower-sparkle" />
+          <div className="absolute left-[65%] top-[35%] -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-radial from-[#9E5430]/30 to-transparent pointer-events-none flower-sparkle" />
 
           {/* Layer 3: Lotus Flower (Blooms and descends from above once they meet) */}
           <img
             src={FLOWER_SRC}
             alt=""
-            className="emblem-layer layer-flower"
+            loading="eager"
+            decoding="sync"
+            className="absolute inset-0 w-full h-full object-contain pointer-events-none layer-flower"
           />
         </div>
 
@@ -120,204 +126,6 @@ export default function Preloader() {
           <div className="h-full w-full bg-gradient-to-r from-[#C27448] via-[#9E5430] to-[#874427] rounded-full animate-progress-fill" />
         </div>
       </div>
-
-      <style jsx>{`
-        /* Base shared layer styles with full GPU hardware acceleration */
-        .emblem-layer {
-          position: absolute;
-          inset: 0;
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
-          pointer-events: none;
-          will-change: transform, opacity;
-          backface-visibility: hidden;
-          -webkit-backface-visibility: hidden;
-          transform: translate3d(0, 0, 0);
-        }
-
-        /* 1. Big Elephant: 100% buttery smooth slide from left */
-        .layer-big {
-          opacity: 0;
-          transform: translate3d(-140px, 0, 0);
-          animation: slideBigElephant 0.95s cubic-bezier(0.16, 1, 0.3, 1) 0.05s forwards;
-        }
-
-        /* 2. Small Elephant: 100% buttery smooth slide from right */
-        .layer-small {
-          opacity: 0;
-          transform: translate3d(140px, 0, 0);
-          animation: slideSmallElephant 0.95s cubic-bezier(0.16, 1, 0.3, 1) 0.05s forwards;
-        }
-
-        /* 3. Lotus Flower: Drops & blooms gently centered right above meeting point */
-        .layer-flower {
-          opacity: 0;
-          transform: translate3d(0, -24px, 0) scale3d(0.5, 0.5, 1);
-          transform-origin: 65% 35%;
-          animation: bloomFlower 0.65s cubic-bezier(0.34, 1.3, 0.64, 1) 0.95s forwards;
-        }
-
-        /* Sparkle pulse right as flower locks into place */
-        .flower-sparkle {
-          position: absolute;
-          left: 65%;
-          top: 35%;
-          width: 80px;
-          height: 80px;
-          border-radius: 9999px;
-          background: radial-gradient(circle, rgba(158, 84, 48, 0.35) 0%, rgba(158, 84, 48, 0) 70%);
-          pointer-events: none;
-          opacity: 0;
-          transform: translate3d(-50%, -50%, 0) scale3d(0.3, 0.3, 1);
-          animation: sparkleGlow 0.65s ease-out 1.1s forwards;
-          will-change: transform, opacity;
-        }
-
-        /* Brand text fade up */
-        .animate-brand-fade {
-          opacity: 0;
-          transform: translate3d(0, 8px, 0);
-          animation: brandFadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 1.25s forwards;
-          will-change: transform, opacity;
-        }
-
-        /* Badge fade */
-        .animate-badge-fade {
-          opacity: 0;
-          animation: badgeFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.05s forwards;
-        }
-
-        /* Progress line container */
-        .animate-progress-container {
-          opacity: 0;
-          animation: progressFadeIn 0.4s ease 0.2s forwards;
-        }
-
-        /* Hardware-accelerated GPU progress bar using scaleX (no width layout reflows) */
-        .animate-progress-fill {
-          transform-origin: left center;
-          transform: scale3d(0, 1, 1);
-          animation: progressFill 2.4s cubic-bezier(0.1, 0, 0.2, 1) 0.1s forwards;
-          will-change: transform;
-        }
-
-        /* Keyframes */
-        @keyframes slideBigElephant {
-          0% {
-            opacity: 0;
-            transform: translate3d(-140px, 0, 0);
-          }
-          25% {
-            opacity: 1;
-          }
-          100% {
-            opacity: 1;
-            transform: translate3d(0, 0, 0);
-          }
-        }
-
-        @keyframes slideSmallElephant {
-          0% {
-            opacity: 0;
-            transform: translate3d(140px, 0, 0);
-          }
-          25% {
-            opacity: 1;
-          }
-          100% {
-            opacity: 1;
-            transform: translate3d(0, 0, 0);
-          }
-        }
-
-        @keyframes bloomFlower {
-          0% {
-            opacity: 0;
-            transform: translate3d(0, -24px, 0) scale3d(0.5, 0.5, 1);
-          }
-          70% {
-            opacity: 1;
-            transform: translate3d(0, 2px, 0) scale3d(1.04, 1.04, 1);
-          }
-          100% {
-            opacity: 1;
-            transform: translate3d(0, 0, 0) scale3d(1, 1, 1);
-          }
-        }
-
-        @keyframes sparkleGlow {
-          0% {
-            opacity: 0;
-            transform: translate3d(-50%, -50%, 0) scale3d(0.3, 0.3, 1);
-          }
-          50% {
-            opacity: 0.8;
-            transform: translate3d(-50%, -50%, 0) scale3d(1.2, 1.2, 1);
-          }
-          100% {
-            opacity: 0;
-            transform: translate3d(-50%, -50%, 0) scale3d(1.8, 1.8, 1);
-          }
-        }
-
-        @keyframes brandFadeUp {
-          0% {
-            opacity: 0;
-            transform: translate3d(0, 8px, 0);
-          }
-          100% {
-            opacity: 1;
-            transform: translate3d(0, 0, 0);
-          }
-        }
-
-        @keyframes badgeFadeIn {
-          0% {
-            opacity: 0;
-            transform: translate3d(0, -6px, 0);
-          }
-          100% {
-            opacity: 1;
-            transform: translate3d(0, 0, 0);
-          }
-        }
-
-        @keyframes progressFadeIn {
-          0% {
-            opacity: 0;
-          }
-          100% {
-            opacity: 1;
-          }
-        }
-
-        @keyframes progressFill {
-          0% {
-            transform: scale3d(0, 1, 1);
-          }
-          100% {
-            transform: scale3d(1, 1, 1);
-          }
-        }
-
-        /* Accessibility: Instant static display if user prefers reduced motion */
-        @media (prefers-reduced-motion: reduce) {
-          .layer-big,
-          .layer-small,
-          .layer-flower,
-          .animate-brand-fade,
-          .animate-badge-fade,
-          .animate-progress-fill {
-            animation: none !important;
-            opacity: 1 !important;
-            transform: none !important;
-          }
-          .flower-sparkle {
-            display: none !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }
