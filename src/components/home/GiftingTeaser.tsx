@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Gift, ArrowRight, HeartHandshake, Building, Calendar, Palette } from 'lucide-react';
+import { Gift, ArrowRight, HeartHandshake, Building, Calendar, Palette, MessageCircle } from 'lucide-react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -118,10 +118,10 @@ export default function GiftingTeaser() {
                   href="https://wa.me/919740540847?text=Hello%20Kalajay!%20I%20am%20exploring%20your%20curated%20celebration%20hampers."
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-semibold text-ink hover:text-emerald-700 underline underline-offset-4 decoration-emerald-600/40 hover:decoration-emerald-700 inline-flex items-center gap-1 transition-colors cursor-pointer"
+                  className="font-semibold text-ink hover:text-rosewood underline underline-offset-4 decoration-rosewood/40 hover:decoration-rosewood inline-flex items-center gap-1 transition-colors cursor-pointer"
                   title="Chat on WhatsApp (+91 97405 40847)"
                 >
-                  <img src="/whatsapp.png" alt="WhatsApp" className="w-3.5 h-3.5 object-contain inline" />
+                  <MessageCircle className="w-3.5 h-3.5 text-rosewood shrink-0 inline" />
                   <span>+91 97405 40847</span>
                 </a>
               </p>

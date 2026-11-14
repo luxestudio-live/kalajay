@@ -283,13 +283,13 @@ export default function CartPage() {
                     href={whatsappCheckoutUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full py-3.5 px-4 sm:px-5 bg-canvas hover:bg-emerald-50/60 border border-emerald-700/30 hover:border-emerald-600 text-ink hover:text-emerald-950 text-xs rounded-full flex items-center justify-center gap-2.5 transition-all shadow-2xs group cursor-pointer"
+                    className="w-full py-3.5 px-4 sm:px-5 bg-canvas hover:bg-canvas-subtle border border-rosewood/40 hover:border-rosewood text-rosewood hover:text-plum text-xs rounded-full flex items-center justify-center gap-2.5 transition-all shadow-2xs group cursor-pointer"
                   >
-                    <img src="/whatsapp.png" alt="WhatsApp" className="w-5 h-5 shrink-0 object-contain" />
+                    <MessageCircle className="w-4 h-4 shrink-0 text-rosewood" />
                     <span className="tracking-refined uppercase text-xs font-semibold whitespace-nowrap">
                       Order via WhatsApp
                     </span>
-                    <span className="text-[10px] uppercase tracking-wider text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full font-medium shrink-0 hidden sm:inline-block">
+                    <span className="text-[10px] uppercase tracking-wider text-rosewood bg-rosewood/10 px-2 py-0.5 rounded-full font-medium shrink-0 hidden sm:inline-block">
                       Instant Approval
                     </span>
                   </a>

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShoppingBag, Search, Menu, X, Sparkles, Heart, Smartphone, Download, User, ArrowRight } from 'lucide-react';
+import { ShoppingBag, Search, Menu, X, Sparkles, Heart, Smartphone, Download, User, ArrowRight, ChevronDown, MessageCircle } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { COLLECTIONS } from '@/data/catalogue';
@@ -19,6 +19,7 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [collectionsDropdown, setCollectionsDropdown] = useState(false);
+  const [mobileShopExpanded, setMobileShopExpanded] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -32,6 +33,7 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
   useEffect(() => {
     setMobileMenuOpen(false);
     setCollectionsDropdown(false);
+    setMobileShopExpanded(false);
   }, [pathname]);
 
   return (
@@ -354,59 +356,131 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                 </button>
               </div>
 
-              <nav className="mt-5 flex flex-col space-y-4 text-base font-sans font-medium text-ink">
-                <Link href="/" className="hover:text-gold-dark py-1">
+              <nav className="mt-5 flex flex-col space-y-3 text-base font-sans font-medium text-ink">
+                <Link
+                  href="/"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="hover:text-gold-dark py-1"
+                >
                   Home
                 </Link>
-                <Link href="/shop" className="hover:text-gold-dark py-1 flex items-center justify-between">
-                  <span>Shop All Pieces</span>
-                  <span className="text-xs text-ink bg-canvas-subtle border border-border-subtle px-2.5 py-0.5 rounded-full font-sans">69 Pieces</span>
-                </Link>
 
-                <div className="pt-2 pb-1 border-t border-border-subtle">
-                  <div className="text-[11px] uppercase tracking-refined text-ink-muted mb-2 font-semibold">
-                    Curated Categories
-                  </div>
-                  <div className="grid grid-cols-1 gap-1 pl-2">
-                    {COLLECTIONS.map(col => (
+                {/* Expandable Shop All Pieces Accordion */}
+                <div className="border-y border-border-subtle/80 py-1">
+                  <button
+                    type="button"
+                    onClick={() => setMobileShopExpanded(!mobileShopExpanded)}
+                    className="w-full text-left py-2 flex items-center justify-between text-base font-medium text-ink hover:text-rosewood transition-colors cursor-pointer group"
+                    aria-expanded={mobileShopExpanded}
+                  >
+                    <span>Shop All Pieces</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-ink-muted bg-canvas-subtle border border-border-subtle px-2.5 py-0.5 rounded-full font-sans font-normal">
+                        69 Pieces
+                      </span>
+                      <ChevronDown
+                        className={`w-4 h-4 text-ink-muted transition-transform duration-300 ${
+                          mobileShopExpanded ? 'rotate-180 text-rosewood' : ''
+                        }`}
+                      />
+                    </div>
+                  </button>
+
+                  {/* Expanded Categories & 1 View All Products Option */}
+                  {mobileShopExpanded && (
+                    <div className="pt-1.5 pb-2 pl-2 pr-1 space-y-1.5 animate-fade-in">
+                      {/* 1. View All Products Option */}
                       <Link
-                        key={col.slug}
-                        href={`/collections/${col.slug}`}
-                        className="py-1 text-sm text-ink-muted hover:text-ink"
+                        href="/shop"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center justify-between p-2.5 rounded-lg bg-canvas-subtle border border-gold/40 text-rosewood hover:text-plum font-semibold text-xs tracking-refined uppercase transition-colors group shadow-2xs"
                       >
-                        {col.name}
+                        <span className="font-sans">View All Products</span>
+                        <span className="text-[11px] font-mono font-normal text-ink-muted group-hover:translate-x-0.5 transition-transform flex items-center gap-1">
+                          <span>69 Pieces</span>
+                          <ArrowRight className="w-3.5 h-3.5 text-rosewood" />
+                        </span>
                       </Link>
-                    ))}
-                  </div>
+
+                      <div className="pt-2 pb-1 px-1 text-[10px] uppercase tracking-refined text-ink-muted font-bold">
+                        Curated Categories
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-0.5">
+                        {COLLECTIONS.map(col => (
+                          <Link
+                            key={col.slug}
+                            href={`/collections/${col.slug}`}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="py-1.5 px-2 text-sm text-ink-secondary hover:text-ink hover:bg-canvas-subtle/60 rounded-md transition-colors flex items-center justify-between group"
+                          >
+                            <span>{col.name}</span>
+                            <span className="text-ink-light opacity-0 group-hover:opacity-100 transition-opacity text-xs">
+                              →
+                            </span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                <div className="pt-2 border-t border-border-subtle space-y-3">
+                <div className="pt-1 space-y-3">
                   <Link
                     href="/customise"
+                    onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center gap-2 p-2.5 rounded-sm bg-canvas-subtle border border-gold/30 text-ink font-medium"
                   >
                     <Sparkles className="w-4 h-4 text-rosewood" />
                     <span>Create Your Own (Custom Studio)</span>
                   </Link>
-                  <Link href="/gifting" className="block hover:text-gold-dark py-1">
+                  <Link
+                    href="/gifting"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block hover:text-gold-dark py-1"
+                  >
                     Gifting & Celebrations
                   </Link>
-                  <Link href="/corporate-gifting" className="block hover:text-gold-dark py-1">
+                  <Link
+                    href="/corporate-gifting"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block hover:text-gold-dark py-1"
+                  >
                     Wedding & Corporate Favours
                   </Link>
-                  <Link href="/story" className="block hover:text-gold-dark py-1">
+                  <Link
+                    href="/story"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block hover:text-gold-dark py-1"
+                  >
                     Our Story & Artisans
                   </Link>
-                  <Link href="/atelier" className="block hover:text-gold-dark py-1">
+                  <Link
+                    href="/atelier"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block hover:text-gold-dark py-1"
+                  >
                     The Craft House
                   </Link>
-                  <Link href="/track" className="block hover:text-gold-dark py-1 text-gold-dark font-medium">
+                  <Link
+                    href="/track"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block hover:text-gold-dark py-1 text-gold-dark font-medium"
+                  >
                     Track Your Order
                   </Link>
-                  <Link href="/wishlist" className="block hover:text-gold-dark py-1">
+                  <Link
+                    href="/wishlist"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block hover:text-gold-dark py-1"
+                  >
                     Saved Pieces (Wishlist)
                   </Link>
-                  <Link href="/contact" className="block hover:text-gold-dark py-1">
+                  <Link
+                    href="/contact"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block hover:text-gold-dark py-1"
+                  >
                     Contact & Craft House Visits
                   </Link>
                 </div>
@@ -423,10 +497,10 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                 href="https://wa.me/919740540847?text=Hello%20Kalajay%20Craft%20House!"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-2 text-ink hover:text-emerald-700 font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="mt-2 text-ink hover:text-rosewood font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
                 title="Chat on WhatsApp (+91 97405 40847)"
               >
-                <img src="/whatsapp.png" alt="WhatsApp" className="w-3.5 h-3.5 object-contain" />
+                <MessageCircle className="w-3.5 h-3.5 text-rosewood shrink-0" />
                 <span>+91 97405 40847</span>
               </a>
             </div>

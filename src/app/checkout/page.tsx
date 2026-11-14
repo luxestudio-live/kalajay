@@ -86,9 +86,9 @@ export default function CheckoutPage() {
               href={`https://wa.me/919740540847?text=Hi%20Kalajay!%20I%20just%20placed%20order%20${orderNumber}%20on%20your%20digital%20flagship.`}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto px-6 py-3.5 bg-canvas border border-border-strong text-plum hover:text-emerald-800 text-xs uppercase tracking-editorial font-medium rounded-sm flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-6 py-3.5 bg-canvas border border-rosewood/40 text-rosewood hover:text-plum text-xs uppercase tracking-editorial font-medium rounded-sm flex items-center justify-center gap-2 transition-colors"
             >
-              <MessageCircle className="w-4 h-4 text-emerald-700" />
+              <MessageCircle className="w-4 h-4 text-rosewood" />
               <span>Track on WhatsApp</span>
             </a>
           </div>
@@ -308,7 +308,7 @@ export default function CheckoutPage() {
                       <span className="text-ink-light">Review order with an artisan liaison before paying.</span>
                     </div>
                   </div>
-                  <MessageCircle className="w-4 h-4 text-emerald-700" />
+                  <MessageCircle className="w-4 h-4 text-rosewood" />
                 </label>
               </div>
 

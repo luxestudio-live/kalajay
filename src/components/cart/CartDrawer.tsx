@@ -237,9 +237,9 @@ export default function CartDrawer() {
                   href={whatsappCheckoutUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full py-2.5 px-4 bg-canvas hover:bg-emerald-50/50 border border-emerald-700/30 hover:border-emerald-600 text-ink hover:text-emerald-950 font-medium text-xs flex items-center justify-center gap-2 rounded-full transition-all shadow-2xs group cursor-pointer"
+                  className="w-full py-2.5 px-4 bg-canvas hover:bg-canvas-subtle border border-border-default hover:border-gold text-ink font-medium text-xs flex items-center justify-center gap-2 rounded-full transition-all shadow-2xs group cursor-pointer"
                 >
-                  <img src="/whatsapp.png" alt="WhatsApp" className="w-4 h-4 shrink-0 object-contain" />
+                  <MessageCircle className="w-4 h-4 text-rosewood shrink-0" />
                   <span className="tracking-refined uppercase text-[11px] font-semibold">
                     Order via WhatsApp
                   </span>

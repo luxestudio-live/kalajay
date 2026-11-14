@@ -468,7 +468,7 @@ export default function CustomisePage() {
                         rel="noopener noreferrer"
                         className="px-6 py-2.5 bg-canvas border border-border-medium text-plum text-xs uppercase tracking-editorial rounded-sm font-medium flex items-center gap-1.5"
                       >
-                        <MessageCircle className="w-3.5 h-3.5 text-emerald-700" />
+                        <MessageCircle className="w-3.5 h-3.5 text-rosewood" />
                         <span>Chat via WhatsApp</span>
                       </a>
                     </div>
@@ -488,9 +488,9 @@ export default function CustomisePage() {
                       href={waUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full py-3.5 bg-canvas border border-border-strong hover:border-emerald-700 text-plum hover:text-emerald-800 text-xs uppercase tracking-editorial font-medium rounded-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                      className="w-full py-3.5 bg-canvas border border-rosewood/40 hover:border-rosewood text-rosewood hover:text-plum text-xs uppercase tracking-editorial font-medium rounded-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
                     >
-                      <MessageCircle className="w-4 h-4 text-emerald-700" />
+                      <MessageCircle className="w-4 h-4 text-rosewood" />
                       <span>Direct WhatsApp Loom Approval ↗</span>
                     </a>
                   </div>

@@ -353,7 +353,7 @@ export default function DPDPConsentBanner() {
                 <div className="p-3.5 sm:p-4 bg-white rounded-xl border border-[#DED3C5] space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 font-serif text-base text-[#372921] font-medium">
-                      <MessageCircle className="w-4 h-4 text-emerald-700" />
+                      <MessageCircle className="w-4 h-4 text-[#9E5430]" />
                       <span>{t.conciergeTitle}</span>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">

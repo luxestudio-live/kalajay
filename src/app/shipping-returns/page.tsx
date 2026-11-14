@@ -176,7 +176,7 @@ export default function ShippingReturnsPage() {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-6 py-3 bg-plum hover:bg-plum/90 text-canvas text-xs uppercase tracking-editorial font-semibold rounded-full transition-all shrink-0 shadow-md"
             >
-              <MessageCircle className="w-4 h-4 text-emerald-400" />
+              <MessageCircle className="w-4 h-4 text-[#D4AF37]" />
               <span>1-Click WhatsApp Return Request</span>
             </a>
           </div>

@@ -52,11 +52,11 @@ export default function ContactPage() {
                 href={BRAND_CONFIG.contact.whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-start gap-3.5 p-4 bg-canvas-subtle rounded-sm border border-border-subtle hover:border-emerald-700/50 transition-colors group"
+                className="flex items-start gap-3.5 p-4 bg-canvas-subtle rounded-sm border border-border-subtle hover:border-rosewood/50 transition-colors group"
               >
-                <MessageCircle className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
+                <MessageCircle className="w-5 h-5 text-rosewood shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-semibold text-plum block group-hover:text-emerald-800">
+                  <span className="font-semibold text-plum block group-hover:text-rosewood">
                     WhatsApp Craft House Line (Fastest)
                   </span>
                   <span className="text-ink-muted">{BRAND_CONFIG.contact.phone}</span>

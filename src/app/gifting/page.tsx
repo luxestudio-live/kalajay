@@ -404,7 +404,7 @@ export default function GiftingPage() {
                     rel="noopener noreferrer"
                     className="w-full py-4 px-6 bg-plum hover:bg-rosewood text-canvas text-xs uppercase tracking-monumental font-semibold rounded-full flex items-center justify-center gap-2 shadow-md transition-colors"
                   >
-                    <MessageCircle className="w-4 h-4 text-emerald-300" />
+                    <MessageCircle className="w-4 h-4 text-[#D4AF37]" />
                     <span>Enquire via WhatsApp</span>
                   </a>
                   <p className="text-center text-[11px] text-ink-muted">

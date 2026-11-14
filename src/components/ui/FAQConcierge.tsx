@@ -542,7 +542,7 @@ export default function FAQConcierge() {
           {/* Quick WhatsApp Banner within header */}
           <div className="bg-[#2A1F19] px-4 py-1.5 border-b border-[#DED3C5]/20 flex items-center justify-between text-[10px] text-[#DED3C5] shrink-0">
             <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]"></span>
               <span>Need live human advice?</span>
             </span>
             <a
@@ -588,7 +588,7 @@ export default function FAQConcierge() {
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white text-[11px] font-medium transition-colors shadow-xs"
                         >
-                          <MessageCircle className="w-3.5 h-3.5 text-emerald-300" />
+                          <MessageCircle className="w-3.5 h-3.5 text-[#D4AF37]" />
                           <span>{msg.action.label}</span>
                           <ExternalLink className="w-3 h-3 ml-0.5" />
                         </a>

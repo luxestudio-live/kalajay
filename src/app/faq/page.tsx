@@ -91,7 +91,7 @@ export default function FAQPage() {
               rel="noopener noreferrer"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#372921] hover:bg-[#9E5430] text-[#F7F3EC] text-xs uppercase tracking-editorial font-semibold rounded-sm transition-colors"
             >
-              <MessageCircle className="w-4 h-4 text-emerald-400" />
+              <MessageCircle className="w-4 h-4 text-[#D4AF37]" />
               <span>Message on WhatsApp</span>
             </a>
           </div>

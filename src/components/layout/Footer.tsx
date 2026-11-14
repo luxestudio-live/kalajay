@@ -244,7 +244,7 @@ export default function Footer() {
                 </div>
               </div>
               <div className="flex items-center gap-2.5 pt-2">
-                <img src="/whatsapp.png" alt="WhatsApp" className="w-4 h-4 shrink-0 object-contain" />
+                <MessageCircle className="w-4 h-4 text-[#9E5430] shrink-0" />
                 <a
                   href={BRAND_CONFIG.contact.whatsappUrl}
                   target="_blank"

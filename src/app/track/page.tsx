@@ -365,9 +365,9 @@ export default function TrackOrderPage() {
                 href={`https://wa.me/919740540847?text=Hello%20Kalajay%2C%20I%20am%20inquiring%20about%20Order%20${activeOrder.orderId}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-canvas rounded-sm text-[11px] font-sans font-semibold uppercase tracking-refined transition-colors shrink-0"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-[#372921] hover:bg-[#503A2E] text-[#F7F3EC] rounded-sm text-[11px] font-sans font-semibold uppercase tracking-refined transition-colors shrink-0 shadow-2xs"
               >
-                <MessageCircle className="w-3.5 h-3.5" />
+                <MessageCircle className="w-3.5 h-3.5 text-gold" />
                 <span>WhatsApp Craft House Concierge</span>
               </a>
             </div>

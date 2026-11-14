@@ -349,7 +349,7 @@ export default function StoryPage() {
                 rel="noopener noreferrer"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-white/10 hover:bg-white/15 text-canvas border border-white/25 text-xs uppercase tracking-editorial font-semibold rounded-full transition-colors"
               >
-                <MessageCircle className="w-4 h-4 text-emerald-400" />
+                <MessageCircle className="w-4 h-4 text-[#D4AF37]" />
                 <span>Chat with Studio Concierge</span>
               </a>
             </div>

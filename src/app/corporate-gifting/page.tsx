@@ -148,7 +148,7 @@ export default function CorporateGiftingPage() {
               rel="noopener noreferrer"
               className="px-8 py-3.5 bg-champagne hover:bg-champagne-light text-plum text-xs uppercase tracking-editorial font-semibold rounded-sm transition-colors flex items-center gap-2"
             >
-              <MessageCircle className="w-4 h-4 text-emerald-800" />
+              <MessageCircle className="w-4 h-4 text-rosewood" />
               <span>Connect on WhatsApp (+91 97405 40847)</span>
             </a>
             <Link

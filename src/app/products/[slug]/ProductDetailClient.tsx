@@ -275,9 +275,9 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
                   href={waUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full py-3.5 px-6 bg-canvas border border-border-strong hover:border-emerald-700 text-plum hover:text-emerald-800 text-xs uppercase tracking-refined font-medium rounded-full flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  className="w-full py-3.5 px-6 bg-canvas border border-rosewood/40 hover:border-rosewood text-rosewood hover:text-plum text-xs uppercase tracking-refined font-medium rounded-full flex items-center justify-center gap-2 transition-colors cursor-pointer"
                 >
-                  <img src="/whatsapp.png" alt="WhatsApp" className="w-4 h-4 shrink-0 object-contain" />
+                  <MessageCircle className="w-4 h-4 shrink-0 text-rosewood" />
                   <span>Order Directly via WhatsApp</span>
                 </a>
               </div>
@@ -478,9 +478,9 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Order on WhatsApp"
-          className="p-3 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full flex items-center justify-center"
+          className="p-3 bg-canvas-subtle hover:bg-canvas text-rosewood hover:text-plum border border-border-default rounded-full flex items-center justify-center transition-colors shadow-2xs"
         >
-          <img src="/whatsapp.png" alt="WhatsApp" className="w-5 h-5 shrink-0 object-contain" />
+          <MessageCircle className="w-5 h-5 shrink-0" />
         </a>
       </div>
     </div>
