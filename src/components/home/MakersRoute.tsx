@@ -226,7 +226,7 @@ export default function MakersRoute() {
                   <Heart className="w-3.5 h-3.5 text-rosewood fill-rosewood" />
                   <span>Master Bead Weaver</span>
                 </span>
-                <span className="font-serif italic text-rosewood font-medium">Kalajay Craft House</span>
+                <span className="font-kalajay text-sm text-rosewood font-medium">Kalajay Craft House</span>
               </div>
             </div>
           ))}

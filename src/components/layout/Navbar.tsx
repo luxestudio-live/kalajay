@@ -386,41 +386,33 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                     </div>
                   </button>
 
-                  {/* Expanded Categories & 1 View All Products Option */}
+                  {/* Expanded Categories & View All Products */}
                   {mobileShopExpanded && (
-                    <div className="pt-1.5 pb-2 pl-2 pr-1 space-y-1.5 animate-fade-in">
+                    <div className="pt-2 pb-3 pl-3.5 space-y-1.5 animate-fade-in border-l-2 border-rosewood/40 ml-2 my-1">
                       {/* 1. View All Products Option */}
                       <Link
                         href="/shop"
                         onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center justify-between p-2.5 rounded-lg bg-canvas-subtle border border-gold/40 text-rosewood hover:text-plum font-semibold text-xs tracking-refined uppercase transition-colors group shadow-2xs"
+                        className="flex items-center justify-between text-xs uppercase tracking-refined font-bold text-rosewood hover:text-plum py-1.5 border-b border-border-subtle/70 pb-2 mb-1.5"
                       >
-                        <span className="font-sans">View All Products</span>
-                        <span className="text-[11px] font-mono font-normal text-ink-muted group-hover:translate-x-0.5 transition-transform flex items-center gap-1">
+                        <span>View All Products</span>
+                        <span className="text-[11px] text-ink-muted flex items-center gap-1 font-normal font-mono">
                           <span>69 Pieces</span>
                           <ArrowRight className="w-3.5 h-3.5 text-rosewood" />
                         </span>
                       </Link>
 
-                      <div className="pt-2 pb-1 px-1 text-[10px] uppercase tracking-refined text-ink-muted font-bold">
-                        Curated Categories
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-0.5">
-                        {COLLECTIONS.map(col => (
-                          <Link
-                            key={col.slug}
-                            href={`/collections/${col.slug}`}
-                            onClick={() => setMobileMenuOpen(false)}
-                            className="py-1.5 px-2 text-sm text-ink-secondary hover:text-ink hover:bg-canvas-subtle/60 rounded-md transition-colors flex items-center justify-between group"
-                          >
-                            <span>{col.name}</span>
-                            <span className="text-ink-light opacity-0 group-hover:opacity-100 transition-opacity text-xs">
-                              →
-                            </span>
-                          </Link>
-                        ))}
-                      </div>
+                      {/* 2. All Categories List */}
+                      {COLLECTIONS.map(col => (
+                        <Link
+                          key={col.slug}
+                          href={`/collections/${col.slug}`}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="block text-[15px] text-ink hover:text-rosewood transition-colors py-1 font-normal"
+                        >
+                          {col.name}
+                        </Link>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -489,7 +481,7 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
 
             {/* Drawer Footer */}
             <div className="pt-6 border-t border-border-subtle mt-8 text-xs text-ink-light">
-              <p className="font-serif italic text-sm text-ink mb-1">
+              <p className="font-kalajay text-base text-ink mb-1">
                 “Small wonders. Beautifully made.”
               </p>
               <p>Handcrafted with love in our studios.</p>

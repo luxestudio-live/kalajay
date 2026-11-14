@@ -502,7 +502,7 @@ export default function FAQConcierge() {
 
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h3 className="font-serif text-base sm:text-lg font-medium leading-tight text-[#FAF7F2]">
+                  <h3 className="font-kalajay text-lg sm:text-xl font-normal leading-tight text-[#FAF7F2]">
                     Kalajay Concierge
                   </h3>
                   <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[#D4AF37]/20 text-[#D4AF37] font-semibold font-mono">

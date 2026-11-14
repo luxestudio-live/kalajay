@@ -1,5 +1,5 @@
 // Kalajay Atelier - Progressive Web App Service Worker
-const CACHE_NAME = 'kalajay-cache-v1';
+const CACHE_NAME = 'kalajay-cache-v3';
 const PRECACHE_ASSETS = [
   '/',
   '/icon.svg',

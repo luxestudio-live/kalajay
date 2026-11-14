@@ -52,7 +52,7 @@ export default function HumanHandsAtelier() {
                   <Heart className="w-3.5 h-3.5 text-rosewood fill-rosewood" />
                   <span>Master Bead Artisan</span>
                 </span>
-                <span className="font-serif italic text-rosewood">Kalajay Craft House</span>
+                <span className="font-kalajay text-sm text-rosewood">Kalajay Craft House</span>
               </div>
             </div>
           ))}

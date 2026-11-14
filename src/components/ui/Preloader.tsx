@@ -113,8 +113,8 @@ export default function Preloader() {
 
         {/* Brand Identity Wordmark */}
         <div className="mt-1 flex flex-col items-center animate-brand-fade">
-          <h2 className="font-serif text-2xl sm:text-[28px] tracking-[0.24em] text-[#372921] font-medium uppercase mb-1">
-            KALAJAY
+          <h2 className="font-kalajay text-3xl sm:text-4xl tracking-wide text-[#372921] font-normal mb-1">
+            kalajay
           </h2>
           <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.32em] text-[#8C7A6B] font-sans font-medium">
             A World of Little Wonders

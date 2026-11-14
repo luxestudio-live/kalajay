@@ -93,6 +93,7 @@ module.exports = {
         'image-lg': '32px',
       },
       fontFamily: {
+        kalajay: ['var(--font-kalajay)', 'Kurale', 'serif'],
         serif: ['var(--font-serif)', 'Playfair Display', 'Cormorant Garamond', 'Prata', 'Georgia', 'serif'],
         sans: ['var(--font-sans)', 'Plus Jakarta Sans', 'Manrope', 'Jost', 'sans-serif'],
         script: ['var(--font-script)', 'Caveat', 'cursive'],

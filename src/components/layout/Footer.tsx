@@ -269,8 +269,8 @@ export default function Footer() {
 
         {/* Monumental Sculptural Wordmark Spread */}
         <div className="py-8 sm:py-12 text-center select-none flex justify-center items-center w-full overflow-hidden" aria-hidden="true" role="presentation">
-          <div className="font-serif text-[12vw] sm:text-[13vw] lg:text-[13.5vw] leading-none tracking-[0.05em] sm:tracking-[0.08em] text-[#F7F3EC]/[0.08] font-normal uppercase pointer-events-none transition-transform duration-700 select-none whitespace-nowrap">
-            KALAJAY
+          <div className="font-kalajay text-[13vw] sm:text-[14vw] lg:text-[14.5vw] leading-none tracking-[0.02em] text-[#F7F3EC]/[0.08] font-normal pointer-events-none transition-transform duration-700 select-none whitespace-nowrap">
+            kalajay
           </div>
         </div>
 
