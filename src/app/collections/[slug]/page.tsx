@@ -25,10 +25,5 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
 }
 
 export default function CollectionDetailPage({ params }: { params: { slug: string } }) {
-  const collection = COLLECTIONS.find((c) => c.slug === params.slug);
-  if (!collection) {
-    return notFound();
-  }
-
   return <CollectionDetailClient slug={params.slug} />;
 }

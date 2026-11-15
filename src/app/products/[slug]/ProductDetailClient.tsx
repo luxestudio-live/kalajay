@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { notFound, useParams } from 'next/navigation';
 import {
@@ -20,6 +20,7 @@ import {
   Package,
 } from 'lucide-react';
 import { PRODUCTS, Product, ProductVariant } from '@/data/catalogue';
+import { getFirestoreProducts, getFirestoreInventory } from '@/lib/firestore';
 import { useCart } from '@/context/CartContext';
 
 interface ProductDetailClientProps {
@@ -30,7 +31,44 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
   const params = useParams();
   const slug = propSlug || (params?.slug as string);
 
-  const product = PRODUCTS.find((p) => p.slug === slug);
+  const [product, setProduct] = useState<Product | undefined>(() =>
+    PRODUCTS.find((p) => p.slug === slug || p.code === slug || p.id === slug)
+  );
+  const [isLiveLoaded, setIsLiveLoaded] = useState(false);
+  const [liveInventoryStock, setLiveInventoryStock] = useState<number | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    getFirestoreProducts().then((liveProds) => {
+      if (!isMounted) return;
+      if (liveProds && liveProds.length > 0) {
+        const live = liveProds.find((p) => p.slug === slug || p.code === slug || p.id === slug);
+        if (live) {
+          setProduct(live);
+        }
+      }
+      setIsLiveLoaded(true);
+    }).catch(() => {
+      if (isMounted) setIsLiveLoaded(true);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [slug]);
+
+  // Sync live inventory stock for accurate availability
+  useEffect(() => {
+    if (product?.code) {
+      getFirestoreInventory().then((invItems) => {
+        const item = invItems.find(i => i.sku === product.code);
+        if (item) {
+          setLiveInventoryStock(item.available !== undefined ? item.available : item.onHand);
+        }
+      }).catch(() => {});
+    }
+  }, [product?.code]);
+
   const { addToCart, formatINR } = useCart();
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -39,6 +77,13 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
   );
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+
+  // Synchronize variant if product data updates from Firestore
+  useEffect(() => {
+    if (product?.variants && product.variants.length > 0 && !selectedVariant) {
+      setSelectedVariant(product.variants[0]);
+    }
+  }, [product, selectedVariant]);
 
   // Accordion open states
   const [openAccordions, setOpenAccordions] = useState<{ [key: string]: boolean }>({
@@ -53,7 +98,17 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
   };
 
   if (!product) {
-    return notFound();
+    if (isLiveLoaded) {
+      return notFound();
+    }
+    return (
+      <div className="bg-canvas min-h-screen flex items-center justify-center py-24">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-2 border-rosewood border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="font-serif text-lg text-plum">Consulting Atelier Catalogue...</p>
+        </div>
+      </div>
+    );
   }
 
   // "Pairs well with" curated products

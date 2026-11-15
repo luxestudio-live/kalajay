@@ -25,10 +25,5 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
 }
 
 export default function ProductDetailPage({ params }: { params: { slug: string } }) {
-  const product = PRODUCTS.find((p) => p.slug === params.slug);
-  if (!product) {
-    return notFound();
-  }
-
   return <ProductDetailClient slug={params.slug} />;
 }

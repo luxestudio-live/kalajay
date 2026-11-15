@@ -6,7 +6,7 @@ import { ArrowRight, ShoppingBag, Check, Star } from 'lucide-react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { PRODUCTS, Product } from '@/data/catalogue';
-import { getFirestoreFeaturedConfig } from '@/lib/firestore';
+import { getFirestoreFeaturedConfig, getFirestoreProducts } from '@/lib/firestore';
 import { useCart } from '@/context/CartContext';
 
 if (typeof window !== 'undefined') {
@@ -30,12 +30,21 @@ export default function BestSellersRail() {
   const progressBarRef = useRef<HTMLDivElement>(null);
   const [addedId, setAddedId] = useState<string | null>(null);
   const [dynamicFeaturedIds, setDynamicFeaturedIds] = useState<string[]>([]);
+  const [liveProducts, setLiveProducts] = useState<Product[]>(PRODUCTS);
 
   // Fetch dynamic curation from Cloud Firestore /cms/featured_products
   useEffect(() => {
     getFirestoreFeaturedConfig().then(cfg => {
       if (cfg && cfg.productIds && cfg.productIds.length > 0) {
         setDynamicFeaturedIds(cfg.productIds);
+      }
+    }).catch(() => {});
+
+    getFirestoreProducts().then(prods => {
+      if (prods && prods.length > 0) {
+        const codeSet = new Set(prods.map(p => p.code));
+        const combined = [...prods, ...PRODUCTS.filter(p => !codeSet.has(p.code))];
+        setLiveProducts(combined);
       }
     }).catch(() => {});
   }, []);
@@ -54,7 +63,7 @@ export default function BestSellersRail() {
     ];
 
     const found = curatedIds
-      .map((id) => PRODUCTS.find((p) => p.id === id || p.code === id))
+      .map((id) => liveProducts.find((p) => p.id === id || p.code === id))
       .filter(
         (p): p is Product =>
           Boolean(p && !p.coverImage.includes('brand.png') && !p.coverImage.includes('kalajay-brand'))
@@ -62,10 +71,10 @@ export default function BestSellersRail() {
 
     if (found.length >= 6) return found;
 
-    return PRODUCTS.filter(
+    return liveProducts.filter(
       (p) => !p.coverImage.includes('brand.png') && !p.coverImage.includes('kalajay-brand')
     ).slice(0, 8);
-  }, [dynamicFeaturedIds]);
+  }, [dynamicFeaturedIds, liveProducts]);
 
   useIsomorphicLayoutEffect(() => {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;

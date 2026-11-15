@@ -24,6 +24,8 @@ import {
   getFirestoreProducts,
   saveFirestoreProduct,
   deleteFirestoreProduct,
+  getFirestoreCategories,
+  saveFirestoreCategory,
 } from '@/lib/firestore';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 
@@ -135,13 +137,21 @@ export default function CatalogueView() {
 
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
-  // Sync products from Cloud Firestore on mount
+  // Sync products and collections from Cloud Firestore on mount
   React.useEffect(() => {
     getFirestoreProducts().then((liveProds) => {
       if (liveProds && liveProds.length > 0) {
         const codeSet = new Set(liveProds.map(p => p.code));
         const combined = [...liveProds, ...PRODUCTS.filter(p => !codeSet.has(p.code))];
         setProducts(combined);
+      }
+    }).catch(() => {});
+
+    getFirestoreCategories().then((liveCats) => {
+      if (liveCats && liveCats.length > 0) {
+        const slugSet = new Set(liveCats.map(c => c.slug));
+        const combined = [...liveCats, ...COLLECTIONS.filter(c => !slugSet.has(c.slug))];
+        setCollections(combined);
       }
     }).catch(() => {});
   }, []);
@@ -262,6 +272,7 @@ export default function CatalogueView() {
     if (!editingCollection) return;
     setCollections(prev => prev.map(c => (c.slug === editingCollection.slug ? editingCollection : c)));
     setEditCollectionModalOpen(false);
+    saveFirestoreCategory(editingCollection).catch(() => {});
     logAction('UPDATE_COLLECTION', 'catalogue', `Updated collection editorial: ${editingCollection.name}`);
     showToast(`Saved updates for Collection "${editingCollection.name}".`);
   };

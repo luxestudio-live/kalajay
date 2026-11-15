@@ -4,7 +4,7 @@ import path from 'path';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { verifyStaffPermission } from '@/lib/serverRbac';
-import { ensureServerAdminAuth } from '@/lib/serverFirebaseAdmin';
+import { ensureServerAdminAuth, getAdminFirestore } from '@/lib/serverFirebaseAdmin';
 import { PermissionAction } from '@/data/adminTypes';
 
 interface UpdateOrderPayload {
@@ -154,14 +154,13 @@ export async function POST(request: Request) {
     orderStore[orderId] = updatedOrderRecord;
     writeOrderStore(orderStore);
 
-    // Sync to Cloud Firestore (/orders/{orderId})
+    // Sync to Cloud Firestore (/orders/{orderId}) via Firebase Admin SDK
     try {
-      await ensureServerAdminAuth();
-      const orderRef = doc(db, 'orders', orderId);
-      const fsSnap = await getDoc(orderRef);
-      if (fsSnap.exists()) {
-        await setDoc(orderRef, updatedOrderRecord, { merge: true });
+      const adminDb = getAdminFirestore();
+      if (adminDb) {
+        await adminDb.collection('orders').doc(orderId).set(updatedOrderRecord, { merge: true });
       } else {
+        const orderRef = doc(db, 'orders', orderId);
         await setDoc(orderRef, updatedOrderRecord, { merge: true });
       }
     } catch (fsErr) {

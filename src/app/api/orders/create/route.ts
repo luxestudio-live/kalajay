@@ -83,11 +83,37 @@ export async function POST(request: Request) {
     }
 
     // 2. Server-Authoritative Price Calculation & Product Verification (Anti-Tampering)
+    // Synchronized with live Firestore /products with resilient static catalogue fallback
     let calculatedSubtotal = 0;
     const verifiedOrderItems: AdminOrder['items'] = [];
+    const adminDb = getAdminFirestore();
 
     for (const item of body.items) {
-      const catalogItem = PRODUCTS.find(p => p.code === item.productId || p.id === item.productId);
+      let catalogItem: any = null;
+      const targetId = item.productId;
+
+      // Authoritative lookup from live Firestore /products first
+      if (adminDb) {
+        try {
+          const fsDoc = await adminDb.collection('products').doc(targetId).get();
+          if (fsDoc.exists) {
+            catalogItem = fsDoc.data();
+          }
+        } catch {}
+      } else if (db && db.type) {
+        try {
+          const fsDoc = await getDoc(doc(db, 'products', targetId));
+          if (fsDoc.exists()) {
+            catalogItem = fsDoc.data();
+          }
+        } catch {}
+      }
+
+      // Seamless fallback to static catalogue if not yet in Firestore
+      if (!catalogItem) {
+        catalogItem = PRODUCTS.find(p => p.code === targetId || p.id === targetId || p.slug === targetId);
+      }
+
       if (!catalogItem) {
         return NextResponse.json(
           { success: false, error: `Invalid or unrecognised atelier SKU: "${item.productId}"` },
@@ -96,45 +122,62 @@ export async function POST(request: Request) {
       }
 
       const qty = Math.max(1, Math.floor(Number(item.quantity) || 1));
-      const authoritativePrice = catalogItem.price; // ALWAYS sourced from server catalogue, NEVER from client
+      const authoritativePrice = Number(catalogItem.price); // ALWAYS sourced from authoritative server/Firestore product, NEVER from client
 
       // Server Stock Validation Pre-check
-      if (db && db.type) {
+      const skuCode = catalogItem.code || targetId;
+      let availableStock: number | null = null;
+      if (adminDb) {
         try {
-          const invRef = doc(db, 'inventory', catalogItem.code);
-          const invSnap = await getDoc(invRef);
-          if (invSnap.exists()) {
-            const invData = invSnap.data();
-            const availableStock = Number(
+          const invSnap = await adminDb.collection('inventory').doc(skuCode).get();
+          if (invSnap.exists) {
+            const invData = invSnap.data()!;
+            availableStock = Number(
               invData.available !== undefined
                 ? invData.available
                 : invData.stockOnHand !== undefined
                 ? invData.stockOnHand
                 : (invData.onHand ?? 15)
             );
-            if (availableStock < qty) {
-              return NextResponse.json(
-                {
-                  success: false,
-                  error: `Atelier Stock Notice: Only ${availableStock} pieces of "${catalogItem.name}" remain in current loom.`,
-                },
-                { status: 400 }
-              );
-            }
+          }
+        } catch {}
+      } else if (db && db.type) {
+        try {
+          const invRef = doc(db, 'inventory', skuCode);
+          const invSnap = await getDoc(invRef);
+          if (invSnap.exists()) {
+            const invData = invSnap.data();
+            availableStock = Number(
+              invData.available !== undefined
+                ? invData.available
+                : invData.stockOnHand !== undefined
+                ? invData.stockOnHand
+                : (invData.onHand ?? 15)
+            );
           }
         } catch (stockErr) {
           console.warn('Stock pre-check notice:', stockErr);
         }
       }
 
+      if (availableStock !== null && availableStock < qty) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Atelier Stock Notice: Only ${availableStock} pieces of "${catalogItem.name}" remain in current loom.`,
+          },
+          { status: 400 }
+        );
+      }
+
       calculatedSubtotal += authoritativePrice * qty;
       verifiedOrderItems.push({
-        productId: catalogItem.code,
+        productId: skuCode,
         name: catalogItem.name,
-        sku: catalogItem.code,
+        sku: skuCode,
         price: authoritativePrice,
         quantity: qty,
-        image: catalogItem.images?.[0] || 'https://www.kalajay.in/v2/p1-1.jpg',
+        image: catalogItem.images?.[0] || catalogItem.coverImage || 'https://www.kalajay.in/v2/p1-1.jpg',
       });
     }
 
@@ -380,8 +423,6 @@ export async function POST(request: Request) {
     };
 
     // 8. Atomic Server-Side Idempotency, Inventory Deduction, and Order Persistence
-    const adminDb = getAdminFirestore();
-
     if (adminDb) {
       try {
         const txResult = await adminDb.runTransaction(async (transaction) => {

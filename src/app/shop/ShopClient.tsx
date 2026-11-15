@@ -17,8 +17,8 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { PRODUCTS, COLLECTIONS, Product, ProductVariant } from '@/data/catalogue';
-import { getFirestoreProducts } from '@/lib/firestore';
+import { PRODUCTS, COLLECTIONS, Product, ProductVariant, Collection } from '@/data/catalogue';
+import { getFirestoreProducts, getFirestoreCategories } from '@/lib/firestore';
 import { useCart } from '@/context/CartContext';
 
 const ITEMS_PER_PAGE = 16;
@@ -29,6 +29,7 @@ export function ShopContent() {
   const initialQuery = searchParams.get('q') || '';
 
   const [productsList, setProductsList] = useState<Product[]>(PRODUCTS);
+  const [categoriesList, setCategoriesList] = useState<Collection[]>(COLLECTIONS);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
   const [selectedColor, setSelectedColor] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>(initialQuery);
@@ -55,13 +56,21 @@ export function ShopContent() {
     }
   }, [searchParams]);
 
-  // Sync live products from Cloud Firestore
+  // Sync live products & categories from Cloud Firestore
   useEffect(() => {
     getFirestoreProducts().then((liveProds) => {
       if (liveProds && liveProds.length > 0) {
         const codeSet = new Set(liveProds.map(p => p.code));
         const combined = [...liveProds, ...PRODUCTS.filter(p => !codeSet.has(p.code))];
         setProductsList(combined);
+      }
+    }).catch(() => {});
+
+    getFirestoreCategories().then((liveCats) => {
+      if (liveCats && liveCats.length > 0) {
+        const slugSet = new Set(liveCats.map(c => c.slug));
+        const combined = [...liveCats, ...COLLECTIONS.filter(c => !slugSet.has(c.slug))];
+        setCategoriesList(combined);
       }
     }).catch(() => {});
   }, []);
@@ -138,7 +147,7 @@ export function ShopContent() {
     }
 
     return list;
-  }, [selectedCategory, selectedColor, searchQuery, sortOrder, onlyInStock]);
+  }, [productsList, selectedCategory, selectedColor, searchQuery, sortOrder, onlyInStock]);
 
   // Pagination calculations
   const totalItems = filteredProducts.length;
@@ -255,7 +264,7 @@ export function ShopContent() {
             >
               All Pieces ({productsList.length})
             </button>
-            {COLLECTIONS.map((col) => {
+            {categoriesList.map((col) => {
               const count = productsList.filter((p) => p.category === col.name).length;
               return (
                 <button

@@ -1,8 +1,6 @@
 import { getApps, initializeApp, cert, App } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import { getAuth as getAdminSdkAuth, Auth as AdminAuth } from 'firebase-admin/auth';
-import { auth as clientAuth } from '@/lib/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
 
 let adminApp: App | null = null;
 let adminFirestore: Firestore | null = null;
@@ -126,43 +124,10 @@ export function isFirebaseAdminActive(): boolean {
 }
 
 /**
- * Resolves scoped machine identity credentials from the deployment environment.
- * Strictly NEVER falls back to STAFF_TEMPORARY_CREDENTIALS.local.json.
- * Strictly NEVER uses human Super Admin accounts.
- */
-function resolveMachineIdentityConfig(): { email: string; passcode: string } | null {
-  const envEmail = process.env.FIREBASE_SERVER_IDENTITY_EMAIL || process.env.SERVER_SERVICE_EMAIL;
-  const envPass = process.env.FIREBASE_SERVER_IDENTITY_PASSCODE || process.env.SERVER_SERVICE_PASSCODE;
-  if (envEmail && envPass) {
-    return { email: envEmail.trim(), passcode: envPass.trim() };
-  }
-  return null;
-}
-
-/**
- * Authenticates the server runtime process using a properly scoped machine identity
- * when client SDK fallback is active.
+ * Verifies that the trusted server Firebase Admin SDK / Workload Identity is operational.
+ * Strictly NEVER falls back to human accounts or email/password authentication.
  * Never logs credentials or secrets.
  */
 export async function ensureServerAdminAuth(): Promise<boolean> {
-  try {
-    if (clientAuth && clientAuth.currentUser) {
-      const currentEmail = clientAuth.currentUser.email || '';
-      const currentUid = clientAuth.currentUser.uid;
-      if (currentUid === 'kalajay-internal-server-worker' || currentEmail.includes('server')) {
-        return true;
-      }
-    }
-
-    const machineConfig = resolveMachineIdentityConfig();
-    if (!machineConfig) {
-      return false;
-    }
-
-    if (!clientAuth || !clientAuth.name) return false;
-    await signInWithEmailAndPassword(clientAuth, machineConfig.email, machineConfig.passcode);
-    return true;
-  } catch {
-    return false;
-  }
+  return isFirebaseAdminActive();
 }

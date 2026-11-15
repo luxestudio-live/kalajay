@@ -253,7 +253,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               if (firestoreProfile) {
                 saveUserSession(firestoreProfile);
               } else {
-                // Initialize default profile in Firestore
+                // Initialize genuine customer profile in Firestore
                 const newPatron: User = {
                   id: fbUser.uid,
                   name: fbUser.displayName || (fbUser.email ? fbUser.email.split('@')[0] : 'Patron'),
@@ -262,8 +262,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   memberSince: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
                   tier: 'Kalajay Circle',
                   rewardPoints: 300,
-                  addresses: DEFAULT_ADDRESSES,
-                  orders: DEFAULT_ORDERS,
+                  addresses: [],
+                  orders: [],
                   preferences: {
                     preferredPalette: 'Champagne Gold & Pearl',
                   },
@@ -281,8 +281,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 memberSince: 'Today',
                 tier: 'Kalajay Circle',
                 rewardPoints: 300,
-                addresses: DEFAULT_ADDRESSES,
-                orders: DEFAULT_ORDERS,
+                addresses: [],
+                orders: [],
                 preferences: { preferredPalette: 'Pearl & Gold' },
               };
               saveUserSession(fallbackPatron);

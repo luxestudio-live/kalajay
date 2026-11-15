@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { notFound, useParams } from 'next/navigation';
 import { ArrowLeft, ShoppingBag, Check, Layers, Filter } from 'lucide-react';
-import { COLLECTIONS, PRODUCTS, Product } from '@/data/catalogue';
+import { COLLECTIONS, PRODUCTS, Product, Collection } from '@/data/catalogue';
+import { getFirestoreCategories, getFirestoreProducts } from '@/lib/firestore';
 import { useCart } from '@/context/CartContext';
 
 interface CollectionDetailClientProps {
@@ -15,32 +16,66 @@ export default function CollectionDetailClient({ slug: propSlug }: CollectionDet
   const params = useParams();
   const slug = propSlug || (params?.slug as string);
 
-  const collection = COLLECTIONS.find(c => c.slug === slug);
+  const [collection, setCollection] = useState<Collection | undefined>(() =>
+    COLLECTIONS.find(c => c.slug === slug)
+  );
+  const [productsList, setProductsList] = useState<Product[]>(PRODUCTS);
+  const [isLiveLoaded, setIsLiveLoaded] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([getFirestoreCategories(), getFirestoreProducts()]).then(([liveCats, liveProds]) => {
+      if (!isMounted) return;
+      if (liveCats && liveCats.length > 0) {
+        const matchingCat = liveCats.find(c => c.slug === slug);
+        if (matchingCat) setCollection(matchingCat);
+      }
+      if (liveProds && liveProds.length > 0) {
+        const codeSet = new Set(liveProds.map(p => p.code));
+        const combined = [...liveProds, ...PRODUCTS.filter(p => !codeSet.has(p.code))];
+        setProductsList(combined);
+      }
+      setIsLiveLoaded(true);
+    }).catch(() => {
+      if (isMounted) setIsLiveLoaded(true);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [slug]);
+
   const { addToCart, formatINR } = useCart();
   const [addedId, setAddedId] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<string>('featured');
 
   if (!collection) {
-    return notFound();
+    if (isLiveLoaded) {
+      return notFound();
+    }
+    return (
+      <div className="bg-canvas min-h-screen flex items-center justify-center py-24">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-2 border-rosewood border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="font-serif text-lg text-plum">Consulting Atelier Curations...</p>
+        </div>
+      </div>
+    );
   }
 
-  let products = PRODUCTS.filter(p => p.category === collection.name);
-
-  // Sorting
-  switch (sortOrder) {
-    case 'price-asc':
-      products.sort((a, b) => a.price - b.price);
-      break;
-    case 'price-desc':
-      products.sort((a, b) => b.price - a.price);
-      break;
-    case 'alpha':
-      products.sort((a, b) => a.name.localeCompare(b.name));
-      break;
-    default:
-      products.sort((a, b) => (b.isBestSeller ? 1 : 0) - (a.isBestSeller ? 1 : 0));
-      break;
-  }
+  const products = useMemo(() => {
+    const list = productsList.filter(p => p.category === collection.name || p.categorySlug === collection.slug);
+    switch (sortOrder) {
+      case 'price-asc':
+        return [...list].sort((a, b) => a.price - b.price);
+      case 'price-desc':
+        return [...list].sort((a, b) => b.price - a.price);
+      case 'alpha':
+        return [...list].sort((a, b) => a.name.localeCompare(b.name));
+      default:
+        return [...list].sort((a, b) => (b.isBestSeller ? 1 : 0) - (a.isBestSeller ? 1 : 0));
+    }
+  }, [productsList, collection, sortOrder]);
 
   const handleQuickAdd = (product: Product, e: React.MouseEvent) => {
     e.preventDefault();

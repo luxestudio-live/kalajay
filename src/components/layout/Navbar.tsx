@@ -6,7 +6,8 @@ import { usePathname } from 'next/navigation';
 import { ShoppingBag, Search, Menu, X, Sparkles, Heart, Smartphone, Download, User, ArrowRight, ChevronDown, MessageCircle } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
-import { COLLECTIONS } from '@/data/catalogue';
+import { COLLECTIONS, Collection } from '@/data/catalogue';
+import { getFirestoreCategories } from '@/lib/firestore';
 
 interface NavbarProps {
   onOpenSearch: () => void;
@@ -20,6 +21,18 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [collectionsDropdown, setCollectionsDropdown] = useState(false);
   const [mobileShopExpanded, setMobileShopExpanded] = useState(false);
+  const [categoriesList, setCategoriesList] = useState<Collection[]>(COLLECTIONS);
+
+  // Sync live categories from Firestore
+  useEffect(() => {
+    getFirestoreCategories().then(liveCats => {
+      if (liveCats && liveCats.length > 0) {
+        const slugSet = new Set(liveCats.map(c => c.slug));
+        const combined = [...liveCats, ...COLLECTIONS.filter(c => !slugSet.has(c.slug))];
+        setCategoriesList(combined);
+      }
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -112,7 +125,7 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                     <div className="text-[11px] uppercase tracking-refined text-[#76695F] px-3 py-1 font-sans font-semibold border-b border-[#EAE2D8] mb-1">
                       Curated Editions
                     </div>
-                    {COLLECTIONS.map(col => (
+                    {categoriesList.map(col => (
                       <Link
                         key={col.slug}
                         href={`/collections/${col.slug}`}
@@ -403,7 +416,7 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                       </Link>
 
                       {/* 2. All Categories List */}
-                      {COLLECTIONS.map(col => (
+                      {categoriesList.map(col => (
                         <Link
                           key={col.slug}
                           href={`/collections/${col.slug}`}

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
 import { PRODUCTS, Product } from '@/data/catalogue';
+import { getFirestoreProducts } from '@/lib/firestore';
 
 export default function FeaturedProductsView() {
   const { featuredConfig, updateFeaturedProducts, inventory, can } = useAdminStore();
@@ -33,6 +34,19 @@ export default function FeaturedProductsView() {
     featuredConfig.productIds
   );
 
+  const [productsList, setProductsList] = useState<Product[]>(PRODUCTS);
+
+  // Sync live products from Firestore
+  React.useEffect(() => {
+    getFirestoreProducts().then((liveProds) => {
+      if (liveProds && liveProds.length > 0) {
+        const codeSet = new Set(liveProds.map(p => p.code));
+        const combined = [...liveProds, ...PRODUCTS.filter(p => !codeSet.has(p.code))];
+        setProductsList(combined);
+      }
+    }).catch(() => {});
+  }, []);
+
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSearch, setPickerSearch] = useState('');
   const [pickerCategory, setPickerCategory] = useState('All');
@@ -45,7 +59,7 @@ export default function FeaturedProductsView() {
 
   // Resolved list of curated products
   const curatedProducts = selectedProductIds
-    .map(id => PRODUCTS.find(p => p.id === id || p.code === id))
+    .map(id => productsList.find(p => p.id === id || p.code === id || p.slug === id))
     .filter((p): p is Product => Boolean(p));
 
   // Compute live stock inventory status for each curated piece
@@ -117,7 +131,7 @@ export default function FeaturedProductsView() {
   };
 
   // Filter products for the picker modal
-  const filteredPickerProducts = PRODUCTS.filter(p => {
+  const filteredPickerProducts = productsList.filter(p => {
     const matchesSearch =
       p.name.toLowerCase().includes(pickerSearch.toLowerCase()) ||
       p.code.toLowerCase().includes(pickerSearch.toLowerCase());
@@ -125,7 +139,7 @@ export default function FeaturedProductsView() {
     return matchesSearch && matchesCat;
   });
 
-  const categories = ['All', ...Array.from(new Set(PRODUCTS.map(p => p.category)))];
+  const categories = ['All', ...Array.from(new Set(productsList.map(p => p.category)))];
 
   return (
     <div className="space-y-6 animate-fade-in pb-12">
