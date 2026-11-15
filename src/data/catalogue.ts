@@ -27,6 +27,8 @@ export interface Product {
   craftHours: string;
   care: string;
   description: string;
+  hsnCode?: string;
+  taxRate?: number;
 }
 
 export interface Collection {

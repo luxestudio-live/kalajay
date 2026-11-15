@@ -596,14 +596,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   /**
-   * Profile updates (syncs to Firestore)
+   * Profile updates (syncs to Firestore with privilege guards)
    */
   const updateProfile = (data: Partial<User>) => {
     if (!user) return;
-    const updated = { ...user, ...data };
+    // Strip privileged fields from client update (Phase 2 & 3)
+    const { role, isAdmin, staffId, rewardPoints, tier, ...safeData } = data as any;
+    const updated = { ...user, ...safeData };
     saveUserSession(updated);
     if (firebaseUser) {
-      updatePatronProfile(firebaseUser.uid, data).catch((e) => console.warn(e));
+      updatePatronProfile(firebaseUser.uid, safeData).catch((e) => console.warn(e));
     }
   };
 

@@ -64,12 +64,21 @@ const KNOWN_ORDERS: Record<string, any> = {
   },
 };
 
-// In-memory rate limiting and anti-enumeration tarpit (Concern 1)
-const ipLookupTracker = new Map<string, { count: number; windowStart: number; failedAttempts: number; lockedUntil?: number }>();
+// Production-safe distributed & durable rate limiting (Phase 5)
+const RATE_LIMIT_STORE = 'kalajay_tracking_ratelimit_store.json';
+
+function getDurableRateLimits(): Record<string, { count: number; windowStart: number; failedAttempts: number; lockedUntil?: number }> {
+  return readDurableStore(RATE_LIMIT_STORE);
+}
+
+function saveDurableRateLimits(data: Record<string, any>) {
+  writeDurableStore(RATE_LIMIT_STORE, data);
+}
 
 function checkRateLimit(ip: string): { allowed: boolean; error?: string } {
   const now = Date.now();
-  const record = ipLookupTracker.get(ip) || { count: 0, windowStart: now, failedAttempts: 0 };
+  const store = getDurableRateLimits();
+  const record = store[ip] || { count: 0, windowStart: now, failedAttempts: 0 };
 
   if (record.lockedUntil && record.lockedUntil > now) {
     const remainingSec = Math.ceil((record.lockedUntil - now) / 1000);
@@ -85,34 +94,37 @@ function checkRateLimit(ip: string): { allowed: boolean; error?: string } {
   }
 
   record.count++;
+  store[ip] = record;
+  saveDurableRateLimits(store);
+
   if (record.count > 45) {
-    ipLookupTracker.set(ip, record);
     return {
       allowed: false,
       error: 'Order tracking rate limit exceeded. Please wait a moment before trying again.',
     };
   }
 
-  ipLookupTracker.set(ip, record);
   return { allowed: true };
 }
 
 function recordFailedAttempt(ip: string) {
   const now = Date.now();
-  const record = ipLookupTracker.get(ip) || { count: 1, windowStart: now, failedAttempts: 0 };
-  record.failedAttempts++;
+  const store = getDurableRateLimits();
+  const record = store[ip] || { count: 1, windowStart: now, failedAttempts: 0 };
+  record.failedAttempts = (record.failedAttempts || 0) + 1;
   if (record.failedAttempts >= 8) {
     record.lockedUntil = now + 5 * 60 * 1000; // 5-minute lockout on repeated scanning
     record.failedAttempts = 0;
   }
-  ipLookupTracker.set(ip, record);
+  store[ip] = record;
+  saveDurableRateLimits(store);
 }
 
 function recordSuccess(ip: string) {
-  const record = ipLookupTracker.get(ip);
-  if (record && record.failedAttempts > 0) {
-    record.failedAttempts = 0;
-    ipLookupTracker.set(ip, record);
+  const store = getDurableRateLimits();
+  if (store[ip] && store[ip].failedAttempts > 0) {
+    store[ip].failedAttempts = 0;
+    saveDurableRateLimits(store);
   }
 }
 
@@ -124,6 +136,17 @@ function readDurableStore(fileName: string): Record<string, any> {
     }
   } catch {}
   return {};
+}
+
+function writeDurableStore(fileName: string, data: Record<string, any>) {
+  try {
+    const cacheDir = path.join(process.cwd(), '.next', 'cache');
+    if (!fs.existsSync(cacheDir)) {
+      fs.mkdirSync(cacheDir, { recursive: true });
+    }
+    const fPath = path.join(cacheDir, fileName);
+    fs.writeFileSync(fPath, JSON.stringify(data, null, 2), 'utf-8');
+  } catch {}
 }
 
 export async function GET(request: Request) {

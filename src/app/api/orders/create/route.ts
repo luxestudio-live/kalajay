@@ -181,13 +181,29 @@ export async function POST(request: Request) {
       }
     }
 
-    // 4. Server-Authoritative Shipping & Business-Configurable GST Calculation (Concern 7)
+    // 4. Server-Authoritative Shipping & Business-Configurable GST Calculation (Phase 7)
     const discountedSubtotal = Math.max(0, calculatedSubtotal - calculatedDiscount);
     const freeShippingThreshold = BRAND_CONFIG.shipping?.freeThreshold ?? 599;
     const standardShippingRate = BRAND_CONFIG.shipping?.standardRate ?? 79;
     const calculatedShipping = discountedSubtotal >= freeShippingThreshold ? 0 : standardShippingRate;
-    const configuredGstRate = (BRAND_CONFIG as any).tax?.gstRate ?? 0.03;
-    const calculatedTax = Math.round(discountedSubtotal * configuredGstRate);
+    
+    // Sourced from product-specific taxRate or central BRAND_CONFIG.tax.gstRate (Phase 7)
+    const defaultGstRate = (BRAND_CONFIG as any).tax?.gstRate ?? 0.03;
+    let calculatedTax = 0;
+    if (calculatedDiscount > 0 && calculatedSubtotal > 0) {
+      const discountRatio = (calculatedSubtotal - calculatedDiscount) / calculatedSubtotal;
+      for (const item of verifiedOrderItems) {
+        const catItem = PRODUCTS.find(p => p.code === item.sku || p.id === item.sku);
+        const itemTaxRate = catItem?.taxRate ?? defaultGstRate;
+        calculatedTax += Math.round(item.price * item.quantity * discountRatio * itemTaxRate);
+      }
+    } else {
+      for (const item of verifiedOrderItems) {
+        const catItem = PRODUCTS.find(p => p.code === item.sku || p.id === item.sku);
+        const itemTaxRate = catItem?.taxRate ?? defaultGstRate;
+        calculatedTax += Math.round(item.price * item.quantity * itemTaxRate);
+      }
+    }
     const calculatedTotal = discountedSubtotal + calculatedShipping + calculatedTax;
 
     // 5. Authoritative Customer Ownership Resolution (Concern 2)
