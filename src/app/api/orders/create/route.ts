@@ -21,10 +21,24 @@ interface CreateOrderRequestBody {
   }>;
   couponCode?: string;
   userId?: string;
+  idempotencyKey?: string;
+}
+
+// In-memory sliding-window idempotency cache (TTL: 60 seconds)
+const recentOrderRequests = new Map<string, { timestamp: number; result: any }>();
+
+function cleanExpiredIdempotencyEntries() {
+  const now = Date.now();
+  recentOrderRequests.forEach((val, key) => {
+    if (now - val.timestamp > 60000) {
+      recentOrderRequests.delete(key);
+    }
+  });
 }
 
 export async function POST(request: Request) {
   try {
+    cleanExpiredIdempotencyEntries();
     const body: CreateOrderRequestBody = await request.json();
 
     // 1. Mandatory Input Validations (Server-Enforced)
@@ -62,6 +76,21 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check Idempotency Fingerprint to prevent duplicate checkout submissions
+    const itemsFingerprint = (body.items || [])
+      .map(i => `${i.productId}:${i.quantity}`)
+      .sort()
+      .join('|');
+    const orderFingerprint =
+      body.idempotencyKey ||
+      `${cleanPhone}_${itemsFingerprint}_${body.paymentMethod || 'upi'}`;
+
+    const existingSubmission = recentOrderRequests.get(orderFingerprint);
+    if (existingSubmission && Date.now() - existingSubmission.timestamp < 30000) {
+      console.log(`[Idempotency] Duplicate checkout prevented for key: ${orderFingerprint}`);
+      return NextResponse.json(existingSubmission.result);
+    }
+
     // 2. Server-Authoritative Price Calculation & Product Verification (Anti-Tampering)
     let calculatedSubtotal = 0;
     const verifiedOrderItems = [];
@@ -85,7 +114,12 @@ export async function POST(request: Request) {
           const invSnap = await getDoc(invRef);
           if (invSnap.exists()) {
             const invData = invSnap.data();
-            const availableStock = invData.stockOnHand ?? 10;
+            const availableStock =
+              invData.available !== undefined
+                ? invData.available
+                : invData.onHand !== undefined
+                ? invData.onHand
+                : (invData.stockOnHand ?? 15);
             if (availableStock < qty) {
               return NextResponse.json(
                 {
@@ -157,6 +191,14 @@ export async function POST(request: Request) {
         ? 'Credit/Debit Card'
         : 'WhatsApp Direct';
 
+    // 7. Payment Verification Enforcement (Requirement 7)
+    // In accordance with PCI-DSS & e-commerce verification standards:
+    // Unless an authoritative payment gateway webhook/signature verifies captured funds,
+    // payment-dependent orders are recorded as 'pending', NOT 'paid'!
+    // Fulfillment status is initialized to 'unfulfilled'.
+    const initialPaymentStatus: AdminOrder['paymentStatus'] = 'pending';
+    const initialFulfillmentStatus: AdminOrder['fulfillmentStatus'] = 'unfulfilled';
+
     const orderRecord: AdminOrder = {
       id: generatedOrderNumber,
       customerName: body.customerName.trim(),
@@ -168,9 +210,9 @@ export async function POST(request: Request) {
       shipping: calculatedShipping,
       tax: calculatedTax,
       total: calculatedTotal,
-      paymentStatus: 'paid',
+      paymentStatus: initialPaymentStatus,
       paymentMethod: payMethodMapped,
-      fulfillmentStatus: 'in_loom',
+      fulfillmentStatus: initialFulfillmentStatus,
       shippingAddress: {
         addressLine: body.shippingAddress.addressLine.trim(),
         city: body.shippingAddress.city.trim(),
@@ -181,22 +223,22 @@ export async function POST(request: Request) {
         {
           title: 'Order Placed & Authoritatively Verified',
           timestamp: new Date().toISOString(),
-          note: 'Pricing and inventory validated by Kalajay Server Operations',
+          note: 'Pricing, discount, and inventory validated by Kalajay Server Operations',
         },
         {
-          title: 'In Loom - Bihar Craft House',
+          title: 'Payment Pending Verification',
           timestamp: new Date().toISOString(),
-          note: 'Allocated to master artisan wooden loom with crystal fiber',
+          note: `Payment mode: ${payMethodMapped}. Awaiting settlement verification prior to artisan loom staging.`,
         },
       ],
-      artisanNote: 'Scheduled for artisan weaving with tension-calibrated nylon fiber and genuine glass crystals.',
+      artisanNote: 'Queued for loom allocation upon payment confirmation.',
       courier: 'Kalajay In-House Direct Dispatch',
       trackingAwb: `KJ-DISP-${Math.floor(10000000 + Math.random() * 90000000)}`,
       createdAt: new Date().toISOString(),
       ...(body.userId ? { userId: body.userId } : {}),
     };
 
-    // 7. Server-Side Persistence into Cloud Firestore
+    // 8. Server-Side Persistence into Cloud Firestore
     if (db && db.type) {
       const orderDocRef = doc(db, 'orders', generatedOrderNumber);
       await setDoc(orderDocRef, {
@@ -219,7 +261,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({
+    const resultPayload = {
       success: true,
       orderId: generatedOrderNumber,
       total: calculatedTotal,
@@ -228,7 +270,15 @@ export async function POST(request: Request) {
       shipping: calculatedShipping,
       tax: calculatedTax,
       order: orderRecord,
+    };
+
+    // Cache in idempotency register
+    recentOrderRequests.set(orderFingerprint, {
+      timestamp: Date.now(),
+      result: resultPayload,
     });
+
+    return NextResponse.json(resultPayload);
   } catch (error: any) {
     console.error('Server order processing error:', error);
     return NextResponse.json(

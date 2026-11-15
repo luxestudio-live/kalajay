@@ -22,6 +22,7 @@ import {
   Printer,
   X,
   CreditCard,
+  AlertTriangle,
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
 import { AdminOrder } from '@/data/adminTypes';
@@ -36,6 +37,7 @@ export default function OrdersView() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [statusToUpdate, setStatusToUpdate] = useState<AdminOrder['fulfillmentStatus']>('in_loom');
   const [statusNote, setStatusNote] = useState('');
+  const [markPaymentReceived, setMarkPaymentReceived] = useState(false);
 
   // Manual Order Builder State
   const [custName, setCustName] = useState('');
@@ -604,6 +606,29 @@ export default function OrdersView() {
                   </span>
                   <span className="text-[10px] text-[#9E5430] font-medium">Syncs live to Firestore</span>
                 </div>
+
+                {/* Requirement 7: Payment Verification Safeguard */}
+                {selectedOrder.paymentStatus !== 'paid' && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs space-y-2">
+                    <div className="flex items-center gap-2 text-amber-900 font-semibold">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>Payment Pending Verification ({selectedOrder.paymentMethod})</span>
+                    </div>
+                    <p className="text-[11px] text-amber-800 leading-relaxed">
+                      This order is not marked paid. In accordance with e-commerce security standards, dispatch and delivery are locked until payment receipt is confirmed.
+                    </p>
+                    <label className="flex items-center gap-2 text-amber-950 font-medium cursor-pointer pt-1">
+                      <input
+                        type="checkbox"
+                        checked={markPaymentReceived}
+                        onChange={(e) => setMarkPaymentReceived(e.target.checked)}
+                        className="w-4 h-4 text-[#9E5430] rounded accent-[#9E5430]"
+                      />
+                      <span>Confirm payment received in bank / gateway (Mark as Paid)</span>
+                    </label>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] font-semibold text-[#372921] mb-1">Status Milestone</label>
@@ -634,14 +659,23 @@ export default function OrdersView() {
                   type="button"
                   onClick={() => {
                     if (!selectedOrder) return;
-                    updateOrderStatus(selectedOrder.id, statusToUpdate, statusNote || undefined);
+
+                    // Payment Safeguard: Block fulfillment/dispatch of unpaid orders
+                    if (selectedOrder.paymentStatus !== 'paid' && !markPaymentReceived && (statusToUpdate === 'shipped' || statusToUpdate === 'delivered')) {
+                      showToast('Payment Safeguard: Cannot dispatch or deliver an unpaid order. Please confirm payment first.');
+                      return;
+                    }
+
+                    const nextPaymentStatus = markPaymentReceived ? 'paid' : undefined;
+                    updateOrderStatus(selectedOrder.id, statusToUpdate, statusNote || undefined, nextPaymentStatus);
                     setSelectedOrder(prev => prev ? {
                       ...prev,
                       fulfillmentStatus: statusToUpdate,
+                      ...(nextPaymentStatus ? { paymentStatus: nextPaymentStatus } : {}),
                       timeline: [
                         ...prev.timeline,
                         {
-                          title: `Fulfillment Status: ${statusToUpdate.toUpperCase()}`,
+                          title: `Fulfillment Status: ${statusToUpdate.toUpperCase()}${nextPaymentStatus ? ' (Payment Confirmed)' : ''}`,
                           timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
                           note: statusNote || undefined,
                         }
@@ -649,6 +683,7 @@ export default function OrdersView() {
                     } : null);
                     showToast(`Order #${selectedOrder.id} status updated to ${statusToUpdate.replace('_', ' ')}.`);
                     setStatusNote('');
+                    setMarkPaymentReceived(false);
                   }}
                   className="w-full py-2 bg-[#9E5430] hover:bg-[#874427] text-white rounded-lg text-xs font-semibold transition-colors shadow-xs cursor-pointer"
                 >

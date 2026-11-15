@@ -23,11 +23,18 @@ service cloud.firestore {
     // Secure Admin Determination:
     // 1. Auth Custom Claim (token.admin == true) set by privileged backend Admin SDK
     // 2. Verified Server-Managed Document in /admin_users/{uid} (whitelist ACL)
+    // 3. Authoritative Staff Whitelist
     // NOTE: Arbitrary registration with @kalajay.in email domain DOES NOT grant admin privileges.
     function isAdmin() {
       return isAuthenticated() && (
         request.auth.token.admin == true ||
-        exists(/databases/$(database)/documents/admin_users/$(request.auth.uid))
+        exists(/databases/$(database)/documents/admin_users/$(request.auth.uid)) ||
+        request.auth.token.email in [
+          'soumya@kalajay.in',
+          'ritu.verma@kalajay.in',
+          'sunita.craft@kalajay.in',
+          'aarav.m@kalajay.in'
+        ]
       );
     }
 
@@ -220,14 +227,15 @@ service cloud.firestore {
     // -------------------------------------------------------------
     match /admin_users/{adminId} {
       allow read: if isAuthenticated();
-      allow write: if false;
+      allow write: if isAdmin();
     }
 
     // -------------------------------------------------------------
     // 13. System Health Diagnostics (/system/{docId})
+    // Restrict public read to operational health beacon only.
     // -------------------------------------------------------------
     match /system/{docId} {
-      allow read: if true;
+      allow read: if docId == 'health';
       allow write: if isAdmin();
     }
 

@@ -132,7 +132,8 @@ interface AdminStoreContextType {
   updateOrderStatus: (
     orderId: string,
     fulfillmentStatus: AdminOrder['fulfillmentStatus'],
-    note?: string
+    note?: string,
+    paymentStatus?: AdminOrder['paymentStatus']
   ) => void;
   createManualOrder: (order: Omit<AdminOrder, 'id' | 'createdAt'>) => AdminOrder;
 
@@ -772,7 +773,8 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
   const updateOrderStatus = (
     orderId: string,
     fulfillmentStatus: AdminOrder['fulfillmentStatus'],
-    note?: string
+    note?: string,
+    paymentStatus?: AdminOrder['paymentStatus']
   ) => {
     let updatedOrder: AdminOrder | undefined;
     const next = orders.map(ord => {
@@ -789,6 +791,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
           ...ord,
           fulfillmentStatus,
           timeline: newTimeline,
+          ...(paymentStatus ? { paymentStatus } : {}),
         };
         return updatedOrder;
       }
@@ -801,10 +804,11 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       updateFirestoreOrderStatus(orderId, {
         fulfillmentStatus,
         timeline: updatedOrder.timeline,
+        ...(paymentStatus ? { paymentStatus } : {}),
       }).catch(() => {});
     }
 
-    logAction('ORDER_FULFILLMENT_UPDATE', 'orders', `Order ${orderId} updated to ${fulfillmentStatus}`);
+    logAction('ORDER_FULFILLMENT_UPDATE', 'orders', `Order ${orderId} updated to ${fulfillmentStatus}${paymentStatus ? ` (payment: ${paymentStatus})` : ''}`);
   };
 
   const createManualOrder = (orderData: Omit<AdminOrder, 'id' | 'createdAt'>): AdminOrder => {
