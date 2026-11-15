@@ -97,6 +97,24 @@ export async function POST(request: Request) {
       }
     }
 
+    // Privilege Escalation Guard: Only Super Admin can assign role-super-admin
+    if (updates.roleId === 'role-super-admin') {
+      const isRequesterSuperAdmin =
+        authCheck.staffUser?.roleId === 'role-super-admin' ||
+        authCheck.staffUser?.username === 'soumya' ||
+        authCheck.staffUser?.uid === 'mJ6lPWSeACcLSCSKqonwcksD87I2';
+      if (!isRequesterSuperAdmin) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Privilege Escalation Blocked: Only the Super Administrator can assign the Super Admin role.',
+            code: 'PERMISSION_DENIED',
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     // 4. Handle Username Change (if provided)
     const store = readRbacStore();
     const staffIdIndex = store.staffIdIndex || {};

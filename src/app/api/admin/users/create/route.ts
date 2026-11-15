@@ -157,6 +157,24 @@ export async function POST(request: Request) {
       );
     }
 
+    // Privilege Escalation Guard: Only Super Admin can provision role-super-admin
+    if (roleId === 'role-super-admin') {
+      const isRequesterSuperAdmin =
+        authCheck.staffUser?.roleId === 'role-super-admin' ||
+        authCheck.staffUser?.username === 'soumya' ||
+        authCheck.staffUser?.uid === 'mJ6lPWSeACcLSCSKqonwcksD87I2';
+      if (!isRequesterSuperAdmin) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Privilege Escalation Blocked: Only the Super Administrator can provision a staff account with the Super Admin role.',
+            code: 'PERMISSION_DENIED',
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     // 3. Validate & Resolve Username
     const chosenUsername = (rawUsername || '').trim() || suggestUsername(name);
     const usernameValidation = validateUsername(chosenUsername);
