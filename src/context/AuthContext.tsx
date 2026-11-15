@@ -15,6 +15,7 @@ import {
   sendPhoneOtpFirebase,
   verifyPhoneOtpFirebase,
   logoutFirebase,
+  updateUserPasswordFirebase,
 } from '@/lib/auth';
 import {
   getPatronProfile,
@@ -225,6 +226,7 @@ interface AuthContextType {
   deleteAddress: (id: string) => void;
   setDefaultAddress: (id: string) => void;
   quickDemoLogin: () => void;
+  updateUserPassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -658,6 +660,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateUserPassword = async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      if (firebaseUser) {
+        await updateUserPasswordFirebase(newPassword);
+        return { success: true };
+      }
+      return { success: false, error: 'No active authenticated session found.' };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Failed to update passcode in Firebase Auth.' };
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -677,6 +691,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         deleteAddress,
         setDefaultAddress,
         quickDemoLogin,
+        updateUserPassword,
       }}
     >
       {children}

@@ -9,6 +9,7 @@ import {
   signOut,
   updateProfile,
   sendPasswordResetEmail,
+  updatePassword,
   User as FirebaseUser,
 } from 'firebase/auth';
 import { auth } from './firebase';
@@ -128,4 +129,14 @@ export async function logoutFirebase() {
 export async function resetPasswordFirebase(email: string) {
   if (!auth.name) throw new Error('Firebase Auth is not initialized.');
   return await sendPasswordResetEmail(auth, email);
+}
+
+/**
+ * Update Current Authenticated User Password
+ */
+export async function updateUserPasswordFirebase(newPassword: string) {
+  if (!auth.name || !auth.currentUser) {
+    throw new Error('No active authenticated user session found to update password.');
+  }
+  return await updatePassword(auth.currentUser, newPassword);
 }

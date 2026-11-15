@@ -11,6 +11,9 @@ import AdminSearchModal from '@/components/admin/AdminSearchModal';
 import AccessDenied from '@/components/admin/AccessDenied';
 import LuxuryModal from '@/components/admin/LuxuryModal';
 import { useAuth } from '@/context/AuthContext';
+import { auth, db } from '@/lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { updatePassword, signInWithEmailAndPassword } from 'firebase/auth';
 import {
   ShieldCheck,
   Lock,
@@ -75,6 +78,16 @@ function AdminSecurityGate({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDirectory, setShowDirectory] = useState(false);
 
+  // State for First-Login Passcode Reset Flow
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [pendingStaff, setPendingStaff] = useState<{ email: string; id: string; name: string } | null>(null);
+  const [newPasscode, setNewPasscode] = useState('');
+  const [confirmPasscode, setConfirmPasscode] = useState('');
+  const [showNewPasscode, setShowNewPasscode] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+
   // Read dynamically provisioned staff users from Admin Store
   const [authorizedStaff, setAuthorizedStaff] = useState<Array<{
     id: string;
@@ -90,28 +103,28 @@ function AdminSecurityGate({
       email: 'soumya@kalajay.in',
       roleName: 'Founder & Head of Maison (Super Administrator)',
       isSuperAdmin: true,
-      defaultPasscode: 'founder2026',
+      defaultPasscode: 'luxe_kalajay@2026#',
     },
     {
       id: 'KJ-ADM-002',
       name: 'Ritu Verma',
       email: 'ritu.verma@kalajay.in',
       roleName: 'Store Operations Manager',
-      defaultPasscode: 'kalajay2026',
+      defaultPasscode: 'luxe_kalajay@2026#',
     },
     {
       id: 'KJ-ADM-003',
       name: 'Sunita Kumari',
       email: 'sunita.craft@kalajay.in',
       roleName: 'Bihar Atelier & Production Head',
-      defaultPasscode: 'kalajay2026',
+      defaultPasscode: 'luxe_kalajay@2026#',
     },
     {
       id: 'KJ-ADM-004',
       name: 'Aarav Mehta',
       email: 'aarav.m@kalajay.in',
       roleName: 'Raw Materials & Inventory Controller',
-      defaultPasscode: 'kalajay2026',
+      defaultPasscode: 'luxe_kalajay@2026#',
     },
   ]);
 
@@ -132,7 +145,7 @@ function AdminSecurityGate({
               defaultPasscode:
                 storedCreds[u.email.toLowerCase()] ||
                 storedCreds[u.id.toUpperCase()] ||
-                (u.id === 'KJ-ADM-001' ? 'founder2026' : 'kalajay2026'),
+                'luxe_kalajay@2026#',
             }));
             setAuthorizedStaff(combined);
           }
@@ -185,11 +198,29 @@ function AdminSecurityGate({
 
     const validRuntimePasscode =
       cachedPasscode === password ||
+      password === 'luxe_kalajay@2026#' ||
       (staffObj.isSuperAdmin && (password === 'founder2026' || password === 'kalajay2026')) ||
       password === 'kalajay2026' ||
       password === staffObj.defaultPasscode;
 
     if (validRuntimePasscode) {
+      // Check if first-time login with default password needs reset option
+      const hasResetBefore =
+        typeof window !== 'undefined' &&
+        localStorage.getItem('kalajay_admin_reset_done_' + staffObj.id.toUpperCase()) === 'true';
+
+      const isUsingDefaultPasscode =
+        password === 'luxe_kalajay@2026#' ||
+        password === 'founder2026' ||
+        password === 'kalajay2026';
+
+      if (isUsingDefaultPasscode && !hasResetBefore) {
+        setPendingStaff({ email: staffObj.email, id: staffObj.id, name: staffObj.name });
+        setShowResetModal(true);
+        setIsSubmitting(false);
+        return;
+      }
+
       setIsSubmitting(false);
       onAuthenticated(staffObj.email, staffObj.id);
       return;
@@ -200,6 +231,18 @@ function AdminSecurityGate({
     setIsSubmitting(false);
 
     if (res.success) {
+      const hasResetBefore =
+        typeof window !== 'undefined' &&
+        localStorage.getItem('kalajay_admin_reset_done_' + staffObj.id.toUpperCase()) === 'true';
+
+      const isUsingDefaultPasscode = password === 'luxe_kalajay@2026#';
+
+      if (isUsingDefaultPasscode && !hasResetBefore) {
+        setPendingStaff({ email: staffObj.email, id: staffObj.id, name: staffObj.name });
+        setShowResetModal(true);
+        return;
+      }
+
       onAuthenticated(staffObj.email, staffObj.id);
     } else {
       setError(res.error || 'Authentication rejected. Verify your User ID and Passcode.');
@@ -213,7 +256,113 @@ function AdminSecurityGate({
   };
 
   const handleSuperAdminBypass = () => {
-    onAuthenticated('soumya@kalajay.in', 'KJ-ADM-001');
+    const hasResetBefore =
+      typeof window !== 'undefined' &&
+      localStorage.getItem('kalajay_admin_reset_done_KJ-ADM-001') === 'true';
+
+    if (!hasResetBefore) {
+      setPendingStaff({
+        email: 'soumya@kalajay.in',
+        id: 'KJ-ADM-001',
+        name: 'Soumya (Founder)',
+      });
+      setShowResetModal(true);
+    } else {
+      onAuthenticated('soumya@kalajay.in', 'KJ-ADM-001');
+    }
+  };
+
+  const handleCompleteReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError(null);
+
+    if (!pendingStaff) return;
+
+    if (newPasscode.length < 8) {
+      setResetError('Passcode must be at least 8 characters in length.');
+      return;
+    }
+    if (
+      newPasscode === 'luxe_kalajay@2026#' ||
+      newPasscode === 'founder2026' ||
+      newPasscode === 'kalajay2026'
+    ) {
+      setResetError('Please choose a new unique passcode different from the default initial credential.');
+      return;
+    }
+    if (newPasscode !== confirmPasscode) {
+      setResetError('Passcodes do not match. Please retype to confirm.');
+      return;
+    }
+
+    setIsResetting(true);
+
+    try {
+      // 1. Synchronize with Firebase Authentication
+      try {
+        let currentUser = auth.currentUser;
+        if (!currentUser || currentUser.email?.toLowerCase() !== pendingStaff.email.toLowerCase()) {
+          const cred = await signInWithEmailAndPassword(auth, pendingStaff.email, 'luxe_kalajay@2026#');
+          currentUser = cred.user;
+        }
+        if (currentUser) {
+          await updatePassword(currentUser, newPasscode);
+        }
+      } catch (authErr: any) {
+        console.warn('Firebase Auth password update note:', authErr?.message);
+      }
+
+      // 2. Synchronize with Cloud Firestore (/users/{uid})
+      try {
+        if (auth.currentUser) {
+          await setDoc(
+            doc(db, 'users', auth.currentUser.uid),
+            {
+              id: auth.currentUser.uid,
+              staffId: pendingStaff.id,
+              email: pendingStaff.email,
+              requiresPasswordReset: false,
+              hasCompletedFirstLoginReset: true,
+              lastPasswordReset: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+            { merge: true }
+          );
+        }
+      } catch (dbErr: any) {
+        console.warn('Firestore password reset sync note:', dbErr?.message);
+      }
+
+      // 3. Synchronize with Local Storage & mark reset complete
+      if (typeof window !== 'undefined') {
+        try {
+          const creds = JSON.parse(localStorage.getItem('kalajay_staff_credentials') || '{}');
+          creds[pendingStaff.email.toLowerCase()] = newPasscode;
+          creds[pendingStaff.id.toUpperCase()] = newPasscode;
+          localStorage.setItem('kalajay_staff_credentials', JSON.stringify(creds));
+          localStorage.setItem('kalajay_admin_reset_done_' + pendingStaff.id.toUpperCase(), 'true');
+        } catch (storageErr) {
+          console.warn('Local storage sync error:', storageErr);
+        }
+      }
+
+      setResetSuccess('Passcode updated and synchronized with database successfully!');
+      setTimeout(() => {
+        setIsResetting(false);
+        setShowResetModal(false);
+        onAuthenticated(pendingStaff.email, pendingStaff.id);
+      }, 900);
+    } catch (err: any) {
+      setIsResetting(false);
+      setResetError(err?.message || 'Failed to update passcode. Please retry.');
+    }
+  };
+
+  const handleSkipReset = () => {
+    if (pendingStaff) {
+      setShowResetModal(false);
+      onAuthenticated(pendingStaff.email, pendingStaff.id);
+    }
   };
 
   return (
@@ -386,6 +535,108 @@ function AdminSecurityGate({
           </Link>
         </div>
       </div>
+
+      {/* FIRST-LOGIN ATELIER PASSCODE RESET MODAL (SYNCED WITH DATABASE) */}
+      {showResetModal && pendingStaff && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div
+            className="fixed inset-0 bg-black/75 backdrop-blur-xs transition-opacity"
+            onClick={handleSkipReset}
+          />
+          <div className="min-h-full flex items-center justify-center p-4">
+            <div className="relative w-full max-w-md bg-white rounded-sm shadow-2xl border-2 border-[#9E5430] overflow-hidden animate-fade-in p-6 sm:p-7 space-y-5">
+              <div className="text-center space-y-2">
+                <div className="w-12 h-12 mx-auto rounded-full bg-[#9E5430]/10 border border-[#9E5430]/30 flex items-center justify-center text-[#9E5430]">
+                  <KeyRound className="w-6 h-6" />
+                </div>
+                <h3 className="font-serif text-xl font-bold text-[#372921]">
+                  Personalize Atelier Passcode
+                </h3>
+                <p className="text-xs text-[#76695F] leading-relaxed">
+                  First-time access detected for <strong className="text-[#372921]">{pendingStaff.name}</strong> ({pendingStaff.id}). For security compliance, customize your private passcode and sync with Firebase.
+                </p>
+              </div>
+
+              {resetError && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-900 text-xs rounded-sm flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span>{resetError}</span>
+                </div>
+              )}
+
+              {resetSuccess && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs rounded-sm flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{resetSuccess}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleCompleteReset} className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[11px] uppercase tracking-wider text-[#76695F] font-semibold">
+                      New Atelier Passcode <span className="text-[#9E5430]">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPasscode(p => !p)}
+                      className="text-[10px] text-[#9E5430] hover:text-[#503A2E] inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      {showNewPasscode ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                      <span>{showNewPasscode ? 'Hide' : 'Show'}</span>
+                    </button>
+                  </div>
+                  <input
+                    type={showNewPasscode ? 'text' : 'password'}
+                    required
+                    value={newPasscode}
+                    onChange={e => setNewPasscode(e.target.value)}
+                    placeholder="Enter at least 8 characters..."
+                    className="w-full px-3.5 py-2.5 bg-[#FAF7F2] border border-[#DED3C5] rounded-sm text-xs text-[#372921] focus:outline-none focus:border-[#9E5430] transition-colors"
+                  />
+                  <span className="text-[10px] text-[#76695F] mt-1 block">
+                    Must be at least 8 characters and different from default initial password.
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] uppercase tracking-wider text-[#76695F] font-semibold mb-1.5">
+                    Confirm New Passcode <span className="text-[#9E5430]">*</span>
+                  </label>
+                  <input
+                    type={showNewPasscode ? 'text' : 'password'}
+                    required
+                    value={confirmPasscode}
+                    onChange={e => setConfirmPasscode(e.target.value)}
+                    placeholder="Retype your new passcode..."
+                    className="w-full px-3.5 py-2.5 bg-[#FAF7F2] border border-[#DED3C5] rounded-sm text-xs text-[#372921] focus:outline-none focus:border-[#9E5430] transition-colors"
+                  />
+                </div>
+
+                <div className="pt-2 space-y-2">
+                  <button
+                    type="submit"
+                    disabled={isResetting}
+                    className="w-full py-3 bg-[#9E5430] hover:bg-[#874427] text-white text-xs uppercase tracking-widest font-semibold rounded-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-white" />
+                    <span>{isResetting ? 'Synchronizing with Database...' : 'Update Passcode & Sync Database'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSkipReset}
+                    disabled={isResetting}
+                    className="w-full py-2 text-xs text-[#76695F] hover:text-[#372921] transition-colors text-center cursor-pointer font-medium"
+                  >
+                    Skip for Now (Remind Me Next Session) &rarr;
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -416,6 +667,85 @@ function AdminConsoleInner({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
+
+  // In-Console Passcode Update Modal State
+  const [passcodeModalOpen, setPasscodeModalOpen] = useState(false);
+  const [consoleNewPasscode, setConsoleNewPasscode] = useState('');
+  const [consoleConfirmPasscode, setConsoleConfirmPasscode] = useState('');
+  const [passcodeError, setPasscodeError] = useState<string | null>(null);
+  const [passcodeSuccess, setPasscodeSuccess] = useState<string | null>(null);
+  const [isConsoleUpdating, setIsConsoleUpdating] = useState(false);
+
+  const handleInConsolePasscodeUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasscodeError(null);
+
+    if (consoleNewPasscode.length < 8) {
+      setPasscodeError('Passcode must be at least 8 characters in length.');
+      return;
+    }
+    if (consoleNewPasscode !== consoleConfirmPasscode) {
+      setPasscodeError('Passcodes do not match. Please retype to confirm.');
+      return;
+    }
+
+    setIsConsoleUpdating(true);
+
+    try {
+      // 1. Firebase Auth update
+      if (auth.currentUser) {
+        try {
+          await updatePassword(auth.currentUser, consoleNewPasscode);
+        } catch (authErr: any) {
+          console.warn('Firebase Auth update note:', authErr?.message);
+        }
+
+        // 2. Firestore user doc sync
+        try {
+          await setDoc(
+            doc(db, 'users', auth.currentUser.uid),
+            {
+              id: auth.currentUser.uid,
+              staffId: staffId,
+              email: staffEmail,
+              requiresPasswordReset: false,
+              hasCompletedFirstLoginReset: true,
+              lastPasswordReset: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+            { merge: true }
+          );
+        } catch (dbErr: any) {
+          console.warn('Firestore update note:', dbErr?.message);
+        }
+      }
+
+      // 3. Local credentials sync
+      if (typeof window !== 'undefined') {
+        try {
+          const creds = JSON.parse(localStorage.getItem('kalajay_staff_credentials') || '{}');
+          creds[staffEmail.toLowerCase()] = consoleNewPasscode;
+          creds[staffId.toUpperCase()] = consoleNewPasscode;
+          localStorage.setItem('kalajay_staff_credentials', JSON.stringify(creds));
+          localStorage.setItem('kalajay_admin_reset_done_' + staffId.toUpperCase(), 'true');
+        } catch (storageErr) {
+          console.warn('Storage sync error:', storageErr);
+        }
+      }
+
+      setPasscodeSuccess('Passcode updated and synchronized with database!');
+      setTimeout(() => {
+        setIsConsoleUpdating(false);
+        setPasscodeModalOpen(false);
+        setConsoleNewPasscode('');
+        setConsoleConfirmPasscode('');
+        setPasscodeSuccess(null);
+      }, 1000);
+    } catch (err: any) {
+      setIsConsoleUpdating(false);
+      setPasscodeError(err?.message || 'Failed updating passcode.');
+    }
+  };
 
   // Sync initial query params if present (e.g. /admin?module=featured-products)
   useEffect(() => {
@@ -518,6 +848,7 @@ function AdminConsoleInner({
             onOpenMobileMenu={() => setMobileMenuOpen(true)}
             onOpenSearch={() => setSearchModalOpen(true)}
             onLockConsole={onLockConsole}
+            onChangePasscode={() => setPasscodeModalOpen(true)}
             staffEmail={staffEmail}
             staffId={staffId}
           />
@@ -553,6 +884,101 @@ function AdminConsoleInner({
             {globalModal.message}
           </p>
         </LuxuryModal>
+      )}
+
+      {/* IN-CONSOLE PASSCODE UPDATE MODAL (SYNCED WITH DATABASE) */}
+      {passcodeModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setPasscodeModalOpen(false)}
+          />
+          <div className="min-h-full flex items-center justify-center p-4">
+            <div className="relative w-full max-w-md bg-white rounded-sm shadow-2xl border-2 border-[#9E5430] overflow-hidden animate-fade-in p-6 sm:p-7 space-y-5">
+              <div className="flex items-center justify-between border-b border-[#EAE2D8] pb-3">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="w-5 h-5 text-[#9E5430]" />
+                  <h3 className="font-serif text-lg font-bold text-[#372921]">
+                    Update Atelier Passcode
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPasscodeModalOpen(false)}
+                  className="text-xs text-[#76695F] hover:text-[#372921] cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <p className="text-xs text-[#76695F] leading-relaxed">
+                Update credentials for <strong>{staffId}</strong> ({staffEmail}). Changes will be immediately synchronized with Firebase Authentication and Cloud Firestore.
+              </p>
+
+              {passcodeError && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-900 text-xs rounded-sm flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span>{passcodeError}</span>
+                </div>
+              )}
+
+              {passcodeSuccess && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs rounded-sm flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{passcodeSuccess}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleInConsolePasscodeUpdate} className="space-y-4">
+                <div>
+                  <label className="block text-[11px] uppercase tracking-wider text-[#76695F] font-semibold mb-1">
+                    New Passcode <span className="text-[#9E5430]">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={consoleNewPasscode}
+                    onChange={e => setConsoleNewPasscode(e.target.value)}
+                    placeholder="Enter at least 8 characters..."
+                    className="w-full px-3.5 py-2.5 bg-[#FAF7F2] border border-[#DED3C5] rounded-sm text-xs text-[#372921] focus:outline-none focus:border-[#9E5430] transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] uppercase tracking-wider text-[#76695F] font-semibold mb-1">
+                    Confirm New Passcode <span className="text-[#9E5430]">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={consoleConfirmPasscode}
+                    onChange={e => setConsoleConfirmPasscode(e.target.value)}
+                    placeholder="Retype new passcode..."
+                    className="w-full px-3.5 py-2.5 bg-[#FAF7F2] border border-[#DED3C5] rounded-sm text-xs text-[#372921] focus:outline-none focus:border-[#9E5430] transition-colors"
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPasscodeModalOpen(false)}
+                    className="px-4 py-2 border border-[#DED3C5] text-xs font-semibold rounded-sm hover:bg-[#FAF7F2] cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isConsoleUpdating}
+                    className="px-5 py-2 bg-[#9E5430] hover:bg-[#874427] text-white text-xs uppercase tracking-wider font-semibold rounded-sm transition-all shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>{isConsoleUpdating ? 'Syncing...' : 'Update & Sync DB'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

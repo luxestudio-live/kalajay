@@ -17,6 +17,7 @@ import {
   Boxes,
   ShoppingBag,
   Lock,
+  KeyRound,
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
 import { ADMIN_MODULE_DEFINITIONS } from '@/data/adminPermissions';
@@ -25,6 +26,7 @@ interface AdminHeaderProps {
   onOpenMobileMenu: () => void;
   onOpenSearch: () => void;
   onLockConsole?: () => void;
+  onChangePasscode?: () => void;
   staffEmail?: string;
   staffId?: string;
 }
@@ -33,6 +35,7 @@ export default function AdminHeader({
   onOpenMobileMenu,
   onOpenSearch,
   onLockConsole,
+  onChangePasscode,
   staffEmail,
   staffId,
 }: AdminHeaderProps) {
@@ -284,6 +287,19 @@ export default function AdminHeader({
             <span>Live Store</span>
             <ExternalLink className="w-3 h-3 text-[#C5A880]" />
           </Link>
+
+          {/* Change Passcode Option */}
+          {onChangePasscode && (
+            <button
+              type="button"
+              onClick={onChangePasscode}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FAF7F2] hover:bg-[#F0E9DF] border border-[#DED3C5] text-[#372921] text-xs font-semibold tracking-wide transition-all shadow-xs cursor-pointer"
+              title="Update your atelier passcode and synchronize database"
+            >
+              <KeyRound className="w-3 h-3 text-[#9E5430]" />
+              <span>Passcode</span>
+            </button>
+          )}
 
           {/* Secure Staff Console Lock */}
           {onLockConsole && (
