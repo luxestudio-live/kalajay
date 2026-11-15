@@ -22,6 +22,7 @@ import {
   OfflineOrder,
 } from './adminTypes';
 import { ADMIN_MODULE_DEFINITIONS, SEED_ROLES } from './adminPermissions';
+import { adminFetch } from '@/lib/adminAuthClient';
 import {
   SEED_ADMIN_USERS,
   SEED_FEATURED_PRODUCTS_CONFIG,
@@ -338,8 +339,8 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     const hydrateRbac = async () => {
       try {
         const [rolesRes, usersRes] = await Promise.all([
-          fetch('/api/admin/roles/').then(r => r.json()).catch(() => null),
-          fetch('/api/admin/users/list/', {
+          adminFetch('/api/admin/roles/').then(r => r.json()).catch(() => null),
+          adminFetch('/api/admin/users/list/', {
             headers: { 'x-staff-username': currentUser?.username || 'soumya' },
           }).then(r => r.json()).catch(() => null),
         ]);
@@ -470,8 +471,8 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
   const refreshRbacData = async () => {
     try {
       const [rolesRes, usersRes] = await Promise.all([
-        fetch('/api/admin/roles/').then(r => r.json()).catch(() => null),
-        fetch('/api/admin/users/list/', {
+        adminFetch('/api/admin/roles/').then(r => r.json()).catch(() => null),
+        adminFetch('/api/admin/users/list/', {
           headers: { 'x-staff-username': currentUser?.username || 'soumya' },
         }).then(r => r.json()).catch(() => null),
       ]);
@@ -490,7 +491,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
   const createRole = async (roleData: Omit<AdminRole, 'id' | 'created' | 'updated'>): Promise<AdminRole> => {
     let createdRole: AdminRole;
     try {
-      const res = await fetch('/api/admin/roles/', {
+      const res = await adminFetch('/api/admin/roles/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -533,7 +534,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     }
 
     try {
-      await fetch('/api/admin/roles/', {
+      await adminFetch('/api/admin/roles/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -568,7 +569,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     }
 
     try {
-      const res = await fetch(`/api/admin/roles/?roleId=${encodeURIComponent(id)}&requestingStaffId=KJ-ADM-001`, {
+      const res = await adminFetch(`/api/admin/roles/?roleId=${encodeURIComponent(id)}&requestingStaffId=KJ-ADM-001`, {
         method: 'DELETE',
       });
       const data = await res.json();
@@ -600,7 +601,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     let provisionalPassword = '';
 
     try {
-      const res = await fetch('/api/admin/users/create/', {
+      const res = await adminFetch('/api/admin/users/create/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -663,7 +664,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
 
   const updateAdminUser = async (userId: string, updates: Partial<AdminUser>): Promise<boolean> => {
     try {
-      const res = await fetch('/api/admin/users/update/', {
+      const res = await adminFetch('/api/admin/users/update/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
 import { AdminUser } from '@/data/adminTypes';
+import { adminFetch } from '@/lib/adminAuthClient';
 
 export default function AdminUsersView() {
   const {
@@ -106,7 +107,7 @@ export default function AdminUsersView() {
     setUsernameStatus({ loading: true });
     const requester = currentUser?.username || currentUser?.staffId || currentUser?.id || 'soumya';
     try {
-      const res = await fetch(
+      const res = await adminFetch(
         `/api/admin/users/check-username/?username=${encodeURIComponent(clean)}&requestingUsername=${encodeURIComponent(requester)}`,
         {
           headers: {

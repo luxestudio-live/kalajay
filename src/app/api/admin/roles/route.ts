@@ -7,8 +7,22 @@ import { SEED_ROLES } from '@/data/adminPermissions';
 import { AdminRole } from '@/data/adminTypes';
 import { readRbacStore, writeRbacStore, verifyStaffPermission } from '@/lib/serverRbac';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    // Check authentication: only authorized staff members can view roles
+    const authCheck = await verifyStaffPermission(request, null, 'settings.roles', 'view');
+    // Block unauthenticated, invalid tokens, customers, and deactivated accounts
+    if (!authCheck.authorized && authCheck.code !== 'PERMISSION_DENIED') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: authCheck.error,
+          code: authCheck.code,
+        },
+        { status: authCheck.status }
+      );
+    }
+
     const store = readRbacStore();
     const customRoles = store.customRoles || {};
     const usersMap = store.users || {};

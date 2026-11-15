@@ -14,6 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 import { auth, db } from '@/lib/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { updatePassword, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { adminFetch } from '@/lib/adminAuthClient';
 import {
   ShieldCheck,
   Lock,
@@ -225,6 +226,9 @@ function AdminSecurityGate({
       resolvedUsername = resolveData.username || cleanInput.toLowerCase();
       resolvedName = resolveData.name;
       serverRequiresReset = resolveData.requiresPasswordReset !== false;
+      if (resolveData.idToken && typeof window !== 'undefined') {
+        sessionStorage.setItem('kalajay_admin_token', resolveData.idToken);
+      }
     } catch {
       setIsSubmitting(false);
       setError('Authentication rejected: Invalid username or security credentials.');
@@ -348,7 +352,7 @@ function AdminSecurityGate({
 
       // 2. Synchronize via backend API to clear reset requirements
       try {
-        await fetch('/api/admin/users/update/', {
+        await adminFetch('/api/admin/users/update/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

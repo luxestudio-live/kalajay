@@ -16,6 +16,7 @@ import {
   Unsubscribe,
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { adminFetch } from './adminAuthClient';
 import type { User, Order } from '@/context/AuthContext';
 import type { Product, Collection } from '@/data/catalogue';
 import type {
@@ -235,7 +236,7 @@ export async function updateFirestoreOrderStatus(
 ): Promise<void> {
   try {
     if (typeof window !== 'undefined') {
-      const res = await fetch('/api/admin/orders/update', {
+      const res = await adminFetch('/api/admin/orders/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

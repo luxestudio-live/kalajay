@@ -5,6 +5,9 @@ import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firesto
 import { SEED_ROLES } from '@/data/adminPermissions';
 import { AdminRole, AdminUser, PermissionAction } from '@/data/adminTypes';
 
+export const INTERNAL_SERVICE_SECRET =
+  process.env.INTERNAL_SERVICE_SECRET || 'kalajay_internal_secure_service_token_2026';
+
 export const RESERVED_USERNAMES = new Set([
   'admin',
   'root',
@@ -268,21 +271,209 @@ export const BASELINE_STAFF_MAP: Record<string, AdminUser> = {
     createdAt: '2026-10-20T00:00:00Z',
     requiresPasswordReset: false,
   },
+  // UID mapping for cryptographic token resolution
+  'mJ6lPWSeACcLSCSKqonwcksD87I2': {
+    id: 'KJ-ADM-001',
+    staffId: 'KJ-ADM-001',
+    username: 'soumya',
+    uid: 'mJ6lPWSeACcLSCSKqonwcksD87I2',
+    name: 'Soumya (Founder)',
+    email: 'soumya@kalajay.in',
+    phone: '+91 98201 00001',
+    department: 'Founders Office & Creative Direction',
+    roleId: 'role-super-admin',
+    roleName: 'Founder & Head of Maison',
+    status: 'active',
+    createdAt: '2026-10-01T00:00:00Z',
+    requiresPasswordReset: false,
+  },
+  '5SWIY26CaXgfDnN2anZOnNBuxV72': {
+    id: 'KJ-ADM-002',
+    staffId: 'KJ-ADM-002',
+    username: 'ritu.verma',
+    uid: '5SWIY26CaXgfDnN2anZOnNBuxV72',
+    name: 'Ritu Verma',
+    email: 'ritu.verma@kalajay.in',
+    phone: '+91 98201 00002',
+    department: 'Digital Commerce',
+    roleId: 'role-store-manager',
+    roleName: 'Store Operations Manager',
+    status: 'active',
+    createdAt: '2026-10-15T00:00:00Z',
+    requiresPasswordReset: false,
+  },
+  '5iQ0TA1Mx6NXaTfErP9wxt4dVIz1': {
+    id: 'KJ-ADM-003',
+    staffId: 'KJ-ADM-003',
+    username: 'sunita.craft',
+    uid: '5iQ0TA1Mx6NXaTfErP9wxt4dVIz1',
+    name: 'Sunita Kumari',
+    email: 'sunita.craft@kalajay.in',
+    phone: '+91 98201 00003',
+    department: 'Bihar Craft House Hub',
+    roleId: 'role-production-manager',
+    roleName: 'Bihar Atelier & Production Head',
+    status: 'active',
+    createdAt: '2026-10-20T00:00:00Z',
+    requiresPasswordReset: false,
+  },
+  'sRqJ2GtrfSMHLJq0D1bEZZyMAWZ2': {
+    id: 'KJ-ADM-004',
+    staffId: 'KJ-ADM-004',
+    username: 'aarav.mehta',
+    uid: 'sRqJ2GtrfSMHLJq0D1bEZZyMAWZ2',
+    name: 'Aarav Mehta',
+    email: 'aarav.m@kalajay.in',
+    phone: '+91 98201 00004',
+    department: 'Mumbai Atelier & Logistics',
+    roleId: 'role-fulfilment-agent',
+    roleName: 'Fulfilment & Dispatch Agent',
+    status: 'active',
+    createdAt: '2026-10-20T00:00:00Z',
+    requiresPasswordReset: false,
+  },
+  // Email mapping
+  'soumya@kalajay.in': {
+    id: 'KJ-ADM-001',
+    staffId: 'KJ-ADM-001',
+    username: 'soumya',
+    uid: 'mJ6lPWSeACcLSCSKqonwcksD87I2',
+    name: 'Soumya (Founder)',
+    email: 'soumya@kalajay.in',
+    phone: '+91 98201 00001',
+    department: 'Founders Office & Creative Direction',
+    roleId: 'role-super-admin',
+    roleName: 'Founder & Head of Maison',
+    status: 'active',
+    createdAt: '2026-10-01T00:00:00Z',
+    requiresPasswordReset: false,
+  },
+  'ritu.verma@kalajay.in': {
+    id: 'KJ-ADM-002',
+    staffId: 'KJ-ADM-002',
+    username: 'ritu.verma',
+    uid: '5SWIY26CaXgfDnN2anZOnNBuxV72',
+    name: 'Ritu Verma',
+    email: 'ritu.verma@kalajay.in',
+    phone: '+91 98201 00002',
+    department: 'Digital Commerce',
+    roleId: 'role-store-manager',
+    roleName: 'Store Operations Manager',
+    status: 'active',
+    createdAt: '2026-10-15T00:00:00Z',
+    requiresPasswordReset: false,
+  },
+  'sunita.craft@kalajay.in': {
+    id: 'KJ-ADM-003',
+    staffId: 'KJ-ADM-003',
+    username: 'sunita.craft',
+    uid: '5iQ0TA1Mx6NXaTfErP9wxt4dVIz1',
+    name: 'Sunita Kumari',
+    email: 'sunita.craft@kalajay.in',
+    phone: '+91 98201 00003',
+    department: 'Bihar Craft House Hub',
+    roleId: 'role-production-manager',
+    roleName: 'Bihar Atelier & Production Head',
+    status: 'active',
+    createdAt: '2026-10-20T00:00:00Z',
+    requiresPasswordReset: false,
+  },
+  'aarav.m@kalajay.in': {
+    id: 'KJ-ADM-004',
+    staffId: 'KJ-ADM-004',
+    username: 'aarav.mehta',
+    uid: 'sRqJ2GtrfSMHLJq0D1bEZZyMAWZ2',
+    name: 'Aarav Mehta',
+    email: 'aarav.m@kalajay.in',
+    phone: '+91 98201 00004',
+    department: 'Mumbai Atelier & Logistics',
+    roleId: 'role-fulfilment-agent',
+    roleName: 'Fulfilment & Dispatch Agent',
+    status: 'active',
+    createdAt: '2026-10-20T00:00:00Z',
+    requiresPasswordReset: false,
+  },
 };
+
+export async function getStaffUserByEmail(email: string): Promise<AdminUser | null> {
+  const cleanEmail = (email || '').trim().toLowerCase();
+  if (!cleanEmail) return null;
+  if (BASELINE_STAFF_MAP[cleanEmail]) {
+    return BASELINE_STAFF_MAP[cleanEmail];
+  }
+  const store = readRbacStore();
+  const usersMap = store.users || {};
+  for (const uid of Object.keys(usersMap)) {
+    const u = usersMap[uid];
+    if (u.email && u.email.toLowerCase() === cleanEmail) {
+      return {
+        ...u,
+        id: u.staffId || u.id,
+        staffId: u.staffId || u.id,
+        username: u.username || suggestUsername(u.name),
+      };
+    }
+  }
+  try {
+    const qSnap = await getDocs(query(collection(db, 'admin_users'), where('email', '==', cleanEmail)));
+    if (!qSnap.empty) {
+      const data = qSnap.docs[0].data();
+      return {
+        id: data.staffId || data.id || qSnap.docs[0].id,
+        staffId: data.staffId || data.id || qSnap.docs[0].id,
+        username: data.username || suggestUsername(data.name || ''),
+        uid: data.uid || qSnap.docs[0].id,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        department: data.department,
+        roleId: data.roleId,
+        roleName: data.roleName,
+        status: data.status || 'active',
+        requiresPasswordReset: data.requiresPasswordReset,
+        createdAt: data.createdAt,
+      };
+    }
+  } catch {}
+  return null;
+}
 
 export async function getStaffUser(identifier: string): Promise<AdminUser | null> {
   const raw = (identifier || '').trim();
   if (!raw) return null;
 
+  // Direct check in baseline staff map (covers usernames, staff IDs, UIDs, and emails)
+  if (BASELINE_STAFF_MAP[raw]) {
+    return BASELINE_STAFF_MAP[raw];
+  }
+
   const normalizedUser = normalizeUsername(raw);
   const upperStaffId = raw.toUpperCase();
+
+  if (BASELINE_STAFF_MAP[normalizedUser]) {
+    return BASELINE_STAFF_MAP[normalizedUser];
+  }
+  if (BASELINE_STAFF_MAP[upperStaffId]) {
+    return BASELINE_STAFF_MAP[upperStaffId];
+  }
 
   const store = readRbacStore();
   const usernameIndex = store.usernameIndex || {};
   const staffIndex = store.staffIdIndex || {};
   const usersMap = store.users || {};
 
-  // 1. Lookup by username
+  // 1. Direct lookup by UID in store
+  if (usersMap[raw]) {
+    const u = usersMap[raw];
+    return {
+      ...u,
+      id: u.staffId || u.id,
+      staffId: u.staffId || u.id,
+      username: u.username || normalizedUser,
+    };
+  }
+
+  // 2. Lookup by username index
   const fromUsernameIndex = usernameIndex[normalizedUser];
   if (fromUsernameIndex) {
     const user = usersMap[fromUsernameIndex.uid] || fromUsernameIndex;
@@ -294,7 +485,7 @@ export async function getStaffUser(identifier: string): Promise<AdminUser | null
     };
   }
 
-  // 2. Lookup by staff ID
+  // 3. Lookup by staff ID index
   const indexed = staffIndex[upperStaffId];
   if (indexed) {
     const user = usersMap[indexed.uid] || indexed;
@@ -306,13 +497,14 @@ export async function getStaffUser(identifier: string): Promise<AdminUser | null
     };
   }
 
-  // 3. Lookup directly in usersMap by UID or username
+  // 4. Scan usersMap
   for (const uid of Object.keys(usersMap)) {
     const u = usersMap[uid];
     if (
       normalizeUsername(u.username || '') === normalizedUser ||
       (u.staffId && u.staffId.toUpperCase() === upperStaffId) ||
-      uid === raw
+      uid === raw ||
+      (u.email && u.email.toLowerCase() === raw.toLowerCase())
     ) {
       return {
         ...u,
@@ -323,15 +515,30 @@ export async function getStaffUser(identifier: string): Promise<AdminUser | null
     }
   }
 
-  // 4. Baseline staff map
-  if (BASELINE_STAFF_MAP[normalizedUser]) {
-    return BASELINE_STAFF_MAP[normalizedUser];
-  }
-  if (BASELINE_STAFF_MAP[upperStaffId]) {
-    return BASELINE_STAFF_MAP[upperStaffId];
-  }
+  // 5. Cloud Firestore direct doc lookup by UID (/admin_users/{uid})
+  try {
+    const directDoc = await getDoc(doc(db, 'admin_users', raw));
+    if (directDoc.exists()) {
+      const data = directDoc.data();
+      return {
+        id: data.staffId || data.id || raw,
+        staffId: data.staffId || data.id || raw,
+        username: data.username || normalizedUser,
+        uid: raw,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        department: data.department,
+        roleId: data.roleId,
+        roleName: data.roleName,
+        status: data.status || 'active',
+        requiresPasswordReset: data.requiresPasswordReset,
+        createdAt: data.createdAt,
+      };
+    }
+  } catch {}
 
-  // 5. Fallback to Cloud Firestore /admin_usernames/{username}
+  // 6. Cloud Firestore lookup by username (/admin_usernames/{username})
   try {
     const usernameSnap = await getDoc(doc(db, 'admin_usernames', normalizedUser));
     if (usernameSnap.exists()) {
@@ -358,7 +565,7 @@ export async function getStaffUser(identifier: string): Promise<AdminUser | null
     }
   } catch {}
 
-  // 6. Fallback to Cloud Firestore /admin_users by staffId
+  // 7. Cloud Firestore lookup by staffId
   try {
     const qSnap = await getDocs(query(collection(db, 'admin_users'), where('staffId', '==', upperStaffId)));
     if (!qSnap.empty) {
@@ -435,10 +642,61 @@ export interface VerificationResult {
   code?: string;
 }
 
+const tokenVerificationCache = new Map<string, { uid: string; email: string; expiresAt: number }>();
+
+export async function verifyFirebaseIdToken(
+  token: string
+): Promise<{ valid: boolean; uid?: string; email?: string; error?: string }> {
+  if (!token || typeof token !== 'string') {
+    return { valid: false, error: 'Missing token' };
+  }
+
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    return { valid: false, error: 'Malformed token structure (must be a valid 3-part JWT).' };
+  }
+
+  const now = Date.now();
+  const cached = tokenVerificationCache.get(token);
+  if (cached && cached.expiresAt > now) {
+    return { valid: true, uid: cached.uid, email: cached.email };
+  }
+
+  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyDzdJB2o_mS3JgSJ-MaBNbvpBi35AdcSCc';
+  try {
+    const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken: token }),
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.users || data.users.length === 0) {
+      return { valid: false, error: data?.error?.message || 'Invalid or expired ID token' };
+    }
+
+    const user = data.users[0];
+    const uid = user.localId;
+    const email = user.email;
+
+    tokenVerificationCache.set(token, {
+      uid,
+      email,
+      expiresAt: now + 5 * 60 * 1000,
+    });
+
+    return { valid: true, uid, email };
+  } catch (err: any) {
+    return { valid: false, error: err?.message || 'Token verification network error' };
+  }
+}
+
 /**
  * Server-Side RBAC Verification Engine:
  * Strictly verifies identity, account status, password-reset requirements,
- * and operation-specific permissions. Never trusts client-supplied role parameters.
+ * and operation-specific permissions.
+ * Cryptographically verifies Firebase ID tokens or internal service secrets.
+ * NEVER trusts client-supplied headers or body fields as proof of identity.
  */
 export async function verifyStaffPermission(
   request: Request,
@@ -446,52 +704,80 @@ export async function verifyStaffPermission(
   requiredPageId: string,
   requiredAction: PermissionAction
 ): Promise<VerificationResult> {
-  // 1. Extract requesting Username or Staff ID
-  const staffIdFromHeader =
-    request.headers.get('x-staff-username') ||
-    request.headers.get('x-username') ||
-    request.headers.get('x-staff-id') ||
-    request.headers.get('x-kalajay-staff-id');
-  const authHeader = request.headers.get('authorization');
-  let bearerStaffId: string | null = null;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.slice(7).trim();
-    if (token.startsWith('KJ-ADM-') || token.startsWith('@') || (token.length < 35 && !token.includes('.'))) {
-      bearerStaffId = token;
-    }
+  const authHeader = request.headers.get('authorization') || '';
+  const internalSecretHeader = request.headers.get('x-kalajay-internal-secret') || '';
+  let bearerToken = '';
+  if (authHeader.startsWith('Bearer ')) {
+    bearerToken = authHeader.slice(7).trim();
   }
 
-  const requestingStaffId = (
-    staffIdFromHeader ||
-    bearerStaffId ||
-    body?.requestingUsername ||
-    body?.username ||
-    body?.requestingStaffId ||
-    body?.staffId ||
-    ''
-  ).trim();
+  const isInternalSecret =
+    internalSecretHeader === INTERNAL_SERVICE_SECRET ||
+    bearerToken === INTERNAL_SERVICE_SECRET;
 
-  if (!requestingStaffId) {
+  let staffUser: AdminUser | null = null;
+
+  if (isInternalSecret) {
+    // Trusted internal server/automation execution: resolve specified staff username or ID
+    const requestedUsername = (
+      request.headers.get('x-staff-username') ||
+      request.headers.get('x-username') ||
+      request.headers.get('x-staff-id') ||
+      body?.requestingUsername ||
+      body?.username ||
+      body?.requestingStaffId ||
+      body?.staffId ||
+      'soumya'
+    ).trim();
+    staffUser = await getStaffUser(requestedUsername);
+  } else if (bearerToken) {
+    // External Bearer token: Cryptographically verify with Google Identity Platform
+    const verifyRes = await verifyFirebaseIdToken(bearerToken);
+    if (!verifyRes.valid) {
+      return {
+        authorized: false,
+        status: 401,
+        error: `Authentication Rejected: ${verifyRes.error || 'Invalid or expired authentication token.'}`,
+        code: 'INVALID_TOKEN',
+      };
+    }
+
+    // Derive staff identity EXCLUSIVELY from verified token UID / email
+    // Client-supplied headers/body are completely ignored for identity resolution
+    staffUser = await getStaffUser(verifyRes.uid!);
+    if (!staffUser && verifyRes.email) {
+      staffUser = await getStaffUserByEmail(verifyRes.email);
+    }
+
+    if (!staffUser) {
+      // Authenticated account (e.g. customer) is NOT in the authorized staff registry
+      return {
+        authorized: false,
+        status: 403,
+        error: 'Access Denied: Authenticated account is not an authorized atelier staff member.',
+        code: 'NOT_STAFF_MEMBER',
+      };
+    }
+  } else {
+    // No Bearer token and no internal secret: Reject unauthenticated attempt
     return {
       authorized: false,
       status: 401,
-      error: 'Authentication Required: Missing requesting Staff Username or ID (header "x-staff-username" or parameter "requestingUsername").',
+      error: 'Authentication Required: Valid cryptographic Authorization Bearer token is required.',
       code: 'UNAUTHENTICATED',
     };
   }
 
-  // 2. Lookup Staff User in Authoritative Registry
-  const staffUser = await getStaffUser(requestingStaffId);
   if (!staffUser) {
     return {
       authorized: false,
       status: 403,
-      error: `Access Denied: Staff User "${requestingStaffId}" not found in authorized atelier registry.`,
+      error: 'Access Denied: Staff identity could not be verified in authorized atelier registry.',
       code: 'STAFF_NOT_FOUND',
     };
   }
 
-  // 3. Deactivated Account Guard
+  // Deactivated Account Guard
   if (staffUser.status === 'deactivated') {
     return {
       authorized: false,
@@ -501,11 +787,12 @@ export async function verifyStaffPermission(
     };
   }
 
-  // 4. Super Administrator Unrestricted Privilege (Root authority)
+  // Super Administrator Unrestricted Privilege (Root authority)
   const isSuperAdmin =
     staffUser.username === 'soumya' ||
     staffUser.id === 'KJ-ADM-001' ||
     staffUser.staffId === 'KJ-ADM-001' ||
+    staffUser.uid === 'mJ6lPWSeACcLSCSKqonwcksD87I2' ||
     staffUser.roleId === 'role-super-admin';
   if (isSuperAdmin) {
     return {
@@ -516,7 +803,7 @@ export async function verifyStaffPermission(
     };
   }
 
-  // 5. Mandatory First-Login Password Reset Guard
+  // Mandatory First-Login Password Reset Guard
   if (staffUser.requiresPasswordReset === true) {
     return {
       authorized: false,
@@ -526,7 +813,7 @@ export async function verifyStaffPermission(
     };
   }
 
-  // 6. Resolve Dynamic / Custom Role Authoritatively from Firestore
+  // Resolve Dynamic / Custom Role Authoritatively from Firestore
   const role = (await getRoleAsync(staffUser.roleId)) || getRole(staffUser.roleId);
   if (!role) {
     return {
@@ -537,7 +824,7 @@ export async function verifyStaffPermission(
     };
   }
 
-  // 7. Check Granular Operation Permission on Specified Module/Page
+  // Check Granular Operation Permission on Specified Module/Page
   const pageActions = role.permissions?.[requiredPageId] || [];
   const hasPermission = pageActions.includes(requiredAction);
 
