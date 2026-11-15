@@ -16,6 +16,7 @@ import {
   Gift,
   RefreshCw,
   Crown,
+  Lock,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -24,7 +25,7 @@ export default function SignupClient() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/account';
 
-  const { signup, sendOtp, isAuthenticated } = useAuth();
+  const { signup, sendOtp, loginWithGoogle, isAuthenticated } = useAuth();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -37,11 +38,27 @@ export default function SignupClient() {
     name: '',
     phone: '',
     email: '',
+    password: '',
     birthday: '',
   });
 
+  const handleGoogleSignUp = async () => {
+    setErrorMsg('');
+    setIsSubmitting(true);
+    try {
+      const res = await loginWithGoogle();
+      if (res.success) {
+        router.push(redirectTo);
+      } else if (res.error) {
+        setErrorMsg(res.error);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
-  const [demoCode, setDemoCode] = useState('482910');
+  const [demoCode, setDemoCode] = useState('123456');
   const [resendTimer, setResendTimer] = useState(30);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -140,6 +157,7 @@ export default function SignupClient() {
         name: formData.name,
         phone: formData.phone,
         email: formData.email,
+        password: formData.password || undefined,
       });
       router.push(redirectTo);
     } finally {
@@ -281,6 +299,46 @@ export default function SignupClient() {
                 <span className="font-medium">Inaugural Privilege: ₹300 credit preloaded onto your account</span>
               </div>
 
+              {/* Invisible reCAPTCHA container for Phone Auth */}
+              <div id="recaptcha-container" />
+
+              {/* Quick Google Sign Up */}
+              <button
+                type="button"
+                onClick={handleGoogleSignUp}
+                disabled={isSubmitting}
+                className="w-full py-3 px-4 rounded-xl sm:rounded-2xl border border-border-medium bg-canvas hover:bg-canvas-subtle hover:border-gold/60 text-ink text-xs font-semibold flex items-center justify-center gap-2.5 transition-all shadow-2xs cursor-pointer disabled:opacity-50 mt-4 sm:mt-5 group"
+              >
+                <svg className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.15z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.36 7.33 24 12 24z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.92 0 12s.45 3.85 1.24 5.42l4.04-3.15z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                  />
+                </svg>
+                <span>Sign up with Google (Instant Account)</span>
+              </button>
+
+              <div className="relative my-3.5 sm:my-4 flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border-subtle" />
+                </div>
+                <div className="relative bg-canvas px-3 text-[10px] uppercase tracking-monumental text-ink-muted">
+                  Or register with details
+                </div>
+              </div>
+
               {/* Error Notice */}
               {errorMsg && (
                 <div className="mt-4 p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs flex items-center gap-2 animate-fade-in">
@@ -336,6 +394,15 @@ export default function SignupClient() {
                         className="w-full px-3.5 sm:px-4 py-3 sm:py-3.5 bg-transparent text-sm text-ink placeholder:text-ink-faint focus:outline-none"
                       />
                     </div>
+                    <div className="mt-1.5 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, phone: '8888899999' })}
+                        className="text-[11px] text-gold-dark hover:underline font-semibold cursor-pointer"
+                      >
+                        Use test: 88888 99999
+                      </button>
+                    </div>
                   </div>
 
                   <div>
@@ -353,6 +420,24 @@ export default function SignupClient() {
                         placeholder="you@example.com"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="w-full pl-10 pr-3.5 sm:pr-4 py-3 sm:py-3.5 bg-canvas border border-border-medium rounded-xl sm:rounded-2xl text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-all shadow-2xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="signup-pass" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
+                      Password (Optional for Email Sign In)
+                    </label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-ink-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        id="signup-pass"
+                        type="password"
+                        autoComplete="new-password"
+                        placeholder="At least 6 characters"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         className="w-full pl-10 pr-3.5 sm:pr-4 py-3 sm:py-3.5 bg-canvas border border-border-medium rounded-xl sm:rounded-2xl text-xs sm:text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 transition-all shadow-2xs"
                       />
                     </div>

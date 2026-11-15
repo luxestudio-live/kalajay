@@ -1,0 +1,95 @@
+rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users/{userId}
+// Document fields:
+//   - id: string (matches userId)
+//   - name: string (1..100 chars)
+//   - email: string (optional / valid email)
+//   - phone: string (optional / e.g. +91...)
+//   - memberSince: string
+//   - tier: string
+//   - rewardPoints: number (>= 0)
+//   - addresses: list (delivery addresses)
+//   - preferences: map
+//   - updatedAt: timestamp (optional)
+//
+// Collection: orders/{orderId}
+// Document fields:
+//   - id: string
+//   - userId: string (matches request.auth.uid)
+//   - date: string or timestamp
+//   - totalAmount: number (>= 0)
+//   - status: string
+//   - items: list
+//   - deliveryAddress: map
+//   - paymentMethod: string
+//   - createdAt: timestamp
+//
+// Collection: custom_enquiries/{enquiryId}
+// Document fields:
+//   - id: string
+//   - userId: string (optional or authenticated)
+//   - name: string
+//   - contact: string
+//   - details: string
+//   - createdAt: timestamp
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidUser(data, userId) {
+      return data.id == userId &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 150)) &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 25)) &&
+        (!('rewardPoints' in data) || (data.rewardPoints is number && data.rewardPoints >= 0));
+    }
+
+    function isValidOrder(data) {
+      return data.userId == request.auth.uid &&
+        data.totalAmount is number && data.totalAmount >= 0 &&
+        data.items is list && data.items.size() > 0;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data, userId);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data, userId);
+      allow delete: if false; // Safeguard patron accounts from accidental deletion
+    }
+
+    // Orders collection
+    match /orders/{orderId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && isValidOrder(request.resource.data);
+      allow update: if false; // Orders cannot be modified by client directly
+      allow delete: if false;
+    }
+
+    // Custom bespoke enquiries
+    match /custom_enquiries/{enquiryId} {
+      allow create: if true; // Allow patrons / guests to submit studio bespoke inquiries
+      allow read, update, delete: if false; // Studio staff only via Admin SDK
+    }
+
+    // Default deny all other collections
+    match /{document=**} {
+      allow read, write: false;
+    }
+  }
+}

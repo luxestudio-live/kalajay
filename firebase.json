@@ -1,0 +1,18 @@
+{
+  "auth": {
+    "providers": {
+      "emailPassword": {
+        "enabled": true
+      },
+      "google": {
+        "enabled": true
+      },
+      "phone": {
+        "enabled": true
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

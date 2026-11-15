@@ -26,7 +26,7 @@ export default function LoginClient() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/account';
 
-  const { loginWithOtp, sendOtp, loginWithEmail, quickDemoLogin, isAuthenticated } = useAuth();
+  const { loginWithOtp, sendOtp, loginWithEmail, loginWithGoogle, quickDemoLogin, isAuthenticated } = useAuth();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -38,7 +38,7 @@ export default function LoginClient() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otpStep, setOtpStep] = useState<'phone' | 'verify'>('phone');
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
-  const [demoCode, setDemoCode] = useState('482910');
+  const [demoCode, setDemoCode] = useState('123456');
   const [resendTimer, setResendTimer] = useState(30);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -141,6 +141,21 @@ export default function LoginClient() {
     const digits = demoCode.split('');
     setOtpDigits(digits);
     verifyOtpCode(demoCode);
+  };
+
+  const handleGoogleSignIn = async () => {
+    setErrorMsg('');
+    setIsSubmitting(true);
+    try {
+      const res = await loginWithGoogle();
+      if (res.success) {
+        router.push(redirectTo);
+      } else if (res.error) {
+        setErrorMsg(res.error);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -306,6 +321,46 @@ export default function LoginClient() {
                 <span className="font-medium">Circle Honour: ₹300 welcome gift on first order</span>
               </div>
 
+              {/* Invisible reCAPTCHA container for Phone Auth */}
+              <div id="recaptcha-container" />
+
+              {/* Google One-Tap / Social Sign-In */}
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={isSubmitting}
+                className="w-full py-3 px-4 rounded-xl sm:rounded-2xl border border-border-medium bg-canvas hover:bg-canvas-subtle hover:border-gold/60 text-ink text-xs font-semibold flex items-center justify-center gap-2.5 transition-all shadow-2xs cursor-pointer disabled:opacity-50 mt-4 sm:mt-5 group"
+              >
+                <svg className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.15z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.36 7.33 24 12 24z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.92 0 12s.45 3.85 1.24 5.42l4.04-3.15z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                  />
+                </svg>
+                <span>Continue with Google</span>
+              </button>
+
+              <div className="relative my-3.5 sm:my-4 flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border-subtle" />
+                </div>
+                <div className="relative bg-canvas px-3 text-[10px] uppercase tracking-monumental text-ink-muted">
+                  Or authenticate with
+                </div>
+              </div>
+
               {/* Creative Pill Switcher: Instant Mobile OTP vs Email & Password */}
               <div className="grid grid-cols-2 gap-1.5 p-1 bg-canvas-subtle border border-border-subtle rounded-xl sm:rounded-2xl mt-4 sm:mt-6 shadow-2xs">
                 <button
@@ -382,10 +437,19 @@ export default function LoginClient() {
                             autoFocus
                           />
                         </div>
-                        <p className="mt-2 text-[11px] text-ink-muted flex items-start gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-gold shrink-0 mt-1" />
-                          <span>We will transmit an instant 6-digit passcode to verify your phone.</span>
-                        </p>
+                        <div className="mt-2 text-[11px] text-ink-muted flex items-center justify-between gap-2">
+                          <span className="flex items-start gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gold shrink-0 mt-1" />
+                            <span>We will transmit an instant 6-digit passcode to verify your phone.</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setPhoneNumber('8888899999')}
+                            className="text-[11px] text-gold-dark hover:underline font-semibold shrink-0 cursor-pointer"
+                          >
+                            Use test: 88888 99999
+                          </button>
+                        </div>
                       </div>
 
                       <button
