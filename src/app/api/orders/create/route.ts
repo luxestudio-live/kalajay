@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
 import { PRODUCTS, BRAND_CONFIG } from '@/data/catalogue';
 import { AdminOrder } from '@/data/adminTypes';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { verifyFirebaseIdToken } from '@/lib/serverRbac';
-import { ensureServerAdminAuth } from '@/lib/serverFirebaseAdmin';
+import { getAdminFirestore } from '@/lib/serverFirebaseAdmin';
 
 interface CreateOrderRequestBody {
   customerName: string;
@@ -29,35 +27,21 @@ interface CreateOrderRequestBody {
   idempotencyKey?: string;
 }
 
-// Durable Cross-Restart Idempotency Register on Server
-function getDurableRegisterPath(): string {
-  const cacheDir = path.join(process.cwd(), '.next', 'cache');
-  if (!fs.existsSync(cacheDir)) {
-    fs.mkdirSync(cacheDir, { recursive: true });
+// In-memory server runtime register (Zero filesystem/JSON dependence)
+const serverMemoryIdempotencyStore = new Map<
+  string,
+  {
+    payloadHash: string;
+    customerEmail: string;
+    orderId: string;
+    response: any;
+    timestamp: number;
   }
-  return path.join(cacheDir, 'kalajay_idempotency_store.json');
-}
+>();
 
-function readDurableIdempotency(): Record<string, any> {
-  try {
-    const fPath = getDurableRegisterPath();
-    if (fs.existsSync(fPath)) {
-      return JSON.parse(fs.readFileSync(fPath, 'utf-8'));
-    }
-  } catch (e) {
-    console.warn('Error reading durable idempotency store:', e);
-  }
-  return {};
-}
+// Singleflight coordinator for in-flight simultaneous requests
+const inFlightRequests = new Map<string, Promise<any>>();
 
-function writeDurableIdempotency(data: Record<string, any>) {
-  try {
-    const fPath = getDurableRegisterPath();
-    fs.writeFileSync(fPath, JSON.stringify(data, null, 2), 'utf-8');
-  } catch (e) {
-    console.warn('Error writing durable idempotency store:', e);
-  }
-}
 
 export async function POST(request: Request) {
   try {
@@ -281,12 +265,10 @@ export async function POST(request: Request) {
     const rawKey = body.idempotencyKey || `IDEMP-${cleanPhone}-${payloadHash.slice(0, 16)}`;
     const sanitizedIdempKey = rawKey.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80);
 
-    // Check durable local store (survives restarts & server reboot)
-    const durableStore = readDurableIdempotency();
-    const cachedEntry = durableStore[sanitizedIdempKey];
-    if (cachedEntry) {
-      // Reject if same key reused with different payload (Requirement 3)
-      if (cachedEntry.payloadHash && cachedEntry.payloadHash !== payloadHash) {
+    // In-memory runtime deduplication (Zero filesystem reliance)
+    const cachedMemory = serverMemoryIdempotencyStore.get(sanitizedIdempKey);
+    if (cachedMemory) {
+      if (cachedMemory.payloadHash && cachedMemory.payloadHash !== payloadHash) {
         return NextResponse.json(
           {
             success: false,
@@ -296,9 +278,7 @@ export async function POST(request: Request) {
           { status: 409 }
         );
       }
-
-      // Reject if bound to different customer
-      if (cachedEntry.customerEmail && cachedEntry.customerEmail.toLowerCase() !== finalCustomerEmail) {
+      if (cachedMemory.customerEmail && cachedMemory.customerEmail.toLowerCase() !== finalCustomerEmail) {
         return NextResponse.json(
           {
             success: false,
@@ -308,51 +288,29 @@ export async function POST(request: Request) {
           { status: 409 }
         );
       }
-
-      if (cachedEntry.status === 'completed' && cachedEntry.response) {
-        return NextResponse.json({
-          ...cachedEntry.response,
-          isIdempotentReplay: true,
-        });
-      }
+      return NextResponse.json({
+        ...cachedMemory.response,
+        isIdempotentReplay: true,
+      });
     }
 
-    // Shared Atomic Firestore Idempotency Check (Cross-Instance Safe)
-    if (db && db.type) {
-      try {
-        await ensureServerAdminAuth();
-        const sharedIdempSnap = await getDoc(doc(db, 'idempotency_keys', sanitizedIdempKey));
-        if (sharedIdempSnap.exists()) {
-          const sharedData = sharedIdempSnap.data();
-          if (sharedData.payloadHash && sharedData.payloadHash !== payloadHash) {
-            return NextResponse.json(
-              {
-                success: false,
-                error: 'Idempotency Conflict: Key reused with mismatched checkout payload parameters across server instances.',
-                code: 'IDEMPOTENCY_PAYLOAD_MISMATCH',
-              },
-              { status: 409 }
-            );
-          }
-          if (sharedData.customerEmail && sharedData.customerEmail.toLowerCase() !== finalCustomerEmail) {
-            return NextResponse.json(
-              {
-                success: false,
-                error: 'Idempotency Conflict: Key is bound to a different customer identity.',
-                code: 'IDEMPOTENCY_CUSTOMER_MISMATCH',
-              },
-              { status: 409 }
-            );
-          }
-          if (sharedData.status === 'completed' && sharedData.response) {
-            return NextResponse.json({
-              ...sharedData.response,
-              isIdempotentReplay: true,
-            });
-          }
-        }
-      } catch {}
+    // In-flight simultaneous concurrency coordination (singleflight pattern)
+    const existingFlight = inFlightRequests.get(sanitizedIdempKey);
+    if (existingFlight) {
+      const flightResult = await existingFlight;
+      return NextResponse.json({
+        ...flightResult,
+        isIdempotentReplay: true,
+      });
     }
+
+    let resolveFlight: (val: any) => void = () => {};
+    let rejectFlight: (err: any) => void = () => {};
+    const flightPromise = new Promise((resolve, reject) => {
+      resolveFlight = resolve;
+      rejectFlight = reject;
+    });
+    inFlightRequests.set(sanitizedIdempKey, flightPromise);
 
     // 7. Generate Cryptographic Order Reference
     const generatedOrderNumber = `KJ-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -421,11 +379,136 @@ export async function POST(request: Request) {
       order: orderRecord,
     };
 
-    // 8. Transactional Inventory Protection & Order Persistence
-    if (db && db.type) {
-      await ensureServerAdminAuth();
+    // 8. Atomic Server-Side Idempotency, Inventory Deduction, and Order Persistence
+    const adminDb = getAdminFirestore();
+
+    if (adminDb) {
       try {
-        await runTransaction(db, async (transaction) => {
+        const txResult = await adminDb.runTransaction(async (transaction) => {
+          // 1. Atomic Idempotency Check inside Transaction
+          const idempRef = adminDb.collection('idempotency_keys').doc(sanitizedIdempKey);
+          const idempSnap = await transaction.get(idempRef);
+
+          if (idempSnap.exists) {
+            const cached = idempSnap.data()!;
+            if (cached.payloadHash && cached.payloadHash !== payloadHash) {
+              throw new Error('IDEMPOTENCY_PAYLOAD_MISMATCH');
+            }
+            if (cached.customerEmail && cached.customerEmail.toLowerCase() !== finalCustomerEmail) {
+              throw new Error('IDEMPOTENCY_CUSTOMER_MISMATCH');
+            }
+            return { isReplay: true, response: cached.response || resultPayload };
+          }
+
+          // 2. Atomic Stock Validation & Reservation
+          for (const item of verifiedOrderItems) {
+            const invRef = adminDb.collection('inventory').doc(item.sku);
+            const invSnap = await transaction.get(invRef);
+
+            if (invSnap.exists) {
+              const invData = invSnap.data()!;
+              const currentAvailable = Number(
+                invData.available !== undefined
+                  ? invData.available
+                  : invData.stockOnHand !== undefined
+                  ? invData.stockOnHand
+                  : (invData.onHand ?? 15)
+              );
+              if (currentAvailable < item.quantity) {
+                throw new Error(
+                  `INSUFFICIENT_STOCK: Atelier Stock Notice: Only ${currentAvailable} pieces of "${item.name}" remain in current loom.`
+                );
+              }
+              const nextAvailable = currentAvailable - item.quantity;
+              const nextReserved = Number(invData.reservedInLoom ?? 0) + item.quantity;
+
+              transaction.update(invRef, {
+                available: Math.max(0, nextAvailable),
+                reservedInLoom: nextReserved,
+                updatedAt: new Date().toISOString(),
+              });
+            }
+          }
+
+          // 3. Persist verified order in /orders
+          const orderDocRef = adminDb.collection('orders').doc(generatedOrderNumber);
+          transaction.set(orderDocRef, {
+            ...orderRecord,
+            createdAtServer: new Date().toISOString(),
+            verifiedByServer: true,
+          });
+
+          // 4. Register completed idempotency key atomically
+          transaction.set(idempRef, {
+            idempotencyKey: sanitizedIdempKey,
+            orderId: generatedOrderNumber,
+            customerEmail: finalCustomerEmail,
+            payloadHash,
+            status: 'completed',
+            response: resultPayload,
+            createdAt: new Date().toISOString(),
+          });
+
+          return { isReplay: false, response: resultPayload };
+        });
+
+        if (txResult.isReplay) {
+          return NextResponse.json({
+            ...txResult.response,
+            isIdempotentReplay: true,
+          });
+        }
+        return NextResponse.json(txResult.response);
+      } catch (adminTxErr: any) {
+        if (adminTxErr.message === 'IDEMPOTENCY_PAYLOAD_MISMATCH') {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Idempotency Conflict: Key reused with mismatched checkout payload parameters.',
+              code: 'IDEMPOTENCY_PAYLOAD_MISMATCH',
+            },
+            { status: 409 }
+          );
+        }
+        if (adminTxErr.message === 'IDEMPOTENCY_CUSTOMER_MISMATCH') {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Idempotency Conflict: Key is bound to a different customer identity.',
+              code: 'IDEMPOTENCY_CUSTOMER_MISMATCH',
+            },
+            { status: 409 }
+          );
+        }
+        if (adminTxErr.message?.includes('INSUFFICIENT_STOCK')) {
+          const cleanMessage = adminTxErr.message.replace('INSUFFICIENT_STOCK: ', '');
+          return NextResponse.json({ success: false, error: cleanMessage }, { status: 400 });
+        }
+        console.error('Admin transaction error:', adminTxErr);
+        throw adminTxErr;
+      }
+    } else if (db && db.type) {
+      try {
+        const txResult = await runTransaction(db, async (transaction) => {
+          const idempRef = doc(db, 'idempotency_keys', sanitizedIdempKey);
+          let idempSnap;
+          try {
+            idempSnap = await transaction.get(idempRef);
+          } catch {
+            idempSnap = null;
+          }
+
+          if (idempSnap && idempSnap.exists()) {
+            const cached = idempSnap.data();
+            if (cached.payloadHash && cached.payloadHash !== payloadHash) {
+              throw new Error('IDEMPOTENCY_PAYLOAD_MISMATCH');
+            }
+            if (cached.customerEmail && cached.customerEmail.toLowerCase() !== finalCustomerEmail) {
+              throw new Error('IDEMPOTENCY_CUSTOMER_MISMATCH');
+            }
+            return { isReplay: true, response: cached.response || resultPayload };
+          }
+
           for (const item of verifiedOrderItems) {
             const invRef = doc(db, 'inventory', item.sku);
             const invSnap = await transaction.get(invRef);
@@ -447,15 +530,11 @@ export async function POST(request: Request) {
               const nextAvailable = currentAvailable - item.quantity;
               const nextReserved = Number(invData.reservedInLoom ?? 0) + item.quantity;
 
-              try {
-                transaction.update(invRef, {
-                  available: Math.max(0, nextAvailable),
-                  reservedInLoom: nextReserved,
-                  updatedAt: serverTimestamp(),
-                });
-              } catch {
-                // Secondary permission handling
-              }
+              transaction.update(invRef, {
+                available: Math.max(0, nextAvailable),
+                reservedInLoom: nextReserved,
+                updatedAt: serverTimestamp(),
+              });
             }
           }
 
@@ -466,64 +545,59 @@ export async function POST(request: Request) {
             verifiedByServer: true,
           });
 
-          // Atomic idempotency record in shared Firestore storage
-          const idempRef = doc(db, 'idempotency_keys', sanitizedIdempKey);
-          transaction.set(idempRef, {
-            idempotencyKey: sanitizedIdempKey,
-            orderId: generatedOrderNumber,
-            customerEmail: finalCustomerEmail,
-            payloadHash,
-            status: 'completed',
-            response: resultPayload,
-            createdAt: serverTimestamp(),
-          });
+          return { isReplay: false, response: resultPayload };
         });
+
+        if (txResult.isReplay) {
+          return NextResponse.json({
+            ...txResult.response,
+            isIdempotentReplay: true,
+          });
+        }
+        serverMemoryIdempotencyStore.set(sanitizedIdempKey, {
+          payloadHash,
+          customerEmail: finalCustomerEmail,
+          orderId: generatedOrderNumber,
+          response: resultPayload,
+          timestamp: Date.now(),
+        });
+        resolveFlight(txResult.response);
+        inFlightRequests.delete(sanitizedIdempKey);
+        return NextResponse.json(txResult.response);
       } catch (txErr: any) {
+        if (txErr.message === 'IDEMPOTENCY_PAYLOAD_MISMATCH') {
+          resolveFlight(null);
+          inFlightRequests.delete(sanitizedIdempKey);
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Idempotency Conflict: Key reused with mismatched checkout payload parameters.',
+              code: 'IDEMPOTENCY_PAYLOAD_MISMATCH',
+            },
+            { status: 409 }
+          );
+        }
         if (txErr.message?.includes('INSUFFICIENT_STOCK')) {
+          resolveFlight(null);
+          inFlightRequests.delete(sanitizedIdempKey);
           const cleanMessage = txErr.message.replace('INSUFFICIENT_STOCK: ', '');
           return NextResponse.json({ success: false, error: cleanMessage }, { status: 400 });
         }
-        // Direct order persistence fallback
-        const orderDocRef = doc(db, 'orders', generatedOrderNumber);
-        await setDoc(orderDocRef, {
-          ...orderRecord,
-          createdAtServer: serverTimestamp(),
-          verifiedByServer: true,
-        });
-
-        try {
-          const idempRef = doc(db, 'idempotency_keys', sanitizedIdempKey);
-          await setDoc(
-            idempRef,
-            {
-              idempotencyKey: sanitizedIdempKey,
-              orderId: generatedOrderNumber,
-              customerEmail: finalCustomerEmail,
-              payloadHash,
-              status: 'completed',
-              response: resultPayload,
-              createdAt: serverTimestamp(),
-            },
-            { merge: true }
-          );
-        } catch {}
       }
     }
 
-    // Save to durable idempotency cache
-    durableStore[sanitizedIdempKey] = {
-      idempotencyKey: sanitizedIdempKey,
-      orderId: generatedOrderNumber,
-      customerEmail: normalizedEmail,
+    serverMemoryIdempotencyStore.set(sanitizedIdempKey, {
       payloadHash,
-      status: 'completed',
+      customerEmail: finalCustomerEmail,
+      orderId: generatedOrderNumber,
       response: resultPayload,
       timestamp: Date.now(),
-    };
-    writeDurableIdempotency(durableStore);
-
+    });
+    resolveFlight(resultPayload);
+    inFlightRequests.delete(sanitizedIdempKey);
     return NextResponse.json(resultPayload);
   } catch (error: any) {
+    inFlightRequests.clear();
     console.error('Server order processing error:', error);
     if (error?.message?.includes('INSUFFICIENT_STOCK')) {
       const cleanMessage = error.message.replace('INSUFFICIENT_STOCK: ', '');

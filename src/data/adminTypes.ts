@@ -65,6 +65,7 @@ export interface AdminUser {
   roleName: string;
   department: string;
   status: 'active' | 'deactivated';
+  active?: boolean;
   staffId?: string;
   uid?: string;
   requiresPasswordReset?: boolean;

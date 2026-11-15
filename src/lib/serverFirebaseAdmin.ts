@@ -1,78 +1,167 @@
-import fs from 'fs';
-import path from 'path';
-import { auth, db } from '@/lib/firebase';
+import { getApps, initializeApp, cert, App } from 'firebase-admin/app';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import { getAuth as getAdminSdkAuth, Auth as AdminAuth } from 'firebase-admin/auth';
+import { auth as clientAuth } from '@/lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 
-let serverAuthPromise: Promise<boolean> | null = null;
+let adminApp: App | null = null;
+let adminFirestore: Firestore | null = null;
+let adminAuth: AdminAuth | null = null;
+
+const PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'kalajay-667ff';
 
 /**
- * Retrieves the headless server identity configuration safely without exposing credentials.
- * Prefers dedicated server environment variables over local configuration.
+ * Checks whether valid server-level credentials or environment triggers exist.
+ * Avoids initializing unauthenticated Admin apps that fail on first ADC lookup.
  */
-function resolveServerIdentityConfig(): { email: string; passcode: string } | null {
-  // 1. Dedicated machine-to-machine environment credentials
+function hasAdminCredentials(): boolean {
+  return Boolean(
+    process.env.FIREBASE_SERVICE_ACCOUNT_KEY ||
+    process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+    (process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) ||
+    (process.env.FIREBASE_ADMIN_CLIENT_EMAIL && process.env.FIREBASE_ADMIN_PRIVATE_KEY) ||
+    process.env.FIRESTORE_EMULATOR_HOST ||
+    process.env.K_SERVICE || // Google Cloud Run / Functions
+    process.env.FIREBASE_CONFIG
+  );
+}
+
+/**
+ * Initializes and retrieves the trusted Firebase Admin SDK instance.
+ * Completely decoupled from human user accounts and temporary credentials files.
+ * Uses environment-scoped service account keys, Application Default Credentials (ADC),
+ * or local Firestore Emulator host.
+ *
+ * Secrets and credentials are NEVER logged or exposed.
+ */
+function initAdminSDK(): { app: App | null; db: Firestore | null; auth: AdminAuth | null } {
+  if (adminApp && adminFirestore && adminAuth) {
+    return { app: adminApp, db: adminFirestore, auth: adminAuth };
+  }
+
+  const existingApps = getApps();
+  if (existingApps.length > 0) {
+    adminApp = existingApps[0];
+    adminFirestore = getFirestore(adminApp);
+    adminAuth = getAdminSdkAuth(adminApp);
+    return { app: adminApp, db: adminFirestore, auth: adminAuth };
+  }
+
+  if (!hasAdminCredentials()) {
+    return { app: null, db: null, auth: null };
+  }
+
+  try {
+    // 1. Direct Service Account JSON in environment
+    const rawKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    if (rawKey) {
+      try {
+        const parsed = typeof rawKey === 'string' ? JSON.parse(rawKey) : rawKey;
+        adminApp = initializeApp({
+          credential: cert(parsed),
+          projectId: parsed.project_id || PROJECT_ID,
+        });
+        adminFirestore = getFirestore(adminApp);
+        adminAuth = getAdminSdkAuth(adminApp);
+        return { app: adminApp, db: adminFirestore, auth: adminAuth };
+      } catch {
+        // Suppress parsing error to prevent leaking partial configuration
+      }
+    }
+
+    // 2. Individual Private Key & Client Email environment variables
+    const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL || process.env.FIREBASE_CLIENT_EMAIL;
+    const privateKey = (process.env.FIREBASE_ADMIN_PRIVATE_KEY || process.env.FIREBASE_PRIVATE_KEY || '').replace(
+      /\\n/g,
+      '\n'
+    );
+    if (clientEmail && privateKey) {
+      adminApp = initializeApp({
+        credential: cert({
+          projectId: PROJECT_ID,
+          clientEmail,
+          privateKey,
+        }),
+        projectId: PROJECT_ID,
+      });
+      adminFirestore = getFirestore(adminApp);
+      adminAuth = getAdminSdkAuth(adminApp);
+      return { app: adminApp, db: adminFirestore, auth: adminAuth };
+    }
+
+    // 3. Firestore Emulator or Google Cloud ADC (Application Default Credentials)
+    adminApp = initializeApp({ projectId: PROJECT_ID });
+    adminFirestore = getFirestore(adminApp);
+    adminAuth = getAdminSdkAuth(adminApp);
+    return { app: adminApp, db: adminFirestore, auth: adminAuth };
+  } catch {
+    // Sanitize error; never print credential details
+    return { app: null, db: null, auth: null };
+  }
+}
+
+/**
+ * Returns the trusted server-side Firestore instance powered by Firebase Admin SDK.
+ * Bypasses Firestore client security rules and allows atomic transaction operations.
+ */
+export function getAdminFirestore(): Firestore | null {
+  const { db } = initAdminSDK();
+  return db;
+}
+
+/**
+ * Returns the trusted server-side Auth instance powered by Firebase Admin SDK.
+ */
+export function getAdminAuth(): AdminAuth | null {
+  const { auth } = initAdminSDK();
+  return auth;
+}
+
+/**
+ * Indicates whether the trusted server Firebase Admin SDK is operational.
+ */
+export function isFirebaseAdminActive(): boolean {
+  const { db } = initAdminSDK();
+  return db !== null;
+}
+
+/**
+ * Resolves scoped machine identity credentials from the deployment environment.
+ * Strictly NEVER falls back to STAFF_TEMPORARY_CREDENTIALS.local.json.
+ * Strictly NEVER uses human Super Admin accounts.
+ */
+function resolveMachineIdentityConfig(): { email: string; passcode: string } | null {
   const envEmail = process.env.FIREBASE_SERVER_IDENTITY_EMAIL || process.env.SERVER_SERVICE_EMAIL;
   const envPass = process.env.FIREBASE_SERVER_IDENTITY_PASSCODE || process.env.SERVER_SERVICE_PASSCODE;
   if (envEmail && envPass) {
     return { email: envEmail.trim(), passcode: envPass.trim() };
   }
-
-  // 2. Fallback to local server provisioned credentials file
-  try {
-    const credPath = path.join(process.cwd(), 'credentials', 'STAFF_TEMPORARY_CREDENTIALS.local.json');
-    if (fs.existsSync(credPath)) {
-      const data = JSON.parse(fs.readFileSync(credPath, 'utf8'));
-      if (Array.isArray(data) && data.length > 0) {
-        // Use Root Super Admin or dedicated server service worker record
-        const rootRecord = data.find((r: any) => r.role === 'super_admin' || r.staffId === 'KJ-ADM-001') || data[0];
-        if (rootRecord?.email && rootRecord?.temporaryPasscode) {
-          return { email: rootRecord.email, passcode: rootRecord.temporaryPasscode };
-        }
-      }
-    }
-  } catch {
-    // Suppress filesystem read errors to prevent leaking paths
-  }
-
   return null;
 }
 
 /**
- * Ensures the server-side process is authenticated with a trusted server identity
- * so privileged server writes (orders, inventory adjustments) satisfy Firestore Security Rules.
- * Never prints or leaks credentials or tokens to logs or client responses.
+ * Authenticates the server runtime process using a properly scoped machine identity
+ * when client SDK fallback is active.
+ * Never logs credentials or secrets.
  */
 export async function ensureServerAdminAuth(): Promise<boolean> {
   try {
-    // If already authenticated with root/server UID, return immediately
-    if (auth && auth.currentUser) {
-      const currentUid = auth.currentUser.uid;
-      if (currentUid === 'mJ6lPWSeACcLSCSKqonwcksD87I2' || currentUid === 'kalajay-internal-server-worker') {
+    if (clientAuth && clientAuth.currentUser) {
+      const currentEmail = clientAuth.currentUser.email || '';
+      const currentUid = clientAuth.currentUser.uid;
+      if (currentUid === 'kalajay-internal-server-worker' || currentEmail.includes('server')) {
         return true;
       }
     }
 
-    if (!serverAuthPromise) {
-      serverAuthPromise = (async () => {
-        try {
-          if (!auth || !auth.name) return false;
-          const config = resolveServerIdentityConfig();
-          if (!config) {
-            console.warn('[ServerAdminAuth] Server identity configuration not available. Fallback to local durable cache.');
-            return false;
-          }
-
-          await signInWithEmailAndPassword(auth, config.email, config.passcode);
-          return true;
-        } catch (err: any) {
-          // Sanitize error message to prevent leaking credentials
-          console.warn('[ServerAdminAuth] Server session initialization notice (using localized offline fallback).');
-          serverAuthPromise = null;
-          return false;
-        }
-      })();
+    const machineConfig = resolveMachineIdentityConfig();
+    if (!machineConfig) {
+      return false;
     }
-    return await serverAuthPromise;
+
+    if (!clientAuth || !clientAuth.name) return false;
+    await signInWithEmailAndPassword(clientAuth, machineConfig.email, machineConfig.passcode);
+    return true;
   } catch {
     return false;
   }

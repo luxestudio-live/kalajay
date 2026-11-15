@@ -21,23 +21,10 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Dedicated Machine-to-Machine Trusted Server Identity
-    function isTrustedServer() {
-      return isAuthenticated() && (
-        request.auth.uid == 'kalajay-internal-server-worker' ||
-        request.auth.token.role == 'server_worker' ||
-        request.auth.token.server == true ||
-        request.auth.token.email == 'server-worker@kalajay-service.in'
-      );
-    }
-
-    // Root Super Administrator: Immutable UID (Soumya - Founder & Head of Maison) or Machine Server Worker
-    // NOTE: Hardcoded root UID and server worker prevent all email spoofing or domain self-registration vectors.
+    // Root Super Administrator: Immutable UID (Soumya - Founder & Head of Maison)
+    // NOTE: Hardcoded root UID prevents all email spoofing or domain self-registration vectors.
     function isRootAdmin() {
-      return isAuthenticated() && (
-        request.auth.uid == 'mJ6lPWSeACcLSCSKqonwcksD87I2' ||
-        isTrustedServer()
-      );
+      return isAuthenticated() && request.auth.uid == 'mJ6lPWSeACcLSCSKqonwcksD87I2';
     }
 
     // Helper to retrieve verified administrative user document
@@ -306,11 +293,11 @@ service cloud.firestore {
 
     // -------------------------------------------------------------
     // 14. Checkout Idempotency Register (/idempotency_keys/{key})
-    // Shared atomic storage across server instances (Requirement 3).
-    // Zero client SDK read/write access. Accessible exclusively by trusted server identity.
+    // Inaccessible to all Firebase Client SDK identities (server-only storage).
+    // Managed exclusively by Firebase Admin SDK server transactions.
     // -------------------------------------------------------------
     match /idempotency_keys/{key} {
-      allow read, write: if isRootAdmin();
+      allow read, write: if false;
     }
 
     // -------------------------------------------------------------

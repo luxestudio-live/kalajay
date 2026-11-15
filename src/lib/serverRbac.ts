@@ -777,8 +777,8 @@ export async function verifyStaffPermission(
     };
   }
 
-  // Deactivated Account Guard
-  if (staffUser.status === 'deactivated') {
+  // Deactivated Account Guard (Strict immediate enforcement)
+  if (staffUser.status === 'deactivated' || staffUser.active === false || (staffUser as any).status === 'inactive') {
     return {
       authorized: false,
       status: 403,
