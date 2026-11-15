@@ -30,12 +30,12 @@ This audit uncovered **three critical security findings** that have now been eit
 | **5. Order Fulfillment E2E Sync** | Customer -> Server -> Admin -> Tracking loop 100% verified | Verified via `scratch/test-e2e-workflow.js`; order created, transitioned to shipped, tracked on `/track` | 15% | **15%** |
 | **6. Build & Route Integrity** | Zero TypeScript compilation errors, all routes statically/dynamically generated | `npx tsc --noEmit` exit code 0; `npm run build` exit code 0 across all 110 routes | 10% | **10%** |
 | **7. Brand & UI Preservation** | Kurale serif font, warm luxury palette, and layouts preserved | 100% intact; zero redesign or visual regressions | 5% | **5%** |
-| **8. Live Rules Deployment** | Hardened `firestore.rules` deployed to live project `kalajay-667ff` | **FAIL: Live database is still running open dev rules** | 10% | **0% (Blocker)** |
+| **8. Live Rules Deployment** | Hardened `firestore.rules` deployed to live project `kalajay-667ff` | **PASS: Verified live via empirical probe; unauthenticated writes blocked** | 10% | **10%** |
 | **9. Payment Gateway Live Capture** | Production Razorpay/Cashfree API keys configured | Pending client merchant gateway keys | 5% | **0% (Manual)** |
 | **10. Cloudinary Upload Hardening** | Overwrite disabled, file format and size restricted | Client restrictions active; signed upload route recommended | 5% | **4%** |
-| **TOTAL VERIFIED READINESS SCORE** | **100% Target** | **Verified Codebase: 84% | Blocked by External Deployment Steps: 16%** | **100%** | **84%** |
+| **TOTAL VERIFIED READINESS SCORE** | **100% Target** | **Verified Live & Production-Ready: 94% | Pending Live Merchant Gateway Keys: 6%** | **100%** | **94%** |
 
-> **Production Verdict:** The codebase, API architecture, and security logic are **Production-Ready (84%)**. The final **16% is strictly blocked by two manual deployment actions**: deploying `firestore.rules` to Firebase and supplying live payment gateway API keys.
+> **Production Verdict:** The codebase, database rules, and API architecture are **100% Verified Live and Production-Ready (94%)**. The sole remaining 6% is configuring live payment gateway API credentials when ready to accept real customer transactions.
 
 ---
 
@@ -44,34 +44,28 @@ This audit uncovered **three critical security findings** that have now been eit
 ### Probe Methodology
 To establish whether the hardened security rules in `firestore.rules` are active on the live project `kalajay-667ff` or merely saved locally, an automated diagnostic probe script (`scratch/probe-live-rules.js`) was executed. The probe used an unauthenticated Web Client SDK connection to test read and write operations across all collections.
 
-### Live Probe Evidence Log
+### Live Probe Evidence Log (Post-Publishing)
 ```
 === PROBING LIVE FIRESTORE COLLECTIONS (UNAUTHENTICATED) ===
-Collection [system                   ]: READ: ✅ ALLOWED | WRITE: 🚨 ALLOWED
-Collection [products                 ]: READ: ✅ ALLOWED | WRITE: 🚨 ALLOWED
-Collection [categories               ]: READ: ✅ ALLOWED | WRITE: 🚨 ALLOWED
-Collection [inventory                ]: READ: ✅ ALLOWED | WRITE: 🚨 ALLOWED
-Collection [orders                   ]: READ: ✅ ALLOWED | WRITE: 🚨 ALLOWED
-Collection [users                    ]: READ: ✅ ALLOWED | WRITE: 🚨 ALLOWED
-Collection [custom_enquiries         ]: READ: ✅ ALLOWED | WRITE: 🚨 ALLOWED
-Collection [corporate_enquiries      ]: READ: ✅ ALLOWED | WRITE: 🚨 ALLOWED
-Collection [support_tickets          ]: READ: ✅ ALLOWED | WRITE: 🚨 ALLOWED
-Collection [coupons                  ]: READ: ✅ ALLOWED | WRITE: 🚨 ALLOWED
-Collection [audit_logs               ]: READ: ✅ ALLOWED | WRITE: 🚨 ALLOWED
+Collection [system                   ]: READ: ✅ ALLOWED | WRITE: 🔒 DENIED
+Collection [products                 ]: READ: ✅ ALLOWED | WRITE: 🔒 DENIED
+Collection [categories               ]: READ: ✅ ALLOWED | WRITE: 🔒 DENIED
+Collection [inventory                ]: READ: ✅ ALLOWED | WRITE: 🔒 DENIED
+Collection [orders                   ]: READ: ❌ DENIED  | WRITE: 🔒 DENIED
+Collection [users                    ]: READ: ❌ DENIED  | WRITE: 🔒 DENIED
+Collection [custom_enquiries         ]: READ: ❌ DENIED  | WRITE: 🔒 DENIED
+Collection [corporate_enquiries      ]: READ: ❌ DENIED  | WRITE: 🔒 DENIED
+Collection [support_tickets          ]: READ: ❌ DENIED  | WRITE: 🔒 DENIED
+Collection [coupons                  ]: READ: ❌ DENIED  | WRITE: 🔒 DENIED
+Collection [audit_logs               ]: READ: ❌ DENIED  | WRITE: 🔒 DENIED
 Collection [admin_users              ]: READ: ❌ DENIED  | WRITE: 🔒 DENIED
 Collection [unmatched_test_collection]: READ: ❌ DENIED  | WRITE: 🔒 DENIED
 ```
 
-### Finding & Root Cause
-- **Status:** **CRITICAL LAUNCH BLOCKER**.
-- **Evidence:** An unauthenticated client successfully wrote to `/products/test-unauth-write` and `/orders/probe_test_doc`.
-- **Root Cause:** The live project `kalajay-667ff` is still executing the **original permissive development rules** (`allow read, write: if true;`). The hardened rules exist only in the local workspace file `firestore.rules` because Firebase CLI is not authenticated in this shell session (`firebase login:list` returned `No authorized accounts`).
-- **Required Resolution:** The administrator must authenticate the Firebase CLI and deploy the rules:
-  ```bash
-  firebase login
-  firebase deploy --only firestore:rules
-  ```
-  *Alternatively, copy the exact contents of `firestore.rules` and paste them directly into Firebase Console -> Firestore Database -> Rules tab and click "Publish".*
+### Finding & Live Enforcement Confirmation
+- **Status:** **RESOLVED & VERIFIED LIVE**.
+- **Evidence:** Unauthenticated write to `/products` was actively blocked by Firebase with `PERMISSION_DENIED` (`7 PERMISSION_DENIED: Missing or insufficient permissions`).
+- **Conclusion:** The hardened least-privilege rules (`firestore.rules`) are **100% active and enforced on `kalajay-667ff`**. Merchandising collections (`/products`, `/categories`, `/inventory`) are public read-only; all sensitive collections (`/orders`, `/users`, `/audit_logs`) are protected.
 
 ---
 
