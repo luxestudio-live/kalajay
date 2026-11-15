@@ -212,16 +212,10 @@ function AdminSecurityGate({
 
       if (!resolveRes.ok || !resolveData.success) {
         setIsSubmitting(false);
-        if (resolveData.code === 'ACCOUNT_DEACTIVATED') {
-          setError('This staff account has been deactivated. Please contact your Super Administrator.');
-        } else if (resolveData.code === 'RATE_LIMITED') {
+        if (resolveData.code === 'RATE_LIMITED') {
           setError('Too many login attempts. Access temporarily restricted. Please try again in 1 minute.');
-        } else if (resolveData.code === 'INVALID_CREDENTIALS') {
-          setError('Authentication rejected. Invalid username or passcode.');
         } else {
-          setError(
-            `Access Denied: Username "${cleanInput}" was not recognized. Administrative accounts must be provisioned internally by the Super Administrator.`
-          );
+          setError('Authentication rejected: Invalid username or security credentials.');
         }
         return;
       }
@@ -232,22 +226,9 @@ function AdminSecurityGate({
       resolvedName = resolveData.name;
       serverRequiresReset = resolveData.requiresPasswordReset !== false;
     } catch {
-      // Local fallback in case network hiccup
-      const staffObj = authorizedStaff.find(
-        s =>
-          s.username.toLowerCase() === cleanInput.toLowerCase() ||
-          s.id.toUpperCase() === cleanInput.toUpperCase() ||
-          s.email.toLowerCase() === cleanInput.toLowerCase()
-      );
-      if (!staffObj) {
-        setIsSubmitting(false);
-        setError(`Access Denied: Username "${cleanInput}" was not recognized.`);
-        return;
-      }
-      resolvedEmail = staffObj.email;
-      resolvedStaffId = staffObj.id;
-      resolvedUsername = staffObj.username || staffObj.id.toLowerCase();
-      resolvedName = staffObj.name;
+      setIsSubmitting(false);
+      setError('Authentication rejected: Invalid username or security credentials.');
+      return;
     }
 
     // 2. Authenticate strictly via Firebase Authentication
@@ -302,43 +283,28 @@ function AdminSecurityGate({
     setError(null);
     setResetEmailSent(false);
 
-    const cleanInput = userId.trim();
+    let cleanInput = userId.trim();
     if (!cleanInput) {
-      setError('Please select or enter your Staff User ID (e.g. KJ-ADM-001) first to request password recovery.');
+      setError('Please enter your Staff Username (e.g. soumya or @soumya) first to request password recovery.');
       return;
     }
-
-    let targetEmail = '';
-    try {
-      const res = await fetch('/api/admin/auth/resolve/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ staffId: cleanInput, password }),
-      });
-      const data = await res.json();
-      if (data.success && data.email) {
-        targetEmail = data.email;
-      }
-    } catch {}
-
-    if (!targetEmail) {
-      const staffObj = authorizedStaff.find(
-        s =>
-          s.id.toUpperCase() === cleanInput.toUpperCase() ||
-          s.email.toLowerCase() === cleanInput.toLowerCase()
-      );
-      if (staffObj) targetEmail = staffObj.email;
-    }
-
-    if (!targetEmail) {
-      setError(`Staff User ID "${cleanInput}" not found in staff directory.`);
-      return;
+    if (cleanInput.startsWith('@')) {
+      cleanInput = cleanInput.substring(1).trim();
     }
 
     setIsSendingReset(true);
     try {
-      await sendPasswordResetEmail(auth, targetEmail);
-      setResetEmailSent(true);
+      const res = await fetch('/api/admin/auth/forgot-password/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: cleanInput }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setResetEmailSent(true);
+      } else {
+        setError(data.error || 'Failed to dispatch password recovery email.');
+      }
     } catch (err: any) {
       setError(err?.message || 'Failed to dispatch password recovery email.');
     } finally {

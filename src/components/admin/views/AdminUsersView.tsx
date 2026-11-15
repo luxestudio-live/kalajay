@@ -30,6 +30,7 @@ export default function AdminUsersView() {
   const {
     allUsers,
     allRoles,
+    currentUser,
     createAdminUser,
     updateAdminUser,
     toggleUserStatus,
@@ -103,10 +104,16 @@ export default function AdminUsersView() {
     }
 
     setUsernameStatus({ loading: true });
+    const requester = currentUser?.username || currentUser?.staffId || currentUser?.id || 'soumya';
     try {
-      const res = await fetch(`/api/admin/users/check-username/?username=${encodeURIComponent(clean)}`).then(r =>
-        r.json()
-      );
+      const res = await fetch(
+        `/api/admin/users/check-username/?username=${encodeURIComponent(clean)}&requestingUsername=${encodeURIComponent(requester)}`,
+        {
+          headers: {
+            'x-staff-username': requester,
+          },
+        }
+      ).then(r => r.json());
       if (res.available) {
         setUsernameStatus({ loading: false, available: true });
       } else {

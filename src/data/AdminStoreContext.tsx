@@ -339,7 +339,9 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       try {
         const [rolesRes, usersRes] = await Promise.all([
           fetch('/api/admin/roles/').then(r => r.json()).catch(() => null),
-          fetch('/api/admin/users/list/').then(r => r.json()).catch(() => null),
+          fetch('/api/admin/users/list/', {
+            headers: { 'x-staff-username': currentUser?.username || 'soumya' },
+          }).then(r => r.json()).catch(() => null),
         ]);
         if (rolesRes?.success && Array.isArray(rolesRes.roles) && rolesRes.roles.length > 0) {
           setRoles(rolesRes.roles);
@@ -469,7 +471,9 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     try {
       const [rolesRes, usersRes] = await Promise.all([
         fetch('/api/admin/roles/').then(r => r.json()).catch(() => null),
-        fetch('/api/admin/users/list/').then(r => r.json()).catch(() => null),
+        fetch('/api/admin/users/list/', {
+          headers: { 'x-staff-username': currentUser?.username || 'soumya' },
+        }).then(r => r.json()).catch(() => null),
       ]);
       if (rolesRes?.success && Array.isArray(rolesRes.roles) && rolesRes.roles.length > 0) {
         setRoles(rolesRes.roles);

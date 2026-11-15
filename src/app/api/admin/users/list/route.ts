@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { suggestUsername } from '@/lib/serverRbac';
+import { suggestUsername, verifyStaffPermission } from '@/lib/serverRbac';
 
 function getRbacStorePath(): string {
   const cacheDir = path.join(process.cwd(), '.next', 'cache');
@@ -80,7 +80,7 @@ const BASELINE_STAFF = [
   },
 ];
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const store = readRbacStore();
     const storedUsers = store.users ? Object.values(store.users) : [];
@@ -100,10 +100,32 @@ export async function GET() {
       (a.staffId || a.id).localeCompare(b.staffId || b.id)
     );
 
+    // Check if requester has authenticated staff-management permissions
+    const authCheck = await verifyStaffPermission(request, null, 'settings.users', 'view');
+    const isAuthorized = authCheck.authorized;
+
+    // Zero Email Leakage: If unauthenticated/unauthorized, sanitize sensitive identity fields
+    const sanitizedUsers = allUsers.map(u => {
+      if (isAuthorized) {
+        return u;
+      }
+      // Public directory view: strip email, phone, uid, temporary credentials
+      return {
+        id: u.staffId || u.id,
+        staffId: u.staffId || u.id,
+        username: u.username || suggestUsername(u.name),
+        name: u.name,
+        department: u.department,
+        roleId: u.roleId,
+        roleName: u.roleName,
+        status: u.status,
+      };
+    });
+
     return NextResponse.json({
       success: true,
-      users: allUsers,
-      count: allUsers.length,
+      users: sanitizedUsers,
+      count: sanitizedUsers.length,
     });
   } catch (err: any) {
     return NextResponse.json(
