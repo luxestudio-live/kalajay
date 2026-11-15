@@ -91,7 +91,9 @@ export function ShopContent() {
   ];
 
   const filteredProducts = useMemo(() => {
-    let list = [...productsList];
+    let list = [...productsList].filter(
+      (p) => p.status !== 'archived' && (p as any).isActive !== false && (p as any).active !== false
+    );
 
     // Category filter
     if (selectedCategory !== 'All') {

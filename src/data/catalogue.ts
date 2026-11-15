@@ -29,6 +29,9 @@ export interface Product {
   description: string;
   hsnCode?: string;
   taxRate?: number;
+  status?: 'active' | 'archived' | 'inactive';
+  isActive?: boolean;
+  active?: boolean;
 }
 
 export interface Collection {

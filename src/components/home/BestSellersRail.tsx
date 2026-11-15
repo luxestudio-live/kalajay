@@ -66,13 +66,23 @@ export default function BestSellersRail() {
       .map((id) => liveProducts.find((p) => p.id === id || p.code === id))
       .filter(
         (p): p is Product =>
-          Boolean(p && !p.coverImage.includes('brand.png') && !p.coverImage.includes('kalajay-brand'))
+          Boolean(
+            p &&
+            p.status !== 'archived' &&
+            (p as any).isActive !== false &&
+            !p.coverImage.includes('brand.png') &&
+            !p.coverImage.includes('kalajay-brand')
+          )
       );
 
     if (found.length >= 6) return found;
 
     return liveProducts.filter(
-      (p) => !p.coverImage.includes('brand.png') && !p.coverImage.includes('kalajay-brand')
+      (p) =>
+        p.status !== 'archived' &&
+        (p as any).isActive !== false &&
+        !p.coverImage.includes('brand.png') &&
+        !p.coverImage.includes('kalajay-brand')
     ).slice(0, 8);
   }, [dynamicFeaturedIds, liveProducts]);
 

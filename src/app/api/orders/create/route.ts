@@ -121,6 +121,23 @@ export async function POST(request: Request) {
         );
       }
 
+      // Archiving / Inactive Product Guard: Never allow purchasing archived or unpublished pieces
+      if (
+        catalogItem.status === 'archived' ||
+        catalogItem.status === 'inactive' ||
+        catalogItem.isActive === false ||
+        catalogItem.active === false
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Atelier Notice: "${catalogItem.name}" is archived or unavailable for purchase.`,
+            code: 'PRODUCT_ARCHIVED',
+          },
+          { status: 400 }
+        );
+      }
+
       const qty = Math.max(1, Math.floor(Number(item.quantity) || 1));
       const authoritativePrice = Number(catalogItem.price); // ALWAYS sourced from authoritative server/Firestore product, NEVER from client
 
@@ -209,30 +226,27 @@ export async function POST(request: Request) {
       }
     }
 
-    // 4. Server-Authoritative Shipping & Business-Configurable GST Calculation (Phase 7)
+    // 4. Server-Authoritative Shipping & Inclusive GST Calculation (Phase 7)
+    // Displayed retail prices (MRP) are inclusive of all taxes under Indian GST law.
     const discountedSubtotal = Math.max(0, calculatedSubtotal - calculatedDiscount);
     const freeShippingThreshold = BRAND_CONFIG.shipping?.freeThreshold ?? 599;
     const standardShippingRate = BRAND_CONFIG.shipping?.standardRate ?? 79;
     const calculatedShipping = discountedSubtotal >= freeShippingThreshold ? 0 : standardShippingRate;
     
-    // Sourced from product-specific taxRate or central BRAND_CONFIG.tax.gstRate (Phase 7)
+    // Tax Extraction (Inclusive GST): Sourced from product-specific taxRate or central BRAND_CONFIG.tax.gstRate (3%)
     const defaultGstRate = (BRAND_CONFIG as any).tax?.gstRate ?? 0.03;
     let calculatedTax = 0;
-    if (calculatedDiscount > 0 && calculatedSubtotal > 0) {
-      const discountRatio = (calculatedSubtotal - calculatedDiscount) / calculatedSubtotal;
-      for (const item of verifiedOrderItems) {
-        const catItem = PRODUCTS.find(p => p.code === item.sku || p.id === item.sku);
-        const itemTaxRate = catItem?.taxRate ?? defaultGstRate;
-        calculatedTax += Math.round(item.price * item.quantity * discountRatio * itemTaxRate);
-      }
-    } else {
-      for (const item of verifiedOrderItems) {
-        const catItem = PRODUCTS.find(p => p.code === item.sku || p.id === item.sku);
-        const itemTaxRate = catItem?.taxRate ?? defaultGstRate;
-        calculatedTax += Math.round(item.price * item.quantity * itemTaxRate);
-      }
+    const discountRatio = calculatedSubtotal > 0 ? (calculatedSubtotal - calculatedDiscount) / calculatedSubtotal : 1;
+    for (const item of verifiedOrderItems) {
+      const catItem = PRODUCTS.find(p => p.code === item.sku || p.id === item.sku);
+      const itemTaxRate = catItem?.taxRate ?? defaultGstRate;
+      const effectiveItemAmount = item.price * item.quantity * discountRatio;
+      // Extract inclusive tax component: Tax = Amount - (Amount / (1 + rate))
+      calculatedTax += Math.round(effectiveItemAmount - (effectiveItemAmount / (1 + itemTaxRate)));
     }
-    const calculatedTotal = discountedSubtotal + calculatedShipping + calculatedTax;
+
+    // Grand Total is Discounted Subtotal + Shipping (Tax is already inclusive in retail product prices)
+    const calculatedTotal = discountedSubtotal + calculatedShipping;
 
     // 5. Authoritative Customer Ownership Resolution (Concern 2)
     // Never trust client-supplied userId or email blindly.

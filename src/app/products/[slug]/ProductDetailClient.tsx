@@ -97,6 +97,10 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
     setOpenAccordions((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  if (product && (product.status === 'archived' || (product as any).isActive === false || (product as any).active === false)) {
+    return notFound();
+  }
+
   if (!product) {
     if (isLiveLoaded) {
       return notFound();

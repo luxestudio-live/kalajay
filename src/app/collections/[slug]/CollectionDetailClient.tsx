@@ -64,7 +64,13 @@ export default function CollectionDetailClient({ slug: propSlug }: CollectionDet
   }
 
   const products = useMemo(() => {
-    const list = productsList.filter(p => p.category === collection.name || p.categorySlug === collection.slug);
+    const list = productsList.filter(
+      p =>
+        (p.category === collection.name || p.categorySlug === collection.slug) &&
+        p.status !== 'archived' &&
+        (p as any).isActive !== false &&
+        (p as any).active !== false
+    );
     switch (sortOrder) {
       case 'price-asc':
         return [...list].sort((a, b) => a.price - b.price);
