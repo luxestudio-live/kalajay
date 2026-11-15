@@ -521,10 +521,20 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       createdAt: new Date().toISOString(),
     };
 
-    // Update state WITHOUT persisting the plaintext password to localStorage or DB
+    // Update state and cache provisioned runtime credentials for admin login gate
     const nextUsers = [...users, newUser];
     setUsers(nextUsers);
     saveState({ users: nextUsers });
+
+    if (typeof window !== 'undefined') {
+      try {
+        const storedCreds = JSON.parse(localStorage.getItem('kalajay_staff_credentials') || '{}');
+        storedCreds[newUser.email.toLowerCase()] = provisionalPassword;
+        localStorage.setItem('kalajay_staff_credentials', JSON.stringify(storedCreds));
+      } catch (e) {
+        console.warn('Failed caching staff credentials:', e);
+      }
+    }
 
     logAction(
       'CREATE_STAFF_USER',

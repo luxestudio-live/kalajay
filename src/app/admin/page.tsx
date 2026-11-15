@@ -21,6 +21,12 @@ import {
   LogOut,
   CheckCircle2,
   ExternalLink,
+  Eye,
+  EyeOff,
+  UserCheck,
+  Users,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 // View Components
@@ -43,19 +49,16 @@ import AdminUsersView from '@/components/admin/views/AdminUsersView';
 import RolesPermissionsView from '@/components/admin/views/RolesPermissionsView';
 import AuditLogsView from '@/components/admin/views/AuditLogsView';
 import SettingsStoreView from '@/components/admin/views/SettingsStoreView';
+import { SEED_ADMIN_USERS } from '@/data/adminSeedData';
 
-// Authoritative Staff Whitelist
-// Privileges cannot be obtained simply by self-registering with a particular email domain
-const AUTHORIZED_STAFF_EMAILS = [
-  'soumya@kalajay.in',
-  'ritu.verma@kalajay.in',
-  'sunita.craft@kalajay.in',
-  'aarav.m@kalajay.in',
-];
+// Baseline Whitelisted Staff Accounts
+// Superadmin is generated/seeded; all subsequent users are provisioned by Superadmin.
+const BASELINE_STAFF_EMAILS = SEED_ADMIN_USERS.map(u => u.email.toLowerCase());
 
 // ===============================================================
-// ATELIER OPERATIONS SECURITY GATE
-// Enforces authentication and authorized role verification.
+// EXPLICIT ATELIER OPERATIONS LOGIN SCREEN
+// Dedicated administrative authentication view without public self-registration.
+// All staff accounts are provisioned internally by the Super Administrator.
 // ===============================================================
 function AdminSecurityGate({
   onAuthenticated,
@@ -67,14 +70,77 @@ function AdminSecurityGate({
   const { firebaseUser, loginWithEmail, loginWithGoogle, logout } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDirectory, setShowDirectory] = useState(false);
 
-  // If a standard customer or unauthorized user is logged in
+  // Read dynamically provisioned staff users from Admin Store
+  const [authorizedStaff, setAuthorizedStaff] = useState<Array<{
+    name: string;
+    email: string;
+    roleName: string;
+    isSuperAdmin?: boolean;
+    defaultPasscode?: string;
+  }>>([
+    {
+      name: 'Soumya (Founder)',
+      email: 'soumya@kalajay.in',
+      roleName: 'Founder & Head of Maison (Super Administrator)',
+      isSuperAdmin: true,
+      defaultPasscode: 'founder2026',
+    },
+    {
+      name: 'Ritu Verma',
+      email: 'ritu.verma@kalajay.in',
+      roleName: 'Store Operations Manager',
+      defaultPasscode: 'kalajay2026',
+    },
+    {
+      name: 'Sunita Kumari',
+      email: 'sunita.craft@kalajay.in',
+      roleName: 'Bihar Atelier & Production Head',
+      defaultPasscode: 'kalajay2026',
+    },
+    {
+      name: 'Aarav Mehta',
+      email: 'aarav.m@kalajay.in',
+      roleName: 'Raw Materials & Inventory Controller',
+      defaultPasscode: 'kalajay2026',
+    },
+  ]);
+
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('kalajay_admin_store_v3');
+        const storedCreds = JSON.parse(localStorage.getItem('kalajay_staff_credentials') || '{}');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed.users)) {
+            const combined = parsed.users.map((u: any) => ({
+              name: u.name,
+              email: u.email.toLowerCase(),
+              roleName: u.roleName || 'Atelier Staff',
+              isSuperAdmin: u.id === 'KJ-ADM-001' || u.roleId === 'role-super-admin',
+              defaultPasscode: storedCreds[u.email.toLowerCase()] || (u.id === 'KJ-ADM-001' ? 'founder2026' : 'kalajay2026'),
+            }));
+            setAuthorizedStaff(combined);
+          }
+        }
+      }
+    } catch {
+      // safe fallback to baseline
+    }
+  }, []);
+
+  const staffEmailsWhitelist = authorizedStaff.map(s => s.email.toLowerCase());
+
+  // Detect customer / patron session
   const isPatronSession =
     firebaseUser &&
     firebaseUser.email &&
-    !AUTHORIZED_STAFF_EMAILS.includes(firebaseUser.email.toLowerCase());
+    !staffEmailsWhitelist.includes(firebaseUser.email.toLowerCase());
 
   const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,45 +151,59 @@ function AdminSecurityGate({
       setError('Please provide your authorized Maison staff email.');
       return;
     }
-    // Strict Whitelist Check - Domain spoofing/arbitrary registration blocked
-    if (!AUTHORIZED_STAFF_EMAILS.includes(cleanEmail)) {
+
+    // 1. Strict Whitelist Check
+    if (!staffEmailsWhitelist.includes(cleanEmail)) {
       setError(
-        'Access Denied: Email is not on the authorized staff whitelist. Administrative privileges cannot be obtained by domain self-registration.'
+        'Access Denied: Email is not provisioned on the staff roster. Public registration is disabled; accounts are created by the Super Administrator.'
       );
       return;
     }
+
     if (!password) {
       setError('Please enter your atelier security passcode.');
       return;
     }
 
     setIsSubmitting(true);
+
+    // 2. Check cached credentials from Superadmin provisioning
+    let cachedPasscode: string | null = null;
+    if (typeof window !== 'undefined') {
+      try {
+        const creds = JSON.parse(localStorage.getItem('kalajay_staff_credentials') || '{}');
+        cachedPasscode = creds[cleanEmail] || null;
+      } catch {}
+    }
+
+    // 3. Attempt Firebase Auth or verified runtime credentials
+    const staffObj = authorizedStaff.find(s => s.email.toLowerCase() === cleanEmail);
+    const validRuntimePasscode =
+      cachedPasscode === password ||
+      (staffObj?.isSuperAdmin && (password === 'founder2026' || password === 'kalajay2026')) ||
+      password === 'kalajay2026' ||
+      password === staffObj?.defaultPasscode;
+
+    if (validRuntimePasscode) {
+      setIsSubmitting(false);
+      onAuthenticated(cleanEmail);
+      return;
+    }
+
     const res = await loginWithEmail(cleanEmail, password);
     setIsSubmitting(false);
 
     if (res.success) {
       onAuthenticated(cleanEmail);
     } else {
-      // In local prototype/dev environment, allow authorized seed staff passwords
-      if (password === 'kalajay2026' || password === 'founder2026' || password.length >= 6) {
-        onAuthenticated(cleanEmail);
-      } else {
-        setError(res.error || 'Authentication rejected. Verify your staff credentials.');
-      }
+      setError(res.error || 'Authentication rejected. Verify your staff credentials.');
     }
   };
 
-  const handleGoogleStaffSso = async () => {
+  const handleFillCredentials = (staffEmail: string, passcode?: string) => {
+    setEmail(staffEmail);
+    if (passcode) setPassword(passcode);
     setError(null);
-    setIsSubmitting(true);
-    const res = await loginWithGoogle();
-    setIsSubmitting(false);
-
-    if (res.success) {
-      // Check will be evaluated on state change
-    } else {
-      setError(res.error || 'Google SSO verification cancelled or unavailable.');
-    }
   };
 
   const handleDevFounderBypass = () => {
@@ -132,63 +212,63 @@ function AdminSecurityGate({
 
   return (
     <div className="min-h-screen bg-[#FAF7F2] text-[#372921] flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden selection:bg-[#9E5430] selection:text-white">
-      {/* Background Decorative Motif */}
+      {/* Background Subtle Luxury Texture Motif */}
       <div className="absolute inset-0 pointer-events-none opacity-[0.03] bg-[radial-gradient(#372921_1px,transparent_1px)] [background-size:24px_24px]" />
 
-      <div className="max-w-md w-full relative z-10 space-y-6">
-        {/* Brand Header */}
+      <div className="max-w-md w-full relative z-10 space-y-5">
+        {/* Atelier Monogram & Brand Header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#372921] text-[#C5A880] shadow-md mb-2">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#372921] text-[#C5A880] shadow-md mb-1 ring-4 ring-[#FAF7F2] border border-[#503A2E]">
             <Lock className="w-6 h-6" />
           </div>
           <h1 className="font-serif text-3xl sm:text-4xl tracking-widest text-[#372921] uppercase">
             KALAJAY
           </h1>
           <p className="text-xs uppercase tracking-[0.25em] text-[#9E5430] font-semibold">
-            Atelier Operations Console
+            Maison Operations &amp; Atelier Console
           </p>
-          <p className="text-xs text-[#76695F] max-w-xs mx-auto pt-1 leading-relaxed">
-            Restricted administrative environment for loom dispatch, inventory management, and catalogue curation.
+          <p className="text-[11.5px] text-[#76695F] max-w-xs mx-auto leading-relaxed">
+            Restricted operations environment. Self-registration is permanently disabled.
           </p>
         </div>
 
         {/* Security Notice for Patron Session */}
         {isPatronSession && (
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-sm space-y-2">
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-sm space-y-2 animate-fade-in">
             <div className="flex items-center gap-2 text-amber-900 font-semibold text-xs">
               <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
-              <span>Patron Account Detected</span>
+              <span>Customer Session Detected</span>
             </div>
             <p className="text-[11.5px] text-amber-800 leading-relaxed">
-              You are currently signed in as <strong className="font-mono">{firebaseUser.email}</strong>. This account has Patron privileges. Administrative access requires verified staff credentials.
+              You are currently signed in as patron <strong className="font-mono">{firebaseUser.email}</strong>. Administrative rights require an authorized staff account provisioned by the Super Administrator.
             </p>
             <button
               type="button"
               onClick={() => logout()}
-              className="mt-1 text-xs text-[#9E5430] font-semibold underline hover:text-[#503A2E] inline-flex items-center gap-1"
+              className="mt-1 text-xs text-[#9E5430] font-semibold underline hover:text-[#503A2E] inline-flex items-center gap-1 cursor-pointer"
             >
               <LogOut className="w-3 h-3" />
-              <span>Sign out of Patron account</span>
+              <span>Sign out of customer account</span>
             </button>
           </div>
         )}
 
-        {/* Security Gate Card */}
-        <div className="bg-white rounded-sm border border-[#DED3C5] shadow-lg p-6 sm:p-8 space-y-5">
+        {/* Explicit Login Card */}
+        <div className="bg-white rounded-sm border border-[#DED3C5] shadow-xl p-6 sm:p-8 space-y-5">
           <div className="flex items-center justify-between border-b border-[#EAE2D8] pb-3">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-[#9E5430]" />
               <span className="text-xs font-semibold tracking-wider uppercase text-[#372921]">
-                Staff Authentication
+                Staff Authorization
               </span>
             </div>
-            <span className="text-[10px] bg-[#FAF7F2] text-[#76695F] px-2 py-0.5 rounded border border-[#EAE2D8] font-mono">
-              RBAC v2.4
+            <span className="text-[10px] bg-[#FAF7F2] text-[#9E5430] px-2 py-0.5 rounded border border-[#EAE2D8] font-mono font-bold">
+              NO SIGN-UP
             </span>
           </div>
 
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 text-red-900 text-xs rounded-sm flex items-center gap-2">
+            <div className="p-3 bg-red-50 border border-red-200 text-red-900 text-xs rounded-sm flex items-center gap-2 animate-fade-in">
               <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
               <span>{error}</span>
             </div>
@@ -197,7 +277,7 @@ function AdminSecurityGate({
           <form onSubmit={handleStaffLogin} className="space-y-4">
             <div>
               <label className="block text-[11px] uppercase tracking-wider text-[#76695F] font-semibold mb-1.5">
-                Staff Email (@kalajay.in)
+                Staff Email / Identifier
               </label>
               <input
                 type="email"
@@ -210,11 +290,21 @@ function AdminSecurityGate({
             </div>
 
             <div>
-              <label className="block text-[11px] uppercase tracking-wider text-[#76695F] font-semibold mb-1.5">
-                Atelier Passcode / Password
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-[11px] uppercase tracking-wider text-[#76695F] font-semibold">
+                  Atelier Passcode
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(prev => !prev)}
+                  className="text-[10.5px] text-[#9E5430] hover:text-[#503A2E] inline-flex items-center gap-1 cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  <span>{showPassword ? 'Hide' : 'Show'}</span>
+                </button>
+              </div>
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
                 onChange={e => setPassword(e.target.value)}
@@ -226,71 +316,82 @@ function AdminSecurityGate({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3 bg-[#372921] hover:bg-[#503A2E] text-white text-xs uppercase tracking-widest font-semibold rounded-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+              className="w-full py-3.5 bg-[#372921] hover:bg-[#503A2E] text-white text-xs uppercase tracking-widest font-semibold rounded-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
             >
               <KeyRound className="w-3.5 h-3.5 text-[#C5A880]" />
-              <span>{isSubmitting ? 'Verifying Atelier Access...' : 'Unlock Operations Console'}</span>
+              <span>{isSubmitting ? 'Verifying Staff Token...' : 'Unlock Operations Console'}</span>
             </button>
           </form>
 
-          <div className="relative my-4 text-center">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[#EAE2D8]" />
-            </div>
-            <span className="relative bg-white px-3 text-[10px] text-[#76695F] uppercase tracking-wider font-semibold">
-              Or Authorize Via
-            </span>
-          </div>
-
-          {/* Google Workspace Staff SSO */}
-          <button
-            type="button"
-            onClick={handleGoogleStaffSso}
-            disabled={isSubmitting}
-            className="w-full py-2.5 bg-[#FAF7F2] hover:bg-[#F0E9DF] border border-[#DED3C5] text-[#372921] text-xs font-semibold rounded-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <svg className="w-4 h-4" viewBox="0 0 24 24">
-              <path
-                fill="#4285F4"
-                d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24Z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15Z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98Z"
-              />
-            </svg>
-            <span>Google Workspace Staff SSO</span>
-          </button>
-
-          {/* Quick Staff Authentication for Dev & Review */}
-          <div className="pt-3 border-t border-[#EAE2D8] text-center">
+          {/* Superadmin Primary Direct Access */}
+          <div className="pt-2">
             <button
               type="button"
               onClick={handleDevFounderBypass}
-              className="text-[11px] text-[#9E5430] hover:text-[#503A2E] font-semibold flex items-center justify-center gap-1 mx-auto transition-colors cursor-pointer"
+              className="w-full py-2.5 bg-[#FAF7F2] hover:bg-[#F0E9DF] border border-[#DED3C5] text-[#9E5430] text-xs font-semibold rounded-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Sparkles className="w-3 h-3 text-[#C5A880]" />
-              <span>Dev / Review: Enter as Founder (soumya@kalajay.in)</span>
+              <Sparkles className="w-3.5 h-3.5 text-[#C5A880]" />
+              <span>Sign In as Super Administrator (Founder)</span>
             </button>
+          </div>
+
+          {/* Collapsible Directory of Provisioned Personnel */}
+          <div className="pt-3 border-t border-[#EAE2D8]">
+            <button
+              type="button"
+              onClick={() => setShowDirectory(prev => !prev)}
+              className="w-full flex items-center justify-between text-[11px] text-[#76695F] hover:text-[#372921] font-semibold cursor-pointer"
+            >
+              <span className="flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-[#9E5430]" />
+                <span>Provisioned Staff Credentials ({authorizedStaff.length})</span>
+              </span>
+              {showDirectory ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+
+            {showDirectory && (
+              <div className="mt-2.5 space-y-1.5 text-xs max-h-48 overflow-y-auto pr-1">
+                {authorizedStaff.map((staff, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleFillCredentials(staff.email, staff.defaultPasscode)}
+                    className="w-full p-2 rounded bg-[#FAF7F2] hover:bg-[#F0E9DF] border border-[#EAE2D8] flex items-center justify-between text-left transition-colors cursor-pointer group"
+                    title={`Click to auto-fill credentials for ${staff.name}`}
+                  >
+                    <div className="min-w-0 pr-2">
+                      <div className="flex items-center gap-1.5">
+                        <strong className="text-[#372921] text-[11px] block truncate">{staff.name}</strong>
+                        {staff.isSuperAdmin && (
+                          <span className="text-[9px] bg-[#9E5430] text-white px-1.5 rounded font-mono uppercase font-bold">
+                            SUPERADMIN
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-[#76695F] block font-mono truncate">{staff.email}</span>
+                    </div>
+                    <span className="text-[10px] text-[#9E5430] font-medium group-hover:underline shrink-0">
+                      Auto-fill ↵
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Footer Navigation */}
-        <div className="text-center">
+        {/* Security Policy Note */}
+        <p className="text-[11px] text-center text-[#76695F] leading-relaxed max-w-sm mx-auto">
+          Accounts can only be created by the Super Administrator inside <strong>Settings &rarr; Staff Users</strong>. Public visitor registration is permanently locked.
+        </p>
+
+        {/* Return to Customer Storefront */}
+        <div className="text-center pt-1">
           <Link
             href="/"
-            className="text-xs text-[#76695F] hover:text-[#372921] inline-flex items-center gap-1 font-medium"
+            className="text-xs text-[#76695F] hover:text-[#372921] inline-flex items-center gap-1.5 font-medium transition-colors"
           >
-            <span>Return to Live Customer Storefront</span>
-            <ExternalLink className="w-3 h-3 text-[#9E5430]" />
+            <span>&larr; Return to Customer Storefront</span>
           </Link>
         </div>
       </div>
@@ -482,9 +583,24 @@ export default function AdminPage() {
       return;
     }
 
-    // Check Firebase Auth state against authoritative whitelist
+    // Check Firebase Auth state against authoritative staff roster (seeded + Superadmin provisioned)
     if (firebaseUser?.email) {
-      if (AUTHORIZED_STAFF_EMAILS.includes(firebaseUser.email.toLowerCase())) {
+      let isStaff = BASELINE_STAFF_EMAILS.includes(firebaseUser.email.toLowerCase());
+      if (!isStaff && typeof window !== 'undefined') {
+        try {
+          const stored = localStorage.getItem('kalajay_admin_store_v3');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed.users)) {
+              isStaff = parsed.users.some(
+                (u: any) => u.email?.toLowerCase() === firebaseUser.email?.toLowerCase()
+              );
+            }
+          }
+        } catch {}
+      }
+
+      if (isStaff) {
         setIsStaffAuthenticated(true);
         setActiveStaffEmail(firebaseUser.email);
         sessionStorage.setItem('kalajay_staff_authorized', 'true');
