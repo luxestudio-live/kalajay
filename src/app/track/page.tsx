@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { BRAND_CONFIG } from '@/data/catalogue';
 import { getFirestoreOrderById } from '@/lib/firestore';
+import { auth } from '@/lib/firebase';
 
 interface SimulatedOrder {
   orderId: string;
@@ -25,7 +26,8 @@ interface SimulatedOrder {
   estimatedDelivery: string;
   status: 'loom' | 'sealed' | 'transit' | 'delivered';
   items: { name: string; variant: string; price: number; image: string }[];
-  total: number;
+  itemCount?: number;
+  total?: number;
   customerName: string;
   city: string;
   artisanNote: string;
@@ -33,6 +35,8 @@ interface SimulatedOrder {
   courier: string;
   paymentStatus?: string;
   isInternalTracking?: boolean;
+  requiresVerification?: boolean;
+  isVerifiedOwner?: boolean;
 }
 
 const KNOWN_ORDERS: Record<string, SimulatedOrder> = {
@@ -115,30 +119,56 @@ function TrackOrderContent() {
   const [searched, setSearched] = useState(!initialOrderId);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [verifyInput, setVerifyInput] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState('');
 
-  const executeSearch = async (targetQuery: string) => {
+  const executeSearch = async (targetQuery: string, verifyValue?: string) => {
     const clean = targetQuery.trim().toUpperCase();
     if (!clean) return;
 
     setLoading(true);
     setError(false);
+    setVerifyError('');
 
     try {
-      let liveDoc: any = await getFirestoreOrderById(clean);
+      let liveDoc: any = null;
 
-      if (!liveDoc) {
-        // Fallback to server-side tracking API
-        try {
-          const res = await fetch(`/api/orders/track/?orderId=${encodeURIComponent(clean)}`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.success && data.order) {
-              liveDoc = data.order;
-            }
-          }
-        } catch (apiErr) {
-          console.warn('Server tracking API notice:', apiErr);
+      // 1. Fetch from server tracking API with Auth token & verification parameters
+      try {
+        const headers: Record<string, string> = {};
+        if (auth?.currentUser) {
+          try {
+            const token = await auth.currentUser.getIdToken();
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+          } catch {}
         }
+
+        let url = `/api/orders/track/?orderId=${encodeURIComponent(clean)}`;
+        if (verifyValue) {
+          if (verifyValue.includes('@')) {
+            url += `&email=${encodeURIComponent(verifyValue.trim().toLowerCase())}`;
+          } else {
+            url += `&phone=${encodeURIComponent(verifyValue.trim())}`;
+          }
+        }
+
+        const res = await fetch(url, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.order) {
+            liveDoc = data.order;
+          }
+        }
+      } catch (apiErr) {
+        console.warn('Server tracking API notice:', apiErr);
+      }
+
+      // 2. Direct Firestore fallback (for authenticated customer's own order)
+      if (!liveDoc) {
+        try {
+          liveDoc = await getFirestoreOrderById(clean);
+        } catch {}
       }
 
       if (liveDoc) {
@@ -161,13 +191,16 @@ function TrackOrderContent() {
           status: mappedStatus,
           paymentStatus: liveDoc.paymentStatus || 'pending',
           isInternalTracking: isInternal,
+          requiresVerification: liveDoc.requiresVerification,
+          isVerifiedOwner: liveDoc.isVerifiedOwner,
+          itemCount: liveDoc.itemCount || (liveDoc.items || []).length || 1,
           items: (liveDoc.items || []).map((it: any) => ({
             name: it.name,
             variant: `${it.sku || it.productId || 'KJ-ATELIER'} · Qty ${it.quantity || 1}`,
             price: it.price || 0,
             image: it.image || 'https://www.kalajay.in/v2/p3-2.jpg',
           })),
-          total: liveDoc.total || 0,
+          total: liveDoc.total,
           customerName: liveDoc.customerName,
           city: `${liveDoc.shippingAddress?.city || 'India'}, ${liveDoc.shippingAddress?.state || ''}`,
           artisanNote: liveDoc.artisanNote || 'Handcrafted on Bihar artisan loom with heirloom-grade bead tension.',
@@ -204,6 +237,15 @@ function TrackOrderContent() {
   const handleSearch = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     executeSearch(query);
+  };
+
+  const handleVerifyGuest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verifyInput.trim() || !activeOrder) return;
+    setVerifying(true);
+    setVerifyError('');
+    await executeSearch(activeOrder.orderId, verifyInput);
+    setVerifying(false);
   };
 
   const getStepActive = (status: SimulatedOrder['status'], step: 1 | 2 | 3) => {
@@ -464,25 +506,57 @@ function TrackOrderContent() {
             {/* Items in this Order */}
             <div className="pt-4 border-t border-border-subtle space-y-3">
               <span className="text-[10px] uppercase tracking-monumental text-rosewood block font-bold">
-                Pieces in this Parcel ({activeOrder.items.length})
+                Pieces in this Parcel ({activeOrder.items.length > 0 ? activeOrder.items.length : (activeOrder.itemCount || 1)})
               </span>
-              <div className="divide-y divide-border-subtle/70">
-                {activeOrder.items.map((item, idx) => (
-                  <div key={idx} className="py-3 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-sm bg-canvas-subtle border border-border-subtle overflow-hidden shrink-0">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                      </div>
-                      <div>
-                        <span className="font-serif text-sm text-plum block font-normal">{item.name}</span>
-                        <span className="text-[11px] text-ink-light font-light">{item.variant}</span>
-                      </div>
-                    </div>
-                    <span className="font-medium text-plum font-mono">₹{item.price.toLocaleString('en-IN')}</span>
+
+              {activeOrder.requiresVerification && activeOrder.items.length === 0 ? (
+                <div className="p-5 bg-canvas-subtle border border-gold/40 rounded-sm space-y-3">
+                  <div className="flex items-center gap-2 text-rosewood">
+                    <ShieldCheck className="w-4 h-4 text-gold shrink-0" />
+                    <span className="text-xs font-semibold text-plum tracking-refined uppercase font-sans">Patron Privacy Protection</span>
                   </div>
-                ))}
-              </div>
+                  <p className="text-xs text-ink-muted leading-relaxed font-light">
+                    To maintain client confidentiality and privacy, itemized piece details and financial invoices ({activeOrder.itemCount || 1} handcrafted creation{(activeOrder.itemCount || 1) === 1 ? '' : 's'}) are shielded. Enter the email address or phone number associated with this order to view complete contents.
+                  </p>
+                  <form onSubmit={handleVerifyGuest} className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                    <input
+                      type="text"
+                      placeholder="Enter order email or phone number"
+                      value={verifyInput}
+                      onChange={(e) => setVerifyInput(e.target.value)}
+                      className="w-full sm:w-72 px-3.5 py-2.5 bg-canvas border border-border-strong rounded-sm text-xs font-mono text-plum placeholder:text-ink-light focus:outline-none focus:border-gold shadow-2xs"
+                    />
+                    <button
+                      type="submit"
+                      disabled={verifying}
+                      className="w-full sm:w-auto px-6 py-2.5 bg-plum hover:bg-rosewood text-canvas text-xs uppercase tracking-editorial font-semibold rounded-sm transition-colors shrink-0 disabled:opacity-50"
+                    >
+                      {verifying ? 'Verifying...' : 'Verify & Reveal'}
+                    </button>
+                  </form>
+                  {verifyError && (
+                    <p className="text-[11px] text-red-600 font-sans mt-1">{verifyError}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="divide-y divide-border-subtle/70">
+                  {activeOrder.items.map((item, idx) => (
+                    <div key={idx} className="py-3 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-sm bg-canvas-subtle border border-border-subtle overflow-hidden shrink-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                          <span className="font-serif text-sm text-plum block font-normal">{item.name}</span>
+                          <span className="text-[11px] text-ink-light font-light">{item.variant}</span>
+                        </div>
+                      </div>
+                      <span className="font-medium text-plum font-mono">₹{item.price.toLocaleString('en-IN')}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Direct WhatsApp Concierge Help */}

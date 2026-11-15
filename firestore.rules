@@ -237,19 +237,21 @@ service cloud.firestore {
 
     // -------------------------------------------------------------
     // 11. Security Audit Logs (/audit_logs)
-    // Strictly restricted to verified Administrators.
+    // Read restricted to Administrators; writes strictly restricted to Root Super Admin.
     // -------------------------------------------------------------
     match /audit_logs/{logId} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin();
+      allow write: if isRootAdmin();
     }
 
     // -------------------------------------------------------------
     // 12. Admin Users ACL (/admin_users/{adminId})
-    // Server/Console managed. Read by authenticated users for RBAC.
+    // Read: Verified Administrators only (customers cannot enumerate staff).
+    // Write: Strictly restricted to Root Super Admin (prevents staff privilege escalation).
     // -------------------------------------------------------------
     match /admin_users/{adminId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow read: if isAdmin();
+      allow write: if isRootAdmin();
     }
 
     // -------------------------------------------------------------
@@ -271,12 +273,12 @@ service cloud.firestore {
 
     // -------------------------------------------------------------
     // 15. Dynamic Administrative Roles (/admin_roles/{roleId})
-    // Read: Authenticated staff / admins.
-    // Write: Verified Administrators only.
+    // Read: Verified Administrators only.
+    // Write: Strictly restricted to Root Super Admin (ordinary staff cannot alter roles).
     // -------------------------------------------------------------
     match /admin_roles/{roleId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow read: if isAdmin();
+      allow write: if isRootAdmin();
     }
 
     // -------------------------------------------------------------
@@ -304,6 +306,14 @@ service cloud.firestore {
     // -------------------------------------------------------------
     match /admin_usernames/{username} {
       allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------
+    // 19. Distributed Tracking Rate Limiter (/tracking_ratelimits/{ipHash})
+    // Shared across server instances for distributed DDoS and order enumeration defense.
+    // -------------------------------------------------------------
+    match /tracking_ratelimits/{ipHash} {
+      allow read, write: if true;
     }
 
     // -------------------------------------------------------------
