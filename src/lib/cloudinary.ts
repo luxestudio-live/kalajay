@@ -82,6 +82,33 @@ export async function uploadToCloudinary(
   error?: string;
 }> {
   try {
+    // 1. Strict Size Guard: 10 MB Limit
+    const MAX_SIZE = 10 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      return {
+        success: false,
+        error: `File is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Maximum allowed size is 10 MB.`,
+      };
+    }
+
+    // 2. Strict Format Guard: Images Only
+    if (file.type) {
+      const allowedMimeTypes = [
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/webp',
+        'image/avif',
+        'image/heic',
+      ];
+      if (!allowedMimeTypes.includes(file.type.toLowerCase())) {
+        return {
+          success: false,
+          error: 'Only image files (JPG, PNG, WebP, AVIF, HEIC) are permitted.',
+        };
+      }
+    }
+
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
