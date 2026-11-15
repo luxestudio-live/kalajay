@@ -142,6 +142,19 @@ export default function DPDPConsentBanner() {
         setConciergeConsent(parsed.concierge);
         setAnalyticsConsent(parsed.analytics);
         if (parsed.language) setLanguage(parsed.language);
+
+        // Sync stored consent choice with Microsoft Clarity (DPDP compliance)
+        try {
+          const clarityFn = (window as unknown as { clarity?: (...args: unknown[]) => void }).clarity;
+          if (typeof clarityFn === 'function') {
+            clarityFn('consentv2', {
+              ad_Storage: 'denied',
+              analytics_Storage: parsed.analytics ? 'granted' : 'denied',
+            });
+          }
+        } catch {
+          // ignore clarity sync error
+        }
       } else {
         // First visit: show polite non-intrusive banner
         setShowBanner(true);
@@ -176,6 +189,19 @@ export default function DPDPConsentBanner() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
     } catch {
       // storage unavailable fallback
+    }
+
+    // Sync updated consent choice with Microsoft Clarity (DPDP compliance)
+    try {
+      const clarityFn = (window as unknown as { clarity?: (...args: unknown[]) => void }).clarity;
+      if (typeof clarityFn === 'function') {
+        clarityFn('consentv2', {
+          ad_Storage: 'denied',
+          analytics_Storage: preferences.analytics ? 'granted' : 'denied',
+        });
+      }
+    } catch {
+      // ignore clarity sync error
     }
 
     setShowBanner(false);
