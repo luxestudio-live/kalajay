@@ -485,7 +485,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const sendOtp = async (phone: string, containerId = 'recaptcha-container'): Promise<{ success: boolean; demoOtp: string; error?: string }> => {
     const cleanPhone = phone.replace(/\D/g, '');
+    const isTestNumber = cleanPhone.endsWith('8888899999') || cleanPhone === '8888899999';
     const demoOtp = '123456';
+
+    if (isTestNumber) {
+      // For configured test number, immediately proceed to OTP step and attempt background Firebase verification
+      if (typeof window !== 'undefined' && document.getElementById(containerId)) {
+        try {
+          const verifier = createRecaptchaVerifier(containerId);
+          sendPhoneOtpFirebase(phone, verifier)
+            .then((res) => {
+              setConfirmationResult(res);
+            })
+            .catch((err) => {
+              console.warn('Firebase test phone notice:', err);
+            });
+        } catch (e) {
+          // container not ready or headless
+        }
+      }
+      return { success: true, demoOtp };
+    }
 
     try {
       if (typeof window !== 'undefined' && document.getElementById(containerId)) {
