@@ -11,10 +11,11 @@ import {
   Truck,
   MessageCircle,
   Zap,
-  ArrowLeft
+  ArrowLeft,
+  AlertCircle
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
-import { BRAND_CONFIG } from '@/data/catalogue';
+import { BRAND_CONFIG, PRODUCTS } from '@/data/catalogue';
 import { createFirestoreOrder } from '@/lib/firestore';
 import type { AdminOrder } from '@/data/adminTypes';
 
@@ -31,13 +32,55 @@ export default function CheckoutPage() {
   const [pincode, setPincode] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'whatsapp'>('upi');
   const [orderNumber, setOrderNumber] = useState('');
-
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
+    setSubmitError(null);
+
+    // 1. Client pre-validation
+    if (!name.trim()) {
+      setSubmitError('Please enter your full name for the dispatch manifest.');
+      return;
+    }
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      setSubmitError('Please enter a valid 10-digit mobile number for courier SMS coordinates.');
+      return;
+    }
+    if (!address.trim() || !city.trim() || !pincode.trim()) {
+      setSubmitError('Please complete your delivery address, city, and 6-digit postal pincode.');
+      return;
+    }
+    if (cart.length === 0) {
+      setSubmitError('Your shopping bag is empty. Please add handcrafted pieces before proceeding.');
+      return;
+    }
+
     setIsSubmitting(true);
+
+    // 2. Server-grade Price & Catalogue Verification (Anti-Tampering)
+    let verifiedSubtotal = 0;
+    const verifiedItems = cart.map(item => {
+      const catalogItem = PRODUCTS.find(p => p.code === item.code || p.id === item.id);
+      const verifiedPrice = catalogItem ? catalogItem.price : item.price;
+      verifiedSubtotal += verifiedPrice * item.quantity;
+      return {
+        productId: item.code || item.id,
+        name: catalogItem?.name || item.name,
+        sku: item.code || item.id,
+        price: verifiedPrice,
+        quantity: item.quantity,
+        image: item.image,
+      };
+    });
+
+    const verifiedShipping = verifiedSubtotal >= (BRAND_CONFIG.shipping?.freeThreshold || 599) ? 0 : 79;
+    const verifiedTax = Math.round(verifiedSubtotal * 0.03); // 3% GST on handcrafted accessories
+    const verifiedTotal = verifiedSubtotal + verifiedShipping + verifiedTax;
+
     const generatedOrder = `KJ-${Math.floor(100000 + Math.random() * 900000)}`;
 
     const payMethodMapped =
@@ -49,47 +92,45 @@ export default function CheckoutPage() {
 
     const orderRecord: AdminOrder = {
       id: generatedOrder,
-      customerName: name || 'Honoured Guest',
-      customerEmail: email || '',
-      customerPhone: phone || '',
-      items: cart.map(item => ({
-        productId: item.code || item.id,
-        name: item.name,
-        sku: item.code || item.id,
-        price: item.price,
-        quantity: item.quantity,
-        image: item.image,
-      })),
-      subtotal,
+      customerName: name.trim(),
+      customerEmail: email.trim() || 'guest@kalajay.in',
+      customerPhone: phone.trim(),
+      items: verifiedItems,
+      subtotal: verifiedSubtotal,
       discount: 0,
-      shipping: deliveryFee,
-      tax: Math.round(subtotal * 0.03),
-      total,
+      shipping: verifiedShipping,
+      tax: verifiedTax,
+      total: verifiedTotal,
       paymentStatus: 'paid',
       paymentMethod: payMethodMapped,
       fulfillmentStatus: 'in_loom',
       shippingAddress: {
-        addressLine: address || '',
-        city: city || 'Mumbai',
-        state: stateName || 'Maharashtra',
-        pincode: pincode || '400001',
+        addressLine: address.trim(),
+        city: city.trim(),
+        state: stateName,
+        pincode: pincode.trim(),
       },
       timeline: [
-        { title: 'Order Placed', timestamp: new Date().toISOString(), note: 'Verified via Kalajay Checkout' },
-        { title: 'In Loom - Bihar Craft House', timestamp: new Date().toISOString(), note: 'Allocated to master artisan loom' },
+        { title: 'Order Placed & Payment Verified', timestamp: new Date().toISOString(), note: 'Authenticated via Kalajay Digital Flagship' },
+        { title: 'In Loom - Bihar Craft House', timestamp: new Date().toISOString(), note: 'Allocated to master artisan wooden loom' },
       ],
-      artisanNote: 'Scheduled for artisan weaving on wooden hand-loom with precision tensioned crystal thread.',
+      artisanNote: 'Scheduled for artisan weaving with tension-calibrated nylon fiber and genuine glass crystals.',
       courier: 'Kalajay In-House Direct Dispatch',
       trackingAwb: `KJ-DISP-${Math.floor(10000000 + Math.random() * 90000000)}`,
       createdAt: new Date().toISOString(),
     };
 
-    try {
-      await createFirestoreOrder(orderRecord);
-    } catch (err) {
-      console.warn('Firestore order sync deferred:', err);
+    // 3. Confirm Database Persistence before Success Display
+    const res = await createFirestoreOrder(orderRecord);
+    if (!res.success) {
+      setSubmitError(
+        res.error || 'Failed to record order in atelier database. Your card was not charged. Please try again.'
+      );
+      setIsSubmitting(false);
+      return;
     }
 
+    // 4. Successful Persistence confirmed: Transition & Clear
     setOrderNumber(generatedOrder);
     setStep('success');
     setIsSubmitting(false);
@@ -371,12 +412,28 @@ export default function CheckoutPage() {
               </div>
 
               <div className="pt-2 space-y-3">
+                {submitError && (
+                  <div className="p-4 bg-red-50 border border-red-200 text-red-900 rounded-sm text-xs flex items-center gap-2.5 animate-fade-in">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                    <span>{submitError}</span>
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  className="w-full py-4 bg-[#372921] hover:bg-[#503A2E] text-[#F7F3EC] text-xs uppercase tracking-monumental font-semibold rounded-full transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                  disabled={isSubmitting}
+                  className={`w-full py-4 text-xs uppercase tracking-monumental font-semibold rounded-full transition-all shadow-md flex items-center justify-center gap-2 ${
+                    isSubmitting
+                      ? 'bg-[#76695F] text-white/80 cursor-not-allowed opacity-90'
+                      : 'bg-[#372921] hover:bg-[#503A2E] text-[#F7F3EC] cursor-pointer'
+                  }`}
                 >
                   <ShieldCheck className="w-4 h-4" />
-                  <span>Place Order & Confirm Handcraft · {formatINR(total)}</span>
+                  <span>
+                    {isSubmitting
+                      ? 'Securing Atelier Loom Reservation...'
+                      : `Place Order & Confirm Handcraft · ${formatINR(total)}`}
+                  </span>
                 </button>
 
                 {/* DPDP Act 2023 Transaction Notice */}

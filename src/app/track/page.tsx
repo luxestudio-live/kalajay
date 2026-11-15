@@ -158,28 +158,9 @@ export default function TrackOrderPage() {
       setActiveOrder(KNOWN_ORDERS[clean]);
       setError(false);
     } else {
-      // Create a simulated live order for any entered string so the user is never stuck
-      setActiveOrder({
-        orderId: clean,
-        placedDate: '01 Nov 2026',
-        estimatedDelivery: '06 Nov 2026',
-        status: 'transit',
-        items: [
-          {
-            name: 'Handcrafted Craft House Piece',
-            variant: 'Custom Artisan Selection',
-            price: 1299,
-            image: 'https://www.kalajay.in/v2/p3-2.jpg',
-          },
-        ],
-        total: 1299,
-        customerName: 'Valued Patron',
-        city: 'India Destination',
-        artisanNote: 'Individual bead sequence verified and calibrated for tension.',
-        awbNumber: 'KJ-DISP-' + Math.floor(10000000 + Math.random() * 90000000),
-        courier: 'Kalajay In-House Direct Dispatch',
-      });
-      setError(false);
+      // Authentic error state - order reference does not exist
+      setActiveOrder(null);
+      setError(true);
     }
     setLoading(false);
     setSearched(true);
@@ -260,6 +241,46 @@ export default function TrackOrderPage() {
           </div>
         </div>
       </div>
+
+      {/* Order Not Found State */}
+      {error && !activeOrder && (
+        <div className="max-w-2xl mx-auto px-4 pt-12 animate-fade-in">
+          <div className="p-8 bg-canvas-subtle border border-border-medium rounded-sm text-center space-y-5">
+            <div className="w-12 h-12 mx-auto rounded-full bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200">
+              <Compass className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="text-[11px] uppercase tracking-refined text-rosewood font-bold block mb-1">
+                Artisan Dispatch Tracking
+              </span>
+              <h3 className="font-serif text-2xl text-plum">
+                No Record Found for &ldquo;{query}&rdquo;
+              </h3>
+            </div>
+            <p className="text-xs text-ink-muted leading-relaxed max-w-md mx-auto">
+              We could not locate an active artisan order or dispatch manifest matching this reference. Please verify your order number from your email receipt or contact our Patron Concierge team for direct assistance.
+            </p>
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <a
+                href={`https://wa.me/919740540847?text=Hello%20Kalajay!%20I%20am%20trying%20to%20track%20my%20order%20reference%20${encodeURIComponent(query)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-6 py-2.5 bg-[#372921] hover:bg-[#503A2E] text-white text-xs uppercase tracking-editorial rounded-sm font-semibold flex items-center gap-2"
+              >
+                <MessageCircle className="w-3.5 h-3.5 text-rosewood" />
+                <span>Contact Atelier on WhatsApp</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => { setQuery(''); setError(false); }}
+                className="px-5 py-2.5 bg-canvas border border-border-medium text-xs text-ink uppercase tracking-editorial rounded-sm font-medium"
+              >
+                Clear Search
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tracking Result Display */}
       {activeOrder && (

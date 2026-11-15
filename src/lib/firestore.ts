@@ -210,18 +210,22 @@ export async function getFirestoreOrderById(orderId: string): Promise<AdminOrder
   }
 }
 
-export async function createFirestoreOrder(order: AdminOrder): Promise<string> {
+export async function createFirestoreOrder(
+  order: AdminOrder
+): Promise<{ success: boolean; orderId: string; error?: string }> {
   try {
-    if (!db || !db.type) return order.id;
+    if (!db || !db.type) {
+      return { success: false, orderId: order.id, error: 'Database service is offline or uninitialized.' };
+    }
     const orderDocRef = doc(db, 'orders', order.id);
     await setDoc(orderDocRef, {
       ...order,
       createdAtServer: serverTimestamp(),
     }, { merge: true });
-    return order.id;
-  } catch (error) {
+    return { success: true, orderId: order.id };
+  } catch (error: any) {
     console.error('Error writing order to Firestore:', error);
-    return order.id;
+    return { success: false, orderId: order.id, error: error?.message || 'Database write rejected' };
   }
 }
 

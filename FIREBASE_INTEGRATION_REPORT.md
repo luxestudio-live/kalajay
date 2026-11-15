@@ -1,8 +1,6 @@
 # KALAJAY HANDCRAFTED LUXURIES — FIREBASE & CLOUDINARY INTEGRATION REPORT
 
 **Document ID:** `KJ-ARCH-2026-INT-001`  
-**Firebase Project:** `kalajay-667ff`  
-**Web App ID:** `1:671100616963:web:cb1d78933fa3a8e166a936`  
 **Firestore Region:** `asia-south1` (Mumbai) · Standard Edition  
 **Cloudinary Cloud Name:** `da6uncyb` · Preset: `kalajay_products` (Unsigned)  
 **Execution Date:** 15 November 2026  

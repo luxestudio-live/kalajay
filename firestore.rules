@@ -1,15 +1,17 @@
 rules_version = '2';
 
 // ===============================================================
-// Kalajay Handcrafted Luxuries - Cloud Firestore Security Rules
-// Project ID: kalajay-667ff
-// Architecture: Next.js Digital Flagship + Unified Admin Operations
+// KALAJAY HANDCRAFTED LUXURIES — PRODUCTION FIRESTORE SECURITY RULES
+// Database: kalajay-667ff (asia-south1)
+// Architecture: Least-Privilege Role-Based Access Control (RBAC)
 // ===============================================================
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
+    // -------------------------------------------------------------
+    // Core Helper Functions
+    // -------------------------------------------------------------
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -18,87 +20,225 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    // Secure Admin Determination:
+    // 1. Auth Custom Claim (token.admin == true)
+    // 2. Verified @kalajay.in corporate staff email with email_verified == true
+    // 3. Document in /admin_users/{uid} (server-managed ACL)
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        (request.auth.token.email != null &&
+         request.auth.token.email.matches('.*@kalajay\\.in$') &&
+         request.auth.token.email_verified == true) ||
+        exists(/databases/$(database)/documents/admin_users/$(request.auth.uid))
+      );
+    }
+
+    // -------------------------------------------------------------
+    // Validation Helpers
+    // -------------------------------------------------------------
+    function isValidProduct(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 150 &&
+             data.code is string && data.code.size() > 0 && data.code.size() <= 50 &&
+             data.price is number && data.price >= 0 &&
+             data.category is string &&
+             data.coverImage is string;
+    }
+
+    function isValidUser(data, userId) {
+      return data.id == userId &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 150)) &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 25)) &&
+             (!('rewardPoints' in data) || (data.rewardPoints is number && data.rewardPoints >= 0));
+    }
+
+    function isValidOrder(data) {
+      return data.id is string && data.id.size() > 0 &&
+             data.customerName is string && data.customerName.size() > 0 && data.customerName.size() <= 120 &&
+             data.total is number && data.total >= 0 &&
+             data.items is list && data.items.size() > 0 && data.items.size() <= 50 &&
+             data.shippingAddress is map &&
+             data.fulfillmentStatus in ['unfulfilled', 'in_loom', 'quality_checked', 'shipped', 'delivered', 'rto'];
+    }
+
+    function isValidCustomEnquiry(data) {
+      return data.silhouette is string && data.silhouette.size() > 0 &&
+             data.estimatedPrice is number && data.estimatedPrice >= 0 &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 2000));
+    }
+
+    function isValidSupportTicket(data) {
+      return data.customerName is string && data.customerName.size() > 0 && data.customerName.size() <= 120 &&
+             data.email is string && data.email.size() > 0 &&
+             data.subject is string && data.subject.size() > 0 && data.subject.size() <= 200 &&
+             data.messages is list && data.messages.size() > 0;
+    }
+
+    // -------------------------------------------------------------
     // 1. Products Catalogue
-    // Storefront shoppers require public read access.
-    // Operations console manages product records, pricing, and imagery.
+    // Storefront visitors need public read access to browse the catalogue.
+    // Writes are strictly restricted to verified Administrators.
+    // -------------------------------------------------------------
     match /products/{productId} {
       allow read: if true;
-      allow write: if true;
+      allow create: if isAdmin() && isValidProduct(request.resource.data);
+      allow update: if isAdmin() && isValidProduct(request.resource.data);
+      allow delete: if isAdmin();
     }
 
+    // -------------------------------------------------------------
     // 2. Collections & Categories
+    // Public read for navigation. Admin write only.
+    // -------------------------------------------------------------
     match /categories/{categoryId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if isAdmin();
     }
 
-    // 3. Orders & Tracking
-    // Shoppers can create orders at checkout and look up order tracking.
-    // Admin operations console manages status transitions (In Loom -> Shipped -> Delivered).
-    match /orders/{orderId} {
-      allow read: if true;
-      allow write: if true;
-    }
-
-    // 4. Patron Users & Profiles
-    // Synchronized with Firebase Authentication UID.
-    match /users/{userId} {
-      allow read: if true;
-      allow write: if true;
-    }
-
-    // 5. Bespoke Studio Custom Enquiries
-    // Website patrons submit custom colorway, silhouette, and monogram requests.
-    // Concierge and studio staff inspect and quote via Admin console.
-    match /custom_enquiries/{enquiryId} {
-      allow read: if true;
-      allow write: if true;
-    }
-
-    // 6. Corporate & Bulk Gifting Requests
-    match /corporate_enquiries/{enquiryId} {
-      allow read: if true;
-      allow write: if true;
-    }
-
-    // 7. Patron Concierge & Support Tickets
-    match /support_tickets/{ticketId} {
-      allow read: if true;
-      allow write: if true;
-    }
-
-    // 8. CMS, Homepage Banners & Featured Products Curation
+    // -------------------------------------------------------------
+    // 3. CMS & Homepage Rails (Featured Curation, Banners)
+    // Public read for website presentation. Admin write only.
+    // -------------------------------------------------------------
     match /cms/{docId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if isAdmin();
     }
 
-    // 9. Inventory ERP & Stock Adjustments
+    // -------------------------------------------------------------
+    // 4. Inventory ERP & Stock
+    // Read: Public (to display stock status on product pages).
+    // Write: Strictly restricted to verified Administrators.
+    // -------------------------------------------------------------
     match /inventory/{sku} {
       allow read: if true;
-      allow write: if true;
+      allow write: if isAdmin();
     }
+
+    // Stock adjustments audit trail - Admin only
     match /stock_adjustments/{adjId} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if isAdmin();
     }
 
-    // 10. Marketing Coupons & Promotional Vouchers
+    // -------------------------------------------------------------
+    // 5. Coupons & Promotions
+    // Public can read active coupons to validate promo codes at checkout.
+    // Create/update/delete restricted to Administrators.
+    // -------------------------------------------------------------
     match /coupons/{couponId} {
-      allow read: if true;
-      allow write: if true;
+      allow read: if resource.data.isActive == true || isAdmin();
+      allow write: if isAdmin();
     }
 
-    // 11. Security Audit Logs
+    // -------------------------------------------------------------
+    // 6. Patron User Profiles (/users/{userId})
+    // Strictly private: A user may only read/write their own profile.
+    // -------------------------------------------------------------
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if (isOwner(userId) && isValidUser(request.resource.data, userId)) || isAdmin();
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data, userId)) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 7. Orders (/orders/{orderId})
+    // Creation: Permitted for legitimate checkout submissions.
+    // Read: Restricted to the patron who placed the order OR Admin.
+    // Update: STRICTLY ADMIN ONLY. Patrons CANNOT modify orders, prices,
+    // payment status, or tracking stages once placed.
+    // Delete: Disallowed (audit trail protection).
+    // -------------------------------------------------------------
+    match /orders/{orderId} {
+      allow create: if isValidOrder(request.resource.data) && (
+        !isAuthenticated() ||
+        request.resource.data.userId == request.auth.uid ||
+        request.resource.data.customerEmail == request.auth.token.email ||
+        isAdmin()
+      );
+      allow read: if (
+        isAuthenticated() && (
+          resource.data.userId == request.auth.uid ||
+          (request.auth.token.email != null && resource.data.customerEmail == request.auth.token.email)
+        )
+      ) || isAdmin();
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // -------------------------------------------------------------
+    // 8. Bespoke Custom Enquiries (/custom_enquiries)
+    // Patrons & guests can submit custom commission requests.
+    // Read/Update/Delete is strictly restricted to Admin/Concierge.
+    // -------------------------------------------------------------
+    match /custom_enquiries/{enquiryId} {
+      allow create: if isValidCustomEnquiry(request.resource.data);
+      allow read, update, delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 9. Corporate Gifting Enquiries (/corporate_enquiries)
+    // Prospective institutional clients can submit leads.
+    // Read/Update/Delete is strictly restricted to Admin.
+    // -------------------------------------------------------------
+    match /corporate_enquiries/{enquiryId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 10. Support Tickets (/support_tickets)
+    // Create: Anyone can create a support ticket.
+    // Read: Ticket creator (by email/userId match) OR Admin.
+    // Update: Admin can reply/resolve; Creator can append messages only.
+    // Delete: Disallowed.
+    // -------------------------------------------------------------
+    match /support_tickets/{ticketId} {
+      allow create: if isValidSupportTicket(request.resource.data);
+      allow read: if (
+        isAuthenticated() && (
+          resource.data.userId == request.auth.uid ||
+          (request.auth.token.email != null && resource.data.email == request.auth.token.email)
+        )
+      ) || isAdmin();
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || resource.data.email == request.auth.token.email) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['messages', 'updatedAt'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 11. Security Audit Logs (/audit_logs)
+    // Strictly restricted to verified Administrators.
+    // -------------------------------------------------------------
     match /audit_logs/{logId} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if isAdmin();
     }
 
-    // 12. System Health & Connectivity Diagnostics
+    // -------------------------------------------------------------
+    // 12. Admin Users ACL (/admin_users/{adminId})
+    // Server/Console managed. Read by authenticated users for RBAC.
+    // -------------------------------------------------------------
+    match /admin_users/{adminId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    // -------------------------------------------------------------
+    // 13. System Health Diagnostics (/system/{docId})
+    // -------------------------------------------------------------
     match /system/{docId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // Default Deny
+    // -------------------------------------------------------------
+    match /{document=**} {
+      allow read, write: false;
     }
   }
 }

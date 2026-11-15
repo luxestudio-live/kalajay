@@ -16,6 +16,7 @@ import {
   Package,
   Boxes,
   ShoppingBag,
+  Lock,
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
 import { ADMIN_MODULE_DEFINITIONS } from '@/data/adminPermissions';
@@ -23,11 +24,15 @@ import { ADMIN_MODULE_DEFINITIONS } from '@/data/adminPermissions';
 interface AdminHeaderProps {
   onOpenMobileMenu: () => void;
   onOpenSearch: () => void;
+  onLockConsole?: () => void;
+  staffEmail?: string;
 }
 
 export default function AdminHeader({
   onOpenMobileMenu,
   onOpenSearch,
+  onLockConsole,
+  staffEmail,
 }: AdminHeaderProps) {
   const {
     activeRole,
@@ -277,6 +282,19 @@ export default function AdminHeader({
             <span>Live Store</span>
             <ExternalLink className="w-3 h-3 text-[#C5A880]" />
           </Link>
+
+          {/* Secure Staff Console Lock */}
+          {onLockConsole && (
+            <button
+              type="button"
+              onClick={onLockConsole}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#503A2E] hover:bg-[#874427] text-white text-xs font-semibold tracking-wide transition-all shadow-xs cursor-pointer"
+              title={`Lock administrative console (${staffEmail || 'Authorized Staff'})`}
+            >
+              <Lock className="w-3 h-3 text-[#C5A880]" />
+              <span className="hidden sm:inline">Lock Console</span>
+            </button>
+          )}
         </div>
       </div>
     </header>
