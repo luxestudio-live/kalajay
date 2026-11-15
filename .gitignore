@@ -21,10 +21,23 @@ scratch/
 credentials/
 *.local.json
 
-# debug
+# debug & emulator logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+hub-debug.log*
+*.emulator.log
+
+# firebase CLI cache & credentials
+.firebase/
+*serviceAccountKey*.json
+*-adminsdk-*.json
+google-services.json
+GoogleService-Info.plist
+*.key.json
 
 # local env files
 .env*.local
@@ -52,6 +65,8 @@ next-env.d.ts
 
 # AI / Agent configuration & instruction files (kept in local only)
 .agent/
+.agents/
+skills-lock.json
 AGENTS.md
 CLAUDE.md
 GEMINI.md
