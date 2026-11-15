@@ -20,6 +20,12 @@ import {
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
 import { PRODUCTS, COLLECTIONS, Product, Collection } from '@/data/catalogue';
+import {
+  getFirestoreProducts,
+  saveFirestoreProduct,
+  deleteFirestoreProduct,
+} from '@/lib/firestore';
+import { uploadToCloudinary } from '@/lib/cloudinary';
 
 interface ReviewItem {
   id: string;
@@ -127,6 +133,46 @@ export default function CatalogueView() {
     description: 'Masterfully hand-threaded by artisan women in Bihar.',
   });
 
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  // Sync products from Cloud Firestore on mount
+  React.useEffect(() => {
+    getFirestoreProducts().then((liveProds) => {
+      if (liveProds && liveProds.length > 0) {
+        const codeSet = new Set(liveProds.map(p => p.code));
+        const combined = [...liveProds, ...PRODUCTS.filter(p => !codeSet.has(p.code))];
+        setProducts(combined);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingImage(true);
+    try {
+      const res = await uploadToCloudinary(file);
+      if (res.secureUrl) {
+        setNewProduct(prev => ({ ...prev, coverImage: res.secureUrl! }));
+        showToast('Uploaded image to Cloudinary (kalajay/products)');
+      } else if (res.error) {
+        showModal({
+          title: 'Upload Failed',
+          message: res.error,
+          icon: 'warning',
+        });
+      }
+    } catch (err: any) {
+      showModal({
+        title: 'Upload Failed',
+        message: err.message || 'Could not upload image to Cloudinary.',
+        icon: 'warning',
+      });
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
   const canEditCatalogue = can('catalogue.products', 'edit');
   const categories = ['All', ...collections.map(c => c.name)];
 
@@ -175,6 +221,7 @@ export default function CatalogueView() {
 
     setProducts(prev => [productItem, ...prev]);
     setAddModalOpen(false);
+    saveFirestoreProduct(productItem).catch(() => {});
     logAction('CREATE_PRODUCT', 'catalogue', `Added new handcrafted piece: ${productItem.name} (${productItem.code})`);
     showToast(`Added "${productItem.name}" to the master product catalogue.`);
     setNewProduct({
@@ -194,14 +241,17 @@ export default function CatalogueView() {
     if (!editingProduct) return;
     setProducts(prev => prev.map(p => (p.id === editingProduct.id ? editingProduct : p)));
     setEditProductModalOpen(false);
+    saveFirestoreProduct(editingProduct).catch(() => {});
     logAction('UPDATE_PRODUCT', 'catalogue', `Updated details for: ${editingProduct.name} (${editingProduct.code})`);
     showToast(`Updated "${editingProduct.name}" specifications.`);
   };
 
   const handleDeleteProduct = () => {
     if (!deletingProduct) return;
+    const targetId = deletingProduct.id || deletingProduct.code;
     setProducts(prev => prev.filter(p => p.id !== deletingProduct.id));
     setDeleteProductModalOpen(false);
+    deleteFirestoreProduct(targetId).catch(() => {});
     logAction('DELETE_PRODUCT', 'catalogue', `Archived piece: ${deletingProduct.name} (${deletingProduct.code})`);
     showToast(`Archived "${deletingProduct.name}" from storefront catalogue.`);
     setDeletingProduct(null);
@@ -653,14 +703,27 @@ export default function CatalogueView() {
 
               <div>
                 <label className="block text-xs font-semibold text-[#372921] mb-1">
-                  Cover Image URL / Path
+                  Cover Image URL / Path (or Upload to Cloudinary)
                 </label>
-                <input
-                  type="text"
-                  value={newProduct.coverImage}
-                  onChange={e => setNewProduct(prev => ({ ...prev, coverImage: e.target.value }))}
-                  className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newProduct.coverImage}
+                    onChange={e => setNewProduct(prev => ({ ...prev, coverImage: e.target.value }))}
+                    className="flex-1 bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                    placeholder="https://... or upload image"
+                  />
+                  <label className="cursor-pointer px-3.5 py-2 bg-[#FAF7F2] border border-[#DED3C5] hover:border-[#9E5430] hover:text-[#9E5430] text-[#372921] rounded-xl text-xs font-medium flex items-center justify-center shrink-0 transition-colors">
+                    {isUploadingImage ? 'Uploading...' : 'Upload Image'}
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/avif"
+                      onChange={handleImageFileUpload}
+                      className="hidden"
+                      disabled={isUploadingImage}
+                    />
+                  </label>
+                </div>
               </div>
 
               <div>

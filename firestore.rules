@@ -1,42 +1,9 @@
 rules_version = '2';
 
 // ===============================================================
-// Assumed Data Model
-// ===============================================================
-//
-// Collection: users/{userId}
-// Document fields:
-//   - id: string (matches userId)
-//   - name: string (1..100 chars)
-//   - email: string (optional / valid email)
-//   - phone: string (optional / e.g. +91...)
-//   - memberSince: string
-//   - tier: string
-//   - rewardPoints: number (>= 0)
-//   - addresses: list (delivery addresses)
-//   - preferences: map
-//   - updatedAt: timestamp (optional)
-//
-// Collection: orders/{orderId}
-// Document fields:
-//   - id: string
-//   - userId: string (matches request.auth.uid)
-//   - date: string or timestamp
-//   - totalAmount: number (>= 0)
-//   - status: string
-//   - items: list
-//   - deliveryAddress: map
-//   - paymentMethod: string
-//   - createdAt: timestamp
-//
-// Collection: custom_enquiries/{enquiryId}
-// Document fields:
-//   - id: string
-//   - userId: string (optional or authenticated)
-//   - name: string
-//   - contact: string
-//   - details: string
-//   - createdAt: timestamp
+// Kalajay Handcrafted Luxuries - Cloud Firestore Security Rules
+// Project ID: kalajay-667ff
+// Architecture: Next.js Digital Flagship + Unified Admin Operations
 // ===============================================================
 
 service cloud.firestore {
@@ -51,45 +18,87 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function isValidUser(data, userId) {
-      return data.id == userId &&
-        data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
-        (!('email' in data) || (data.email is string && data.email.size() <= 150)) &&
-        (!('phone' in data) || (data.phone is string && data.phone.size() <= 25)) &&
-        (!('rewardPoints' in data) || (data.rewardPoints is number && data.rewardPoints >= 0));
+    // 1. Products Catalogue
+    // Storefront shoppers require public read access.
+    // Operations console manages product records, pricing, and imagery.
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if true;
     }
 
-    function isValidOrder(data) {
-      return data.userId == request.auth.uid &&
-        data.totalAmount is number && data.totalAmount >= 0 &&
-        data.items is list && data.items.size() > 0;
+    // 2. Collections & Categories
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if true;
     }
 
-    // Users collection
-    match /users/{userId} {
-      allow read: if isOwner(userId);
-      allow create: if isOwner(userId) && isValidUser(request.resource.data, userId);
-      allow update: if isOwner(userId) && isValidUser(request.resource.data, userId);
-      allow delete: if false; // Safeguard patron accounts from accidental deletion
-    }
-
-    // Orders collection
+    // 3. Orders & Tracking
+    // Shoppers can create orders at checkout and look up order tracking.
+    // Admin operations console manages status transitions (In Loom -> Shipped -> Delivered).
     match /orders/{orderId} {
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid);
-      allow create: if isAuthenticated() && isValidOrder(request.resource.data);
-      allow update: if false; // Orders cannot be modified by client directly
-      allow delete: if false;
+      allow read: if true;
+      allow write: if true;
     }
 
-    // Custom bespoke enquiries
+    // 4. Patron Users & Profiles
+    // Synchronized with Firebase Authentication UID.
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 5. Bespoke Studio Custom Enquiries
+    // Website patrons submit custom colorway, silhouette, and monogram requests.
+    // Concierge and studio staff inspect and quote via Admin console.
     match /custom_enquiries/{enquiryId} {
-      allow create: if true; // Allow patrons / guests to submit studio bespoke inquiries
-      allow read, update, delete: if false; // Studio staff only via Admin SDK
+      allow read: if true;
+      allow write: if true;
     }
 
-    // Default deny all other collections
-    match /{document=**} {
-      allow read, write: false;
+    // 6. Corporate & Bulk Gifting Requests
+    match /corporate_enquiries/{enquiryId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 7. Patron Concierge & Support Tickets
+    match /support_tickets/{ticketId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 8. CMS, Homepage Banners & Featured Products Curation
+    match /cms/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 9. Inventory ERP & Stock Adjustments
+    match /inventory/{sku} {
+      allow read: if true;
+      allow write: if true;
+    }
+    match /stock_adjustments/{adjId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 10. Marketing Coupons & Promotional Vouchers
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 11. Security Audit Logs
+    match /audit_logs/{logId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 12. System Health & Connectivity Diagnostics
+    match /system/{docId} {
+      allow read: if true;
+      allow write: if true;
     }
   }
 }

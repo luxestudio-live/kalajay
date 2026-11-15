@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { CUSTOMISER_CONFIG } from '@/data/extras';
 import { useCart } from '@/context/CartContext';
+import { createFirestoreCustomEnquiry } from '@/lib/firestore';
 
 export default function CustomisePage() {
   const { formatINR, addToCart } = useCart();
@@ -47,7 +48,7 @@ export default function CustomisePage() {
   const unitPrice = calculatedBasePrice + charmPrice;
   const estimatedTotal = unitPrice * quantity;
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     // Add custom piece as a typed synthetic product to cart
     const customProduct = {
       id: `CUSTOM-${Date.now()}`,
@@ -77,6 +78,25 @@ export default function CustomisePage() {
 
     addToCart(customProduct, undefined, quantity);
     setSubmitted(true);
+
+    // Sync to Firestore /custom_enquiries for Admin operations
+    try {
+      await createFirestoreCustomEnquiry({
+        customerName: 'Studio Patron',
+        email: 'concierge@kalajay.in',
+        phone: '+91 97405 40847',
+        silhouette: activeConfig.productType,
+        palette: activePalette.name,
+        accents: selectedCharms,
+        monogram: monogramText || 'None',
+        occasion,
+        notes: customNotes || '',
+        estimatedPrice: estimatedTotal,
+        status: 'inquiry_received',
+      });
+    } catch (err) {
+      console.warn('Firestore custom inquiry deferred:', err);
+    }
   };
 
   const waCustomText = `Hi Kalajay! I designed a custom piece in your Bespoke Studio:\n\n• Product: ${activeConfig.productType}\n• Palette: ${activePalette.name}\n• Finish: ${activeAccent.name}\n• Accents: ${selectedCharms.join(', ') || 'None'}\n• Monogram: ${monogramText || 'None'}\n• Occasion: ${occasion}\n• Quantity: ${quantity}\n• Estimated Total: ${formatINR(estimatedTotal)}\n• Notes: ${customNotes || 'None'}\n\nCould you please review and confirm the artisan loom schedule?`;

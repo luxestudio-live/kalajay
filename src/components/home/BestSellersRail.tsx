@@ -6,6 +6,7 @@ import { ArrowRight, ShoppingBag, Check, Star } from 'lucide-react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { PRODUCTS, Product } from '@/data/catalogue';
+import { getFirestoreFeaturedConfig } from '@/lib/firestore';
 import { useCart } from '@/context/CartContext';
 
 if (typeof window !== 'undefined') {
@@ -28,10 +29,20 @@ export default function BestSellersRail() {
   const trackRef = useRef<HTMLDivElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const [addedId, setAddedId] = useState<string | null>(null);
+  const [dynamicFeaturedIds, setDynamicFeaturedIds] = useState<string[]>([]);
+
+  // Fetch dynamic curation from Cloud Firestore /cms/featured_products
+  useEffect(() => {
+    getFirestoreFeaturedConfig().then(cfg => {
+      if (cfg && cfg.productIds && cfg.productIds.length > 0) {
+        setDynamicFeaturedIds(cfg.productIds);
+      }
+    }).catch(() => {});
+  }, []);
 
   // Curate 8 authentic, verified bestsellers with genuine macro photography
   const bestSellers: Product[] = useMemo(() => {
-    const curatedIds = [
+    const curatedIds = dynamicFeaturedIds.length > 0 ? dynamicFeaturedIds : [
       'KJ-ORG-101', // Pearl Vanity Jewellery Box
       'KJ-APC-404', // Crystal Beaded AirPods Case
       'KJ-MAT-510', // Beaded Theme Mat
@@ -54,7 +65,7 @@ export default function BestSellersRail() {
     return PRODUCTS.filter(
       (p) => !p.coverImage.includes('brand.png') && !p.coverImage.includes('kalajay-brand')
     ).slice(0, 8);
-  }, []);
+  }, [dynamicFeaturedIds]);
 
   useIsomorphicLayoutEffect(() => {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;

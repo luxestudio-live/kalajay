@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { BRAND_CONFIG } from '@/data/catalogue';
+import { createFirestoreOrder } from '@/lib/firestore';
+import type { AdminOrder } from '@/data/adminTypes';
 
 export default function CheckoutPage() {
   const { cart, subtotal, deliveryFee, total, formatINR, clearCart } = useCart();
@@ -30,11 +32,67 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'whatsapp'>('upi');
   const [orderNumber, setOrderNumber] = useState('');
 
-  const handleSubmitOrder = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     const generatedOrder = `KJ-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const payMethodMapped =
+      paymentMethod === 'upi'
+        ? ('UPI Instant' as const)
+        : paymentMethod === 'card'
+        ? ('Credit/Debit Card' as const)
+        : ('WhatsApp Direct' as const);
+
+    const orderRecord: AdminOrder = {
+      id: generatedOrder,
+      customerName: name || 'Honoured Guest',
+      customerEmail: email || '',
+      customerPhone: phone || '',
+      items: cart.map(item => ({
+        productId: item.code || item.id,
+        name: item.name,
+        sku: item.code || item.id,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image,
+      })),
+      subtotal,
+      discount: 0,
+      shipping: deliveryFee,
+      tax: Math.round(subtotal * 0.03),
+      total,
+      paymentStatus: 'paid',
+      paymentMethod: payMethodMapped,
+      fulfillmentStatus: 'in_loom',
+      shippingAddress: {
+        addressLine: address || '',
+        city: city || 'Mumbai',
+        state: stateName || 'Maharashtra',
+        pincode: pincode || '400001',
+      },
+      timeline: [
+        { title: 'Order Placed', timestamp: new Date().toISOString(), note: 'Verified via Kalajay Checkout' },
+        { title: 'In Loom - Bihar Craft House', timestamp: new Date().toISOString(), note: 'Allocated to master artisan loom' },
+      ],
+      artisanNote: 'Scheduled for artisan weaving on wooden hand-loom with precision tensioned crystal thread.',
+      courier: 'Kalajay In-House Direct Dispatch',
+      trackingAwb: `KJ-DISP-${Math.floor(10000000 + Math.random() * 90000000)}`,
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      await createFirestoreOrder(orderRecord);
+    } catch (err) {
+      console.warn('Firestore order sync deferred:', err);
+    }
+
     setOrderNumber(generatedOrder);
     setStep('success');
+    setIsSubmitting(false);
     clearCart();
   };
 

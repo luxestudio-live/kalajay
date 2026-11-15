@@ -39,6 +39,31 @@ import {
   SEED_TAX_SLABS,
   SEED_OFFLINE_ORDERS,
 } from './adminSeedData';
+import {
+  getAllFirestoreOrders,
+  createFirestoreOrder,
+  updateFirestoreOrderStatus,
+  subscribeToOrders,
+  getFirestoreCustomEnquiries,
+  updateFirestoreCustomEnquiry,
+  subscribeToCustomEnquiries,
+  getFirestoreCorporateEnquiries,
+  updateFirestoreCorporateEnquiry,
+  getFirestoreSupportTickets,
+  addFirestoreSupportMessage,
+  updateFirestoreTicketStatus,
+  subscribeToSupportTickets,
+  getFirestoreFeaturedConfig,
+  saveFirestoreFeaturedConfig,
+  getFirestoreBanners,
+  saveFirestoreBanners,
+  getFirestoreInventory,
+  saveFirestoreInventoryItem,
+  logFirestoreStockAdjustment,
+  getFirestoreCoupons,
+  saveFirestoreCoupon,
+  logFirestoreAuditAction,
+} from '@/lib/firestore';
 
 interface AdminStoreContextType {
   // Navigation & Role Simulation
@@ -229,7 +254,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     setGlobalModal(null);
   };
 
-  // 2. Load from LocalStorage if available on mount
+  // 2. Load from LocalStorage and sync with Cloud Firestore
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -262,6 +287,73 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     } catch {
       // safe fallback to in-memory state
     }
+
+    // Async hydration from live Cloud Firestore
+    const hydrateFromFirestore = async () => {
+      try {
+        const [liveOrders, liveCustom, liveTickets, liveFeatured, liveBanners, liveInv, liveCoupons] =
+          await Promise.allSettled([
+            getAllFirestoreOrders(),
+            getFirestoreCustomEnquiries(),
+            getFirestoreSupportTickets(),
+            getFirestoreFeaturedConfig(),
+            getFirestoreBanners(),
+            getFirestoreInventory(),
+            getFirestoreCoupons(),
+          ]);
+
+        if (liveOrders.status === 'fulfilled' && liveOrders.value.length > 0) {
+          setOrders(liveOrders.value);
+        }
+        if (liveCustom.status === 'fulfilled' && liveCustom.value.length > 0) {
+          setCustomRequests(liveCustom.value);
+        }
+        if (liveTickets.status === 'fulfilled' && liveTickets.value.length > 0) {
+          setSupportTickets(liveTickets.value);
+        }
+        if (liveFeatured.status === 'fulfilled' && liveFeatured.value) {
+          setFeaturedConfig(liveFeatured.value);
+        }
+        if (liveBanners.status === 'fulfilled' && liveBanners.value.length > 0) {
+          setBanners(liveBanners.value);
+        }
+        if (liveInv.status === 'fulfilled' && liveInv.value.length > 0) {
+          setInventory(liveInv.value);
+        }
+        if (liveCoupons.status === 'fulfilled' && liveCoupons.value.length > 0) {
+          setCoupons(liveCoupons.value);
+        }
+      } catch (err) {
+        console.warn('Initial Firestore hydration deferred:', err);
+      }
+    };
+
+    hydrateFromFirestore();
+
+    // Setup live real-time listeners
+    const unsubOrders = subscribeToOrders((liveOrders) => {
+      if (liveOrders.length > 0) {
+        setOrders(liveOrders);
+      }
+    });
+
+    const unsubCustom = subscribeToCustomEnquiries((liveCustom) => {
+      if (liveCustom.length > 0) {
+        setCustomRequests(liveCustom);
+      }
+    });
+
+    const unsubTickets = subscribeToSupportTickets((liveTickets) => {
+      if (liveTickets.length > 0) {
+        setSupportTickets(liveTickets);
+      }
+    });
+
+    return () => {
+      if (unsubOrders) unsubOrders();
+      if (unsubCustom) unsubCustom();
+      if (unsubTickets) unsubTickets();
+    };
   }, []);
 
   // 3. Persist to LocalStorage on changes
@@ -310,6 +402,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       saveState({ auditLogs: next });
       return next;
     });
+    logFirestoreAuditAction(newLog).catch(() => {});
   };
 
   // Active Role & User resolution
@@ -475,6 +568,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     };
     setFeaturedConfig(next);
     saveState({ featuredConfig: next });
+    saveFirestoreFeaturedConfig(next).catch(() => {});
     logAction(
       'UPDATE_FEATURED_PRODUCTS',
       'featured-products',
@@ -504,6 +598,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     const next = banners.map(b => (b.id === bannerId ? { ...b, ...updates } : b));
     setBanners(next);
     saveState({ banners: next });
+    saveFirestoreBanners(next).catch(() => {});
     logAction('UPDATE_BANNER', 'cms', `Updated banner/ticker ID: ${bannerId}`);
   };
 
@@ -515,6 +610,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     const next = [newBanner, ...banners];
     setBanners(next);
     saveState({ banners: next });
+    saveFirestoreBanners(next).catch(() => {});
     logAction('CREATE_BANNER', 'cms', `Created promotional announcement: ${newBanner.title}`);
   };
 
@@ -522,6 +618,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     const next = banners.filter(b => b.id !== bannerId);
     setBanners(next);
     saveState({ banners: next });
+    saveFirestoreBanners(next).catch(() => {});
     logAction('DELETE_BANNER', 'cms', `Removed banner ID: ${bannerId}`);
   };
 
@@ -574,6 +671,13 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     const nextAdj = [newAdjustment, ...stockAdjustments];
     setStockAdjustments(nextAdj);
     saveState({ inventory: nextInventory, stockAdjustments: nextAdj });
+
+    // Sync to Firestore
+    const changedItem = nextInventory.find(i => i.sku === sku);
+    if (changedItem) {
+      saveFirestoreInventoryItem(changedItem).catch(() => {});
+    }
+    logFirestoreStockAdjustment(newAdjustment).catch(() => {});
 
     logAction(
       'STOCK_ADJUSTMENT',
@@ -659,6 +763,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     fulfillmentStatus: AdminOrder['fulfillmentStatus'],
     note?: string
   ) => {
+    let updatedOrder: AdminOrder | undefined;
     const next = orders.map(ord => {
       if (ord.id === orderId) {
         const newTimeline = [
@@ -669,16 +774,25 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
             note,
           },
         ];
-        return {
+        updatedOrder = {
           ...ord,
           fulfillmentStatus,
           timeline: newTimeline,
         };
+        return updatedOrder;
       }
       return ord;
     });
     setOrders(next);
     saveState({ orders: next });
+
+    if (updatedOrder) {
+      updateFirestoreOrderStatus(orderId, {
+        fulfillmentStatus,
+        timeline: updatedOrder.timeline,
+      }).catch(() => {});
+    }
+
     logAction('ORDER_FULFILLMENT_UPDATE', 'orders', `Order ${orderId} updated to ${fulfillmentStatus}`);
   };
 
@@ -691,6 +805,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     const next = [newOrder, ...orders];
     setOrders(next);
     saveState({ orders: next });
+    createFirestoreOrder(newOrder).catch(() => {});
     logAction('CREATE_MANUAL_ORDER', 'orders', `Created manual concierge order ${newOrder.id}`);
     return newOrder;
   };
@@ -713,6 +828,10 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     });
     setCustomRequests(next);
     saveState({ customRequests: next });
+    updateFirestoreCustomEnquiry(id, {
+      status,
+      finalQuotedPrice,
+    }).catch(() => {});
     logAction('CUSTOM_REQUEST_STATUS', 'custom-orders', `Custom request ${id} updated to ${status}`);
   };
 
@@ -720,11 +839,18 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     const next = corporateEnquiries.map(c => (c.id === id ? { ...c, status } : c));
     setCorporateEnquiries(next);
     saveState({ corporateEnquiries: next });
+    updateFirestoreCorporateEnquiry(id, { status }).catch(() => {});
     logAction('CORPORATE_ENQUIRY_STATUS', 'gifting', `Corporate enquiry ${id} updated to ${status}`);
   };
 
   // Support
   const addSupportMessage = (ticketId: string, text: string) => {
+    const msgObj = {
+      sender: 'concierge' as const,
+      senderName: currentUser.name,
+      text,
+      timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
+    };
     const next = supportTickets.map(t => {
       if (t.id === ticketId) {
         return {
@@ -732,12 +858,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
           status: 'waiting_patron' as const,
           messages: [
             ...t.messages,
-            {
-              sender: 'concierge' as const,
-              senderName: currentUser.name,
-              text,
-              timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
-            },
+            msgObj,
           ],
         };
       }
@@ -745,6 +866,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     });
     setSupportTickets(next);
     saveState({ supportTickets: next });
+    addFirestoreSupportMessage(ticketId, msgObj).catch(() => {});
     logAction('SUPPORT_TICKET_REPLY', 'support', `Replied to support ticket ${ticketId}`);
   };
 
@@ -752,6 +874,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     const next = supportTickets.map(t => (t.id === ticketId ? { ...t, status } : t));
     setSupportTickets(next);
     saveState({ supportTickets: next });
+    updateFirestoreTicketStatus(ticketId, status).catch(() => {});
   };
 
   // Coupons
@@ -764,13 +887,24 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     const next = [newCoupon, ...coupons];
     setCoupons(next);
     saveState({ coupons: next });
+    saveFirestoreCoupon(newCoupon).catch(() => {});
     logAction('CREATE_COUPON', 'marketing', `Created promo code: ${newCoupon.code}`);
   };
 
   const toggleCouponStatus = (id: string) => {
-    const next = coupons.map(c => (c.id === id ? { ...c, isActive: !c.isActive } : c));
+    let toggled: CouponItem | undefined;
+    const next = coupons.map(c => {
+      if (c.id === id) {
+        toggled = { ...c, isActive: !c.isActive };
+        return toggled;
+      }
+      return c;
+    });
     setCoupons(next);
     saveState({ coupons: next });
+    if (toggled) {
+      saveFirestoreCoupon(toggled).catch(() => {});
+    }
   };
 
   // Tax Slabs (HSN) Management

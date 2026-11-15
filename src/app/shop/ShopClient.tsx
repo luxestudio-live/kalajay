@@ -18,6 +18,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { PRODUCTS, COLLECTIONS, Product, ProductVariant } from '@/data/catalogue';
+import { getFirestoreProducts } from '@/lib/firestore';
 import { useCart } from '@/context/CartContext';
 
 const ITEMS_PER_PAGE = 16;
@@ -27,6 +28,7 @@ export function ShopContent() {
   const initialCategory = searchParams.get('category') || 'All';
   const initialQuery = searchParams.get('q') || '';
 
+  const [productsList, setProductsList] = useState<Product[]>(PRODUCTS);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
   const [selectedColor, setSelectedColor] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>(initialQuery);
@@ -53,6 +55,17 @@ export function ShopContent() {
     }
   }, [searchParams]);
 
+  // Sync live products from Cloud Firestore
+  useEffect(() => {
+    getFirestoreProducts().then((liveProds) => {
+      if (liveProds && liveProds.length > 0) {
+        const codeSet = new Set(liveProds.map(p => p.code));
+        const combined = [...liveProds, ...PRODUCTS.filter(p => !codeSet.has(p.code))];
+        setProductsList(combined);
+      }
+    }).catch(() => {});
+  }, []);
+
   // Reset to page 1 whenever any filter changes
   useEffect(() => {
     setCurrentPage(1);
@@ -69,7 +82,7 @@ export function ShopContent() {
   ];
 
   const filteredProducts = useMemo(() => {
-    let list = [...PRODUCTS];
+    let list = [...productsList];
 
     // Category filter
     if (selectedCategory !== 'All') {
@@ -240,10 +253,10 @@ export function ShopContent() {
                   : 'bg-canvas text-ink border-border-subtle hover:border-border-strong'
               }`}
             >
-              All Pieces ({PRODUCTS.length})
+              All Pieces ({productsList.length})
             </button>
             {COLLECTIONS.map((col) => {
-              const count = PRODUCTS.filter((p) => p.category === col.name).length;
+              const count = productsList.filter((p) => p.category === col.name).length;
               return (
                 <button
                   key={col.slug}

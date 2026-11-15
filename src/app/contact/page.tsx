@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Mail, Phone, MessageCircle, MapPin, Instagram, Check, Send } from 'lucide-react';
 import { BRAND_CONFIG } from '@/data/catalogue';
+import { createFirestoreSupportTicket } from '@/lib/firestore';
 
 export default function ContactPage() {
   const [name, setName] = useState('');
@@ -12,9 +13,41 @@ export default function ContactPage() {
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    const ticketNumber = `TICK-${Math.floor(1000 + Math.random() * 9000)}`;
+    try {
+      await createFirestoreSupportTicket({
+        id: ticketNumber,
+        ticketNumber,
+        customerName: name || 'Valued Patron',
+        email: email || 'patron@example.com',
+        subject: subject || 'General Enquiry',
+        category: (subject.includes('Order') ? 'Order Status' : subject.includes('Custom') ? 'Customization' : 'Care & Repair') as any,
+        priority: 'medium',
+        status: 'open',
+        assignedTo: 'Patron Concierge Team',
+        messages: [
+          {
+            sender: 'customer',
+            senderName: name || 'Valued Patron',
+            text: message,
+            timestamp: new Date().toISOString(),
+          }
+        ],
+        createdAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.warn('Firestore ticket sync deferred:', err);
+    }
+
     setSent(true);
+    setIsSubmitting(false);
   };
 
   return (

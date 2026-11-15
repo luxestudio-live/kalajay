@@ -16,6 +16,7 @@ import {
   MapPin
 } from 'lucide-react';
 import { BRAND_CONFIG } from '@/data/catalogue';
+import { getFirestoreOrderById } from '@/lib/firestore';
 
 interface SimulatedOrder {
   orderId: string;
@@ -106,9 +107,53 @@ export default function TrackOrderPage() {
   const [searched, setSearched] = useState(true);
   const [error, setError] = useState(false);
 
-  const handleSearch = (e?: React.FormEvent) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const clean = query.trim().toUpperCase();
+    if (!clean) return;
+
+    setLoading(true);
+    try {
+      const liveDoc = await getFirestoreOrderById(clean);
+      if (liveDoc) {
+        const mappedStatus: SimulatedOrder['status'] =
+          liveDoc.fulfillmentStatus === 'delivered'
+            ? 'delivered'
+            : liveDoc.fulfillmentStatus === 'shipped'
+            ? 'transit'
+            : liveDoc.fulfillmentStatus === 'in_loom'
+            ? 'loom'
+            : 'sealed';
+
+        setActiveOrder({
+          orderId: liveDoc.id,
+          placedDate: liveDoc.createdAt ? new Date(liveDoc.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recent',
+          estimatedDelivery: '3 to 5 Business Days',
+          status: mappedStatus,
+          items: liveDoc.items.map(it => ({
+            name: it.name,
+            variant: `${it.sku} · Qty ${it.quantity}`,
+            price: it.price,
+            image: it.image || 'https://www.kalajay.in/v2/p3-2.jpg',
+          })),
+          total: liveDoc.total,
+          customerName: liveDoc.customerName,
+          city: `${liveDoc.shippingAddress?.city || 'India'}, ${liveDoc.shippingAddress?.state || ''}`,
+          artisanNote: liveDoc.artisanNote || 'Handcrafted on Bihar artisan loom with heirloom-grade bead tension.',
+          awbNumber: liveDoc.trackingAwb || 'KJ-DISP-' + Math.floor(10000000 + Math.random() * 90000000),
+          courier: liveDoc.courier || 'Kalajay In-House Direct Dispatch',
+        });
+        setError(false);
+        setSearched(true);
+        setLoading(false);
+        return;
+      }
+    } catch (err) {
+      console.warn('Live order query failed, using fallback:', err);
+    }
+
     if (KNOWN_ORDERS[clean]) {
       setActiveOrder(KNOWN_ORDERS[clean]);
       setError(false);
@@ -136,6 +181,7 @@ export default function TrackOrderPage() {
       });
       setError(false);
     }
+    setLoading(false);
     setSearched(true);
   };
 
