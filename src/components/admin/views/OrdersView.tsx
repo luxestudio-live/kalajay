@@ -34,6 +34,8 @@ export default function OrdersView() {
   const [search, setSearch] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [statusToUpdate, setStatusToUpdate] = useState<AdminOrder['fulfillmentStatus']>('in_loom');
+  const [statusNote, setStatusNote] = useState('');
 
   // Manual Order Builder State
   const [custName, setCustName] = useState('');
@@ -289,6 +291,7 @@ export default function OrdersView() {
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedOrder(order);
+                            setStatusToUpdate(order.fulfillmentStatus);
                           }}
                           className="px-2.5 py-1 rounded bg-[#F7F3EC] hover:bg-[#EAE2D8] text-[#372921] font-semibold text-[11px] inline-flex items-center gap-1 cursor-pointer"
                         >
@@ -591,6 +594,66 @@ export default function OrdersView() {
                   {selectedOrder.shippingAddress.addressLine}, {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} - {selectedOrder.shippingAddress.pincode}
                 </p>
                 <span className="text-[#76695F] block mt-1">Contact: {selectedOrder.customerPhone} ({selectedOrder.customerEmail})</span>
+              </div>
+
+              {/* Status Update Control */}
+              <div className="p-4 bg-[#FAF8F5] rounded-xl border border-[#DED3C5] space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold uppercase tracking-wider text-[10.5px] text-[#76695F]">
+                    Update Fulfillment Status &amp; Tracking
+                  </span>
+                  <span className="text-[10px] text-[#9E5430] font-medium">Syncs live to Firestore</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#372921] mb-1">Status Milestone</label>
+                    <select
+                      value={statusToUpdate}
+                      onChange={(e) => setStatusToUpdate(e.target.value as AdminOrder['fulfillmentStatus'])}
+                      className="w-full bg-white border border-[#DED3C5] rounded-lg px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                    >
+                      <option value="unfulfilled">Unfulfilled / Order Queued</option>
+                      <option value="in_loom">In Atelier Loom (Bihar)</option>
+                      <option value="quality_checked">Quality Inspected &amp; Wax-Sealed (Mumbai)</option>
+                      <option value="shipped">Dispatched &amp; In Transit</option>
+                      <option value="delivered">Delivered to Patron</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#372921] mb-1">Artisan Note / Courier AWB</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Dispatched via In-House Direct, AWB: KLJ-..."
+                      value={statusNote}
+                      onChange={(e) => setStatusNote(e.target.value)}
+                      className="w-full bg-white border border-[#DED3C5] rounded-lg px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!selectedOrder) return;
+                    updateOrderStatus(selectedOrder.id, statusToUpdate, statusNote || undefined);
+                    setSelectedOrder(prev => prev ? {
+                      ...prev,
+                      fulfillmentStatus: statusToUpdate,
+                      timeline: [
+                        ...prev.timeline,
+                        {
+                          title: `Fulfillment Status: ${statusToUpdate.toUpperCase()}`,
+                          timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
+                          note: statusNote || undefined,
+                        }
+                      ]
+                    } : null);
+                    showToast(`Order #${selectedOrder.id} status updated to ${statusToUpdate.replace('_', ' ')}.`);
+                    setStatusNote('');
+                  }}
+                  className="w-full py-2 bg-[#9E5430] hover:bg-[#874427] text-white rounded-lg text-xs font-semibold transition-colors shadow-xs cursor-pointer"
+                >
+                  Apply Status Transition
+                </button>
               </div>
 
               {/* Timeline Milestones */}
