@@ -59,6 +59,7 @@ export interface AdminUser {
   id: string;
   name: string;
   email: string;
+  username?: string;
   phone?: string;
   roleId: string;
   roleName: string;

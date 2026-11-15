@@ -3,20 +3,31 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { db } from '@/lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
-import { readRbacStore, writeRbacStore, verifyStaffPermission } from '@/lib/serverRbac';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import {
+  readRbacStore,
+  writeRbacStore,
+  verifyStaffPermission,
+  validateUsername,
+  suggestUsername,
+  normalizeUsername,
+  BASELINE_STAFF_MAP,
+} from '@/lib/serverRbac';
 
 interface CreateStaffBody {
   requestingStaffId?: string;
+  requestingUsername?: string;
   name: string;
+  username?: string;
   email: string;
   phone?: string;
   department: string;
   roleId: string;
   roleName?: string;
+  status?: 'active' | 'deactivated';
 }
 
-// In-process asynchronous Mutex to guarantee atomic sequential ID allocation under concurrent load
+// In-process asynchronous Mutex to guarantee atomic sequential ID and username allocation under concurrent load
 class Mutex {
   private current: Promise<void> = Promise.resolve();
   lock(): Promise<() => void> {
@@ -64,7 +75,18 @@ function generateSecureTemporaryPasscode(): string {
 export async function POST(request: Request) {
   try {
     const body: CreateStaffBody = await request.json();
-    const { requestingStaffId, name, email, phone, department, roleId, roleName } = body;
+    const {
+      requestingStaffId,
+      requestingUsername,
+      name,
+      username: rawUsername,
+      email,
+      phone,
+      department,
+      roleId,
+      roleName,
+      status: requestedStatus,
+    } = body;
 
     // 1. Authorize: Check effective permissions on 'settings.users' -> 'manage_users'
     const authCheck = await verifyStaffPermission(request, body, 'settings.users', 'manage_users');
@@ -99,31 +121,88 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Acquire Critical Section Mutex for Atomic Provisioning & Sequential ID Allocation
+    // 3. Validate & Resolve Username
+    const chosenUsername = (rawUsername || '').trim() || suggestUsername(name);
+    const usernameValidation = validateUsername(chosenUsername);
+    if (!usernameValidation.valid) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: usernameValidation.error,
+          code: 'INVALID_USERNAME',
+        },
+        { status: 400 }
+      );
+    }
+    const finalUsername = usernameValidation.normalized;
+
+    // 4. Acquire Critical Section Mutex for Atomic Provisioning & Unique Reservation
     const releaseLock = await staffCreationMutex.lock();
 
     try {
       const store = readRbacStore();
       const staffIdIndex = store.staffIdIndex || {};
+      const usernameIndex = store.usernameIndex || {};
+      const usersMap = store.users || {};
 
-      // Check for duplicate staff email
-      const existingStaff = Object.values(staffIdIndex).find(
-        (s: any) => s.email?.toLowerCase() === cleanEmail
-      );
-
-      if (existingStaff) {
+      // Check for duplicate username in local store or baseline map
+      if (BASELINE_STAFF_MAP[finalUsername] || usernameIndex[finalUsername]) {
         return NextResponse.json(
           {
             success: false,
-            error: `Staff account with email "${cleanEmail}" is already provisioned under ID ${(existingStaff as any).staffId}.`,
+            error: `Username "@${finalUsername}" is already registered. Please choose another username.`,
+            code: 'USERNAME_ALREADY_EXISTS',
+          },
+          { status: 409 }
+        );
+      }
+
+      for (const uid of Object.keys(usersMap)) {
+        if (normalizeUsername(usersMap[uid].username || '') === finalUsername) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: `Username "@${finalUsername}" is already registered. Please choose another username.`,
+              code: 'USERNAME_ALREADY_EXISTS',
+            },
+            { status: 409 }
+          );
+        }
+      }
+
+      // Check Firestore /admin_usernames/{username}
+      try {
+        const snap = await getDoc(doc(db, 'admin_usernames', finalUsername));
+        if (snap.exists()) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: `Username "@${finalUsername}" is already registered in cloud directory.`,
+              code: 'USERNAME_ALREADY_EXISTS',
+            },
+            { status: 409 }
+          );
+        }
+      } catch {}
+
+      // Check for duplicate staff email
+      const existingStaffByEmail = Object.values(staffIdIndex).find(
+        (s: any) => s.email?.toLowerCase() === cleanEmail
+      );
+
+      if (existingStaffByEmail) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Staff account with email "${cleanEmail}" is already provisioned under ID ${(existingStaffByEmail as any).staffId}.`,
             code: 'EMAIL_ALREADY_EXISTS',
           },
           { status: 409 }
         );
       }
 
-      // Atomic Sequential Staff ID Generation (KJ-ADM-xxx)
-      let maxNum = 4; // KJ-ADM-001 through KJ-ADM-004 baseline
+      // Atomic Sequential Staff ID Generation (KJ-ADM-xxx for legacy and auditing)
+      let maxNum = 4;
       Object.keys(staffIdIndex).forEach(id => {
         const match = id.match(/^KJ-ADM-(\d+)$/i);
         if (match) {
@@ -135,19 +214,27 @@ export async function POST(request: Request) {
       const nextStaffNum = maxNum + 1;
       const newStaffId = `KJ-ADM-${String(nextStaffNum).padStart(3, '0')}`;
 
-      // Reserve ID immediately in store index to prevent race conditions
-      staffIdIndex[newStaffId] = {
+      // Reserve username and staff ID immediately
+      usernameIndex[finalUsername] = {
+        username: finalUsername,
         staffId: newStaffId,
         email: cleanEmail,
         status: 'provisioning',
       };
+      staffIdIndex[newStaffId] = {
+        staffId: newStaffId,
+        username: finalUsername,
+        email: cleanEmail,
+        status: 'provisioning',
+      };
+      store.usernameIndex = usernameIndex;
       store.staffIdIndex = staffIdIndex;
       writeRbacStore(store);
 
-      // 4. Generate Cryptographic Temporary Passcode
+      // 5. Generate Cryptographic Temporary Passcode
       const temporaryPasscode = generateSecureTemporaryPasscode();
 
-      // 5. Create Account in Firebase Authentication via Identity Platform REST API
+      // 6. Create Account in Firebase Authentication via Identity Platform REST API
       const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyDzdJB2o_mS3JgSJ-MaBNbvpBi35AdcSCc';
       let firebaseUid = `uid-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
@@ -169,15 +256,12 @@ export async function POST(request: Request) {
         const signUpData = await signUpRes.json();
         if (signUpData.localId) {
           firebaseUid = signUpData.localId;
-        } else if (signUpData.error?.message === 'EMAIL_EXISTS') {
-          // If already in Auth, generate unique synthetic UID or continue gracefully
-          console.warn(`Auth user exists for ${cleanEmail}, associating with designated UID.`);
         }
       } catch (authErr) {
-        console.warn('Firebase Auth REST signup fallback:', authErr);
+        console.warn('Firebase Auth REST signup warning:', authErr);
       }
 
-      // 6. Assemble Complete Staff User Record
+      // 7. Assemble Complete Staff User Record
       const nowIso = new Date().toISOString();
       const resolvedRoleName = roleName || (roleId === 'role-super-admin' ? 'Super Admin' : 'Custom Staff');
 
@@ -185,45 +269,69 @@ export async function POST(request: Request) {
         id: newStaffId,
         uid: firebaseUid,
         staffId: newStaffId,
+        username: finalUsername,
         name: name.trim(),
         email: cleanEmail,
         phone: phone?.trim() || '',
         department: department?.trim() || 'General Operations',
         roleId: roleId.trim(),
         roleName: resolvedRoleName,
-        status: 'active' as const,
+        status: (requestedStatus || 'active') as 'active' | 'deactivated',
         requiresPasswordReset: true,
         hasCompletedFirstLoginReset: false,
         createdAt: nowIso,
         updatedAt: nowIso,
-        createdBy: authCheck.staffUser?.id || requestingStaffId,
+        createdBy: authCheck.staffUser?.username || authCheck.staffUser?.staffId || requestingStaffId,
       };
 
-      // 7. Persist to Server Durable Store
+      // 8. Persist to Server Durable Store
       store.users = store.users || {};
       store.users[firebaseUid] = newStaffUser;
+      store.usernameIndex[finalUsername] = {
+        uid: firebaseUid,
+        username: finalUsername,
+        staffId: newStaffId,
+        email: cleanEmail,
+        name: newStaffUser.name,
+      };
       store.staffIdIndex[newStaffId] = {
         staffId: newStaffId,
+        username: finalUsername,
         uid: firebaseUid,
         email: cleanEmail,
         name: newStaffUser.name,
         department: newStaffUser.department,
         roleId: newStaffUser.roleId,
         roleName: newStaffUser.roleName,
-        status: 'active',
+        status: newStaffUser.status,
         requiresPasswordReset: true,
       };
       store.nextStaffNumber = nextStaffNum + 1;
       writeRbacStore(store);
 
-      // 8. Sync to Cloud Firestore (/admin_users and /users)
+      // 9. Sync to Cloud Firestore:
+      // - /admin_usernames/{username}
+      // - /admin_users/{firebaseUid}
+      // - /users/{firebaseUid}
       try {
+        await setDoc(
+          doc(db, 'admin_usernames', finalUsername),
+          {
+            uid: firebaseUid,
+            username: finalUsername,
+            staffId: newStaffId,
+            createdAt: nowIso,
+          },
+          { merge: true }
+        );
+
         await setDoc(doc(db, 'admin_users', firebaseUid), newStaffUser, { merge: true });
         await setDoc(
           doc(db, 'users', firebaseUid),
           {
             id: firebaseUid,
             staffId: newStaffId,
+            username: finalUsername,
             name: newStaffUser.name,
             email: cleanEmail,
             phone: newStaffUser.phone,
@@ -240,14 +348,15 @@ export async function POST(request: Request) {
         console.warn('Firestore staff sync warning:', fsErr);
       }
 
-      // 9. Return One-Time Credential Handover Payload
+      // 10. Return One-Time Credential Handover Payload with Username & Password
       return NextResponse.json(
         {
           success: true,
+          username: finalUsername,
           staffId: newStaffId,
           temporaryPasscode,
           user: newStaffUser,
-          message: 'Staff account successfully provisioned. Hand over credentials securely.',
+          message: `Staff account @${finalUsername} successfully provisioned. Hand over credentials securely.`,
         },
         { status: 201 }
       );

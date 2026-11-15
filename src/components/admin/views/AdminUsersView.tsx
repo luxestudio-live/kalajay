@@ -20,6 +20,8 @@ import {
   Edit,
   RotateCcw,
   Check,
+  AtSign,
+  Loader2,
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
 import { AdminUser } from '@/data/adminTypes';
@@ -45,6 +47,13 @@ export default function AdminUsersView() {
 
   // Form Fields for Create
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [usernameManuallyEdited, setUsernameManuallyEdited] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState<{
+    loading: boolean;
+    available?: boolean;
+    error?: string;
+  } | null>(null);
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [department, setDepartment] = useState('Digital Commerce');
@@ -53,6 +62,12 @@ export default function AdminUsersView() {
 
   // Form Fields for Edit
   const [editName, setEditName] = useState('');
+  const [editUsername, setEditUsername] = useState('');
+  const [editUsernameStatus, setEditUsernameStatus] = useState<{
+    loading: boolean;
+    available?: boolean;
+    error?: string;
+  } | null>(null);
   const [editPhone, setEditPhone] = useState('');
   const [editDepartment, setEditDepartment] = useState('');
   const [editRoleId, setEditRoleId] = useState('');
@@ -65,12 +80,71 @@ export default function AdminUsersView() {
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'active' | 'deactivated'>('ALL');
 
   // Copy Feedback state
+  const [copiedUsername, setCopiedUsername] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
   const [copiedPw, setCopiedPw] = useState(false);
   const [showPassword, setShowPassword] = useState(true);
   const [actionFeedback, setActionFeedback] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const canManageUsers = can('settings.users', 'manage_users');
+
+  // Live availability checker
+  const checkUsernameAvailability = async (raw: string, currentUid?: string) => {
+    let clean = (raw || '').trim().toLowerCase();
+    if (clean.startsWith('@')) clean = clean.substring(1);
+
+    if (!clean || clean.length < 3) {
+      setUsernameStatus({
+        loading: false,
+        available: false,
+        error: 'Username must be at least 3 characters.',
+      });
+      return;
+    }
+
+    setUsernameStatus({ loading: true });
+    try {
+      const res = await fetch(`/api/admin/users/check-username/?username=${encodeURIComponent(clean)}`).then(r =>
+        r.json()
+      );
+      if (res.available) {
+        setUsernameStatus({ loading: false, available: true });
+      } else {
+        setUsernameStatus({
+          loading: false,
+          available: false,
+          error: res.error || 'Username is not available.',
+        });
+      }
+    } catch {
+      setUsernameStatus({ loading: false, available: true });
+    }
+  };
+
+  const handleNameChange = (val: string) => {
+    setName(val);
+    if (!usernameManuallyEdited) {
+      let suggested = val
+        .toLowerCase()
+        .replace(/[^a-z0-9\s._-]/g, '')
+        .trim()
+        .replace(/[\s_-]+/g, '.')
+        .replace(/\.+/g, '.')
+        .replace(/^\.+|\.+$/g, '');
+      if (suggested) {
+        setUsername(suggested);
+        checkUsernameAvailability(suggested);
+      }
+    }
+  };
+
+  const handleUsernameChange = (val: string) => {
+    setUsernameManuallyEdited(true);
+    let clean = val.trim().toLowerCase();
+    if (clean.startsWith('@')) clean = clean.substring(1);
+    setUsername(clean);
+    checkUsernameAvailability(clean);
+  };
 
   // Filtered staff list
   const filteredUsers = useMemo(() => {
@@ -80,8 +154,9 @@ export default function AdminUsersView() {
         const q = searchQuery.toLowerCase().trim();
         const matchName = user.name.toLowerCase().includes(q);
         const matchEmail = user.email.toLowerCase().includes(q);
+        const matchUsername = (user.username || '').toLowerCase().includes(q);
         const matchId = (user.staffId || user.id).toLowerCase().includes(q);
-        if (!matchName && !matchEmail && !matchId) return false;
+        if (!matchName && !matchEmail && !matchUsername && !matchId) return false;
       }
       // Department filter
       if (departmentFilter !== 'ALL' && user.department !== departmentFilter) {
@@ -103,12 +178,18 @@ export default function AdminUsersView() {
     e.preventDefault();
     if (!name.trim() || !email.trim()) return;
 
+    if (usernameStatus && !usernameStatus.available && !usernameStatus.loading) {
+      setActionFeedback({ text: usernameStatus.error || 'Please choose an available username.', type: 'error' });
+      return;
+    }
+
     setIsCreating(true);
     setActionFeedback(null);
 
     try {
       const result = await createAdminUser({
         name,
+        username: username.trim(),
         email,
         phone,
         department,
@@ -121,9 +202,15 @@ export default function AdminUsersView() {
 
       // Reset form inputs
       setName('');
+      setUsername('');
+      setUsernameManuallyEdited(false);
+      setUsernameStatus(null);
       setEmail('');
       setPhone('');
-      setActionFeedback({ text: `Staff user ${result.user.id} provisioned successfully!`, type: 'success' });
+      setActionFeedback({
+        text: `Staff user @${result.user.username || result.user.id} provisioned successfully!`,
+        type: 'success',
+      });
       setTimeout(() => setActionFeedback(null), 4000);
     } catch (err: any) {
       setActionFeedback({ text: err?.message || 'Failed to provision staff user.', type: 'error' });
@@ -135,6 +222,8 @@ export default function AdminUsersView() {
   const handleStartEdit = (user: AdminUser) => {
     setEditModalUser(user);
     setEditName(user.name);
+    setEditUsername(user.username || (user.staffId || user.id).toLowerCase());
+    setEditUsernameStatus(null);
     setEditPhone(user.phone || '');
     setEditDepartment(user.department);
     setEditRoleId(user.roleId);
@@ -150,6 +239,7 @@ export default function AdminUsersView() {
     try {
       const success = await updateAdminUser(editModalUser.id, {
         name: editName.trim(),
+        username: editUsername.trim().replace(/^@/, '').toLowerCase(),
         phone: editPhone.trim(),
         department: editDepartment,
         roleId: editRoleId,
@@ -157,41 +247,66 @@ export default function AdminUsersView() {
       });
 
       if (success) {
-        setActionFeedback({ text: `Updated staff profile for ${editModalUser.id}`, type: 'success' });
         setEditModalUser(null);
+        setActionFeedback({ text: `Staff profile for ${editName} updated successfully.`, type: 'success' });
         setTimeout(() => setActionFeedback(null), 3000);
       }
     } catch (err: any) {
-      setActionFeedback({ text: err?.message || 'Failed to update staff user.', type: 'error' });
+      setActionFeedback({ text: err?.message || 'Failed to update profile.', type: 'error' });
     } finally {
       setIsUpdating(false);
     }
   };
 
-  const handleResetPassword = async (user: AdminUser) => {
-    showModal({
-      title: 'Force Staff Passcode Reset',
-      subtitle: `Target: ${user.name} (${user.id})`,
-      icon: 'warning',
-      message: `Enforcing a mandatory passcode reset will require ${user.name} to establish a new cryptographically verified passcode upon their next atelier login. Proceed?`,
-      confirmLabel: 'Enforce Reset',
-      cancelLabel: 'Cancel',
-      onConfirm: async () => {
-        try {
-          await resetUserCredentials(user.id);
-          setActionFeedback({ text: `Mandatory reset flag set for ${user.id}. Next login will require new passcode.`, type: 'success' });
-          setTimeout(() => setActionFeedback(null), 3500);
-        } catch (err: any) {
-          setActionFeedback({ text: err?.message || 'Failed to enforce password reset.', type: 'error' });
-        }
-      },
-    });
+  const handleForceReset = async (user: AdminUser) => {
+    const confirmed = window.confirm(
+      `Force password reset for staff member @${user.username || user.staffId || user.id} (${user.name})?\n\nThey will be required to choose a new password upon their next login.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await updateAdminUser(user.id, { requiresPasswordReset: true });
+      setActionFeedback({
+        text: `Mandatory passcode reset flagged for @${user.username || user.staffId || user.id}.`,
+        type: 'success',
+      });
+      setTimeout(() => setActionFeedback(null), 3500);
+    } catch {
+      setActionFeedback({ text: 'Failed to flag passcode reset.', type: 'error' });
+    }
   };
 
-  const handleCopy = (text: string, type: 'id' | 'pw') => {
-    if (navigator.clipboard) {
+  const handleToggleStatus = async (user: AdminUser) => {
+    if (user.id === 'KJ-ADM-001' || user.username === 'soumya') {
+      showModal({
+        title: 'Protected Root Super Admin',
+        message: 'The Root Super Administrator account (soumya / KJ-ADM-001) cannot be deactivated.',
+        icon: 'warning',
+      });
+      return;
+    }
+
+    const nextStatus = user.status === 'active' ? 'deactivate' : 'reactivate';
+    const confirmed = window.confirm(
+      `Are you sure you want to ${nextStatus} staff account @${user.username || user.staffId || user.id} (${user.name})?`
+    );
+    if (confirmed) {
+      await toggleUserStatus(user.id);
+      setActionFeedback({
+        text: `Staff user @${user.username || user.staffId || user.id} is now ${user.status === 'active' ? 'deactivated' : 'active'}.`,
+        type: 'success',
+      });
+      setTimeout(() => setActionFeedback(null), 3000);
+    }
+  };
+
+  const handleCopy = (text: string, type: 'username' | 'id' | 'pw') => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(text);
-      if (type === 'id') {
+      if (type === 'username') {
+        setCopiedUsername(true);
+        setTimeout(() => setCopiedUsername(false), 2000);
+      } else if (type === 'id') {
         setCopiedId(true);
         setTimeout(() => setCopiedId(false), 2000);
       } else {
@@ -214,13 +329,21 @@ export default function AdminUsersView() {
             Operational Staff Directory &amp; RBAC
           </h1>
           <p className="text-xs sm:text-sm text-[#76695F] mt-1">
-            Provision sequential Staff IDs (KJ-ADM-xxx), assign granular dynamic roles, and manage credentials.
+            Provision unique usernames (@username), assign granular dynamic roles, and manage authentication credentials.
           </p>
         </div>
 
         <button
           type="button"
-          onClick={() => setCreateModalOpen(true)}
+          onClick={() => {
+            setName('');
+            setUsername('');
+            setUsernameManuallyEdited(false);
+            setUsernameStatus(null);
+            setEmail('');
+            setPhone('');
+            setCreateModalOpen(true);
+          }}
           disabled={!canManageUsers}
           className="px-4 py-2 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-40 cursor-pointer self-start sm:self-auto"
         >
@@ -251,10 +374,10 @@ export default function AdminUsersView() {
       <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200 text-xs text-amber-900 space-y-1">
         <div className="flex items-center gap-2 font-semibold">
           <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-          <span>Cryptographic Security &amp; Zero-Plaintext Storage Policy</span>
+          <span>Username-Based Authentication &amp; Zero-Plaintext Security Policy</span>
         </div>
         <p className="text-[11.5px] text-amber-800 leading-relaxed">
-          Provisional passcodes are generated at runtime via cryptographically secure random entropy. Plaintext passcodes are displayed <strong>strictly once</strong> in the secure modal and leave server memory upon delivery. All newly provisioned staff must change their password on first login.
+          Staff members authenticate exclusively using their human-readable username (e.g. <code>@soumya</code> or <code>@ritu.verma</code>). Provisional passcodes are generated at runtime via cryptographically secure entropy and displayed strictly once. All newly provisioned staff must change their passcode on first login.
         </p>
       </div>
 
@@ -268,7 +391,7 @@ export default function AdminUsersView() {
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search by Name, Staff ID, Email..."
+              placeholder="Search by Username, Name, ID, Email..."
               className="w-full bg-[#FAF7F2] border border-[#DED3C5] rounded-xl pl-9 pr-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
             />
           </div>
@@ -349,7 +472,7 @@ export default function AdminUsersView() {
             Active Staff Directory ({filteredUsers.length})
           </h3>
           <span className="text-[11px] text-[#76695F] font-mono">
-            Directly synced with Firestore /admin_users &amp; Auth Index
+            Synced with Firestore /admin_users &amp; /admin_usernames
           </span>
         </div>
 
@@ -357,7 +480,7 @@ export default function AdminUsersView() {
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-[#F7F3EC] text-[#76695F] border-b border-[#DED3C5] text-[10.5px] uppercase tracking-wider font-semibold">
-                <th className="py-3 px-4">Staff Member &amp; ID</th>
+                <th className="py-3 px-4">Staff Member &amp; Username</th>
                 <th className="py-3 px-4">Assigned Role</th>
                 <th className="py-3 px-4">Department</th>
                 <th className="py-3 px-4">Status</th>
@@ -374,8 +497,8 @@ export default function AdminUsersView() {
                 </tr>
               ) : (
                 filteredUsers.map(user => {
-                  const isSuper = user.id === 'KJ-ADM-001' || user.roleId === 'role-super-admin';
-                  const isRootSuper = user.id === 'KJ-ADM-001';
+                  const displayUsername = user.username || (user.staffId || user.id).toLowerCase();
+                  const isRootSuper = user.id === 'KJ-ADM-001' || user.username === 'soumya';
 
                   return (
                     <tr key={user.id} className="hover:bg-[#FFFCF7] transition-colors">
@@ -386,11 +509,16 @@ export default function AdminUsersView() {
                             {user.name.charAt(0)}
                           </div>
                           <div>
-                            <strong className="font-semibold text-[#372921] block">
-                              {user.name}
-                            </strong>
+                            <div className="flex items-center gap-1.5">
+                              <strong className="font-semibold text-[#372921] block">
+                                {user.name}
+                              </strong>
+                              <span className="font-mono text-xs font-bold text-[#9E5430] bg-[#9E5430]/10 px-1.5 py-0.5 rounded">
+                                @{displayUsername}
+                              </span>
+                            </div>
                             <span className="text-[10.5px] text-[#76695F] block font-mono">
-                              {user.email} · <span className="font-bold text-[#9E5430]">{user.staffId || user.id}</span>
+                              {user.email} · <span className="text-[#A99583]">{user.staffId || user.id}</span>
                             </span>
                           </div>
                         </div>
@@ -450,39 +578,42 @@ export default function AdminUsersView() {
                             type="button"
                             onClick={() => handleStartEdit(user)}
                             disabled={!canManageUsers}
+                            className="p-1.5 rounded-lg border border-[#DED3C5] text-[#372921] hover:bg-[#F0E9DF] transition-colors disabled:opacity-40 cursor-pointer"
                             title="Edit Staff Member"
-                            className="p-1 text-[#76695F] hover:text-[#9E5430] hover:bg-[#F0E9DF] rounded transition-colors cursor-pointer"
                           >
                             <Edit className="w-3.5 h-3.5" />
                           </button>
 
-                          {/* Reset Passcode */}
+                          {/* Force Password Reset */}
                           <button
                             type="button"
-                            onClick={() => handleResetPassword(user)}
+                            onClick={() => handleForceReset(user)}
                             disabled={!canManageUsers}
-                            title="Force Password Reset on Next Login"
-                            className="p-1 text-[#76695F] hover:text-amber-700 hover:bg-amber-50 rounded transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg border border-[#DED3C5] text-amber-700 hover:bg-amber-50 transition-colors disabled:opacity-40 cursor-pointer"
+                            title="Force First-Login Password Reset"
                           >
-                            <RefreshCw className="w-3.5 h-3.5" />
+                            <KeyRound className="w-3.5 h-3.5" />
                           </button>
 
-                          {/* Toggle Active / Deactivate */}
-                          {!isRootSuper ? (
+                          {/* Deactivate / Reactivate Toggle */}
+                          {!isRootSuper && (
                             <button
                               type="button"
-                              onClick={() => toggleUserStatus(user.id)}
+                              onClick={() => handleToggleStatus(user)}
                               disabled={!canManageUsers}
-                              className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors cursor-pointer ${
+                              className={`p-1.5 rounded-lg border transition-colors disabled:opacity-40 cursor-pointer ${
                                 user.status === 'active'
-                                  ? 'text-rose-700 hover:bg-rose-50'
-                                  : 'text-emerald-700 hover:bg-emerald-50'
+                                  ? 'border-rose-200 text-rose-700 hover:bg-rose-50'
+                                  : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
                               }`}
+                              title={user.status === 'active' ? 'Deactivate Account' : 'Reactivate Account'}
                             >
-                              {user.status === 'active' ? 'Deactivate' : 'Reactivate'}
+                              {user.status === 'active' ? (
+                                <UserX className="w-3.5 h-3.5" />
+                              ) : (
+                                <UserCheck className="w-3.5 h-3.5" />
+                              )}
                             </button>
-                          ) : (
-                            <span className="text-[10px] text-[#A99583] italic px-1">Primary Root</span>
                           )}
                         </div>
                       </td>
@@ -495,7 +626,7 @@ export default function AdminUsersView() {
         </div>
       </div>
 
-      {/* 4. PROVISION USER MODAL */}
+      {/* 4. PROVISION NEW STAFF MODAL */}
       {createModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div
@@ -522,6 +653,7 @@ export default function AdminUsersView() {
               </div>
 
               <form onSubmit={handleCreateSubmit} className="p-5 space-y-4">
+                {/* Full Name */}
                 <div>
                   <label className="block text-xs font-semibold text-[#372921] mb-1">
                     Full Name <span className="text-[#9E5430]">*</span>
@@ -530,12 +662,53 @@ export default function AdminUsersView() {
                     type="text"
                     required
                     value={name}
-                    onChange={e => setName(e.target.value)}
+                    onChange={e => handleNameChange(e.target.value)}
                     placeholder="e.g. Radhika Sharma"
                     className="w-full bg-[#F7F3EC] border border-[#DED3C5] rounded-lg px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
                   />
                 </div>
 
+                {/* Username Input with Live Availability Check */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-[#372921]">
+                      Username <span className="text-[#9E5430]">*</span>
+                    </label>
+                    <span className="text-[10px] text-[#76695F]">
+                      3–30 characters, letters, numbers, periods, underscores
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#9E5430]">
+                      @
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      value={username}
+                      onChange={e => handleUsernameChange(e.target.value)}
+                      placeholder="radhika.sharma"
+                      className="w-full bg-[#F7F3EC] border border-[#DED3C5] rounded-lg pl-7 pr-9 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430] font-mono font-semibold lowercase"
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {usernameStatus?.loading ? (
+                        <Loader2 className="w-3.5 h-3.5 text-[#9E5430] animate-spin" />
+                      ) : usernameStatus?.available ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      ) : usernameStatus?.error ? (
+                        <AlertTriangle className="w-4 h-4 text-rose-600" />
+                      ) : null}
+                    </div>
+                  </div>
+                  {usernameStatus?.error && (
+                    <p className="text-[10.5px] text-rose-600 mt-1 font-medium">{usernameStatus.error}</p>
+                  )}
+                  {usernameStatus?.available && (
+                    <p className="text-[10.5px] text-emerald-700 mt-1 font-medium">Username is available.</p>
+                  )}
+                </div>
+
+                {/* Email */}
                 <div>
                   <label className="block text-xs font-semibold text-[#372921] mb-1">
                     Official Work Email <span className="text-[#9E5430]">*</span>
@@ -604,7 +777,7 @@ export default function AdminUsersView() {
                 </div>
 
                 <div className="p-3 bg-[#F7F3EC] rounded-xl border border-[#DED3C5] text-[11px] text-[#76695F]">
-                  Submitting will automatically allocate the next sequential <strong>Staff ID (e.g. KJ-ADM-xxx)</strong>, create the user in Firebase Authentication, and generate a 16-character cryptographic temporary passcode.
+                  Submitting will create the staff account in Firebase Authentication, register <strong>@{username || 'username'}</strong> in the cloud index, and generate a 16-character cryptographic temporary passcode.
                 </div>
 
                 <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#EAE2D8]">
@@ -617,7 +790,7 @@ export default function AdminUsersView() {
                   </button>
                   <button
                     type="submit"
-                    disabled={isCreating}
+                    disabled={isCreating || (usernameStatus?.available === false)}
                     className="px-5 py-2 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50"
                   >
                     <KeyRound className="w-3.5 h-3.5" />
@@ -644,7 +817,7 @@ export default function AdminUsersView() {
                 <div className="flex items-center gap-2">
                   <Edit className="w-4 h-4 text-[#9E5430]" />
                   <h3 className="font-serif text-lg font-semibold text-[#372921]">
-                    Edit Staff Profile: {editModalUser.id}
+                    Edit Staff Profile: @{editModalUser.username || editModalUser.id}
                   </h3>
                 </div>
                 <button
@@ -668,6 +841,29 @@ export default function AdminUsersView() {
                     onChange={e => setEditName(e.target.value)}
                     className="w-full bg-[#F7F3EC] border border-[#DED3C5] rounded-lg px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
                   />
+                </div>
+
+                {/* Username */}
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">
+                    Username (@handle)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#9E5430]">
+                      @
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      disabled={editModalUser.id === 'KJ-ADM-001' || editModalUser.username === 'soumya'}
+                      value={editUsername}
+                      onChange={e => setEditUsername(e.target.value.trim().replace(/^@/, '').toLowerCase())}
+                      className="w-full bg-[#F7F3EC] border border-[#DED3C5] rounded-lg pl-7 pr-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430] font-mono font-semibold lowercase disabled:opacity-50"
+                    />
+                  </div>
+                  {editModalUser.id === 'KJ-ADM-001' && (
+                    <p className="text-[10px] text-amber-700 mt-1">Root Super Administrator username is immutable.</p>
+                  )}
                 </div>
 
                 <div>
@@ -722,7 +918,7 @@ export default function AdminUsersView() {
                   <select
                     value={editRoleId}
                     onChange={e => setEditRoleId(e.target.value)}
-                    disabled={editModalUser.id === 'KJ-ADM-001'}
+                    disabled={editModalUser.id === 'KJ-ADM-001' || editModalUser.username === 'soumya'}
                     className="w-full bg-[#F7F3EC] border border-[#DED3C5] rounded-lg px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430] disabled:opacity-50"
                   >
                     {allRoles.map(r => (
@@ -731,11 +927,6 @@ export default function AdminUsersView() {
                       </option>
                     ))}
                   </select>
-                  {editModalUser.id === 'KJ-ADM-001' && (
-                    <p className="text-[10px] text-amber-700 mt-1">
-                      Root Super Administrator role is immutable.
-                    </p>
-                  )}
                 </div>
 
                 <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#EAE2D8]">
@@ -793,17 +984,45 @@ export default function AdminUsersView() {
 
               {/* Credentials Copy Box */}
               <div className="space-y-3 bg-[#F7F3EC] p-4 rounded-xl border border-[#DED3C5]">
-                {/* Staff User ID */}
+                {/* Staff Username */}
                 <div>
                   <span className="text-[10px] uppercase tracking-wider text-[#76695F] font-bold block mb-1">
-                    Staff User ID:
+                    Login Username (@handle):
                   </span>
-                  <div className="flex items-center justify-between bg-white border border-[#DED3C5] rounded-lg px-3 py-2 font-mono text-xs font-bold text-[#372921]">
-                    <span>{onboardingModalData.user.id}</span>
+                  <div className="flex items-center justify-between bg-white border border-[#DED3C5] rounded-lg px-3 py-2 font-mono text-xs font-bold text-[#9E5430]">
+                    <span>@{onboardingModalData.user.username || onboardingModalData.user.id.toLowerCase()}</span>
                     <button
                       type="button"
-                      onClick={() => handleCopy(onboardingModalData.user.id, 'id')}
+                      onClick={() =>
+                        handleCopy(
+                          `@${onboardingModalData.user.username || onboardingModalData.user.id.toLowerCase()}`,
+                          'username'
+                        )
+                      }
                       className="text-[11px] text-[#9E5430] hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span>{copiedUsername ? 'Copied!' : 'Copy'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Staff User ID (Audit Record) */}
+                <div>
+                  <span className="text-[10px] uppercase tracking-wider text-[#76695F] font-bold block mb-1">
+                    Internal Staff ID (Audit Ledger):
+                  </span>
+                  <div className="flex items-center justify-between bg-white border border-[#DED3C5] rounded-lg px-3 py-2 font-mono text-xs font-semibold text-[#76695F]">
+                    <span>{onboardingModalData.user.staffId || onboardingModalData.user.id}</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleCopy(
+                          onboardingModalData.user.staffId || onboardingModalData.user.id,
+                          'id'
+                        )
+                      }
+                      className="text-[11px] text-[#76695F] hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <Copy className="w-3 h-3" />
                       <span>{copiedId ? 'Copied!' : 'Copy'}</span>

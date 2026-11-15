@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { suggestUsername } from '@/lib/serverRbac';
 
 function getRbacStorePath(): string {
   const cacheDir = path.join(process.cwd(), '.next', 'cache');
@@ -24,6 +25,7 @@ const BASELINE_STAFF = [
   {
     id: 'KJ-ADM-001',
     staffId: 'KJ-ADM-001',
+    username: 'soumya',
     uid: 'mJ6lPWSeACcLSCSKqonwcksD87I2',
     name: 'Soumya (Founder)',
     email: 'soumya@kalajay.in',
@@ -37,6 +39,7 @@ const BASELINE_STAFF = [
   {
     id: 'KJ-ADM-002',
     staffId: 'KJ-ADM-002',
+    username: 'ritu.verma',
     uid: '5SWIY26CaXgfDnN2anZOnNBuxV72',
     name: 'Ritu Verma',
     email: 'ritu.verma@kalajay.in',
@@ -50,6 +53,7 @@ const BASELINE_STAFF = [
   {
     id: 'KJ-ADM-003',
     staffId: 'KJ-ADM-003',
+    username: 'sunita.craft',
     uid: '5iQ0TA1Mx6NXaTfErP9wxt4dVIz1',
     name: 'Sunita Kumari',
     email: 'sunita.craft@kalajay.in',
@@ -63,6 +67,7 @@ const BASELINE_STAFF = [
   {
     id: 'KJ-ADM-004',
     staffId: 'KJ-ADM-004',
+    username: 'aarav.mehta',
     uid: 'sRqJ2GtrfSMHLJq0D1bEZZyMAWZ2',
     name: 'Aarav Mehta',
     email: 'aarav.m@kalajay.in',
@@ -80,13 +85,19 @@ export async function GET() {
     const store = readRbacStore();
     const storedUsers = store.users ? Object.values(store.users) : [];
 
-    // Merge baseline and stored users (keyed by staffId)
+    // Merge baseline and stored users (keyed by staffId or uid)
     const userMap = new Map<string, any>();
     BASELINE_STAFF.forEach(u => userMap.set(u.staffId, u));
-    storedUsers.forEach((u: any) => userMap.set(u.staffId || u.id, u));
+    storedUsers.forEach((u: any) => {
+      const key = u.staffId || u.id;
+      userMap.set(key, {
+        ...u,
+        username: u.username || suggestUsername(u.name),
+      });
+    });
 
     const allUsers = Array.from(userMap.values()).sort((a, b) =>
-      a.staffId.localeCompare(b.staffId)
+      (a.staffId || a.id).localeCompare(b.staffId || b.id)
     );
 
     return NextResponse.json({

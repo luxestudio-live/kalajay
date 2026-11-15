@@ -284,6 +284,17 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------
+    // 18. Staff Usernames Directory (/admin_usernames/{username})
+    // Directory of reserved staff usernames. Never publicly readable to prevent username harvesting.
+    // Read: Authenticated staff / admin only.
+    // Write: Verified Administrators only.
+    // -------------------------------------------------------------
+    match /admin_usernames/{username} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
     // Default Deny
     // -------------------------------------------------------------
     match /{document=**} {

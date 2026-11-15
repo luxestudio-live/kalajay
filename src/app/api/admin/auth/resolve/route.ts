@@ -2,14 +2,16 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { normalizeUsername, getStaffUser } from '@/lib/serverRbac';
 
 interface ResolveRequestBody {
+  username?: string;
   staffId?: string;
   password?: string;
 }
 
-// In-memory rate limiting map: ipOrId -> { count, firstAttempt }
+// In-memory rate limiting map: ipOrUsername -> { count, firstAttempt }
 const rateLimitMap = new Map<string, { count: number; firstAttempt: number }>();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const MAX_ATTEMPTS_PER_WINDOW = 10;
@@ -32,89 +34,24 @@ function checkRateLimit(key: string): boolean {
   return entry.count <= MAX_ATTEMPTS_PER_WINDOW;
 }
 
-function getRbacStorePath(): string {
-  const cacheDir = path.join(process.cwd(), '.next', 'cache');
-  if (!fs.existsSync(cacheDir)) {
-    fs.mkdirSync(cacheDir, { recursive: true });
-  }
-  return path.join(cacheDir, 'kalajay_staff_rbac_store.json');
-}
-
-function readRbacStore(): Record<string, any> {
-  try {
-    const fPath = getRbacStorePath();
-    if (fs.existsSync(fPath)) {
-      return JSON.parse(fs.readFileSync(fPath, 'utf-8'));
-    }
-  } catch {}
-  return {};
-}
-
-const BASELINE_STAFF_MAP: Record<string, any> = {
-  'KJ-ADM-001': {
-    staffId: 'KJ-ADM-001',
-    uid: 'mJ6lPWSeACcLSCSKqonwcksD87I2',
-    name: 'Soumya (Founder)',
-    email: 'soumya@kalajay.in',
-    phone: '+91 98201 00001',
-    department: 'Founders Office & Creative Direction',
-    roleId: 'role-super-admin',
-    roleName: 'Founder & Head of Maison',
-    status: 'active',
-  },
-  'KJ-ADM-002': {
-    staffId: 'KJ-ADM-002',
-    uid: '5SWIY26CaXgfDnN2anZOnNBuxV72',
-    name: 'Ritu Verma',
-    email: 'ritu.verma@kalajay.in',
-    phone: '+91 98201 00002',
-    department: 'Digital Commerce',
-    roleId: 'role-store-manager',
-    roleName: 'Store Operations Manager',
-    status: 'active',
-  },
-  'KJ-ADM-003': {
-    staffId: 'KJ-ADM-003',
-    uid: '5iQ0TA1Mx6NXaTfErP9wxt4dVIz1',
-    name: 'Sunita Kumari',
-    email: 'sunita.craft@kalajay.in',
-    phone: '+91 98201 00003',
-    department: 'Bihar Craft House Hub',
-    roleId: 'role-production-manager',
-    roleName: 'Bihar Atelier & Production Head',
-    status: 'active',
-  },
-  'KJ-ADM-004': {
-    staffId: 'KJ-ADM-004',
-    uid: 'sRqJ2GtrfSMHLJq0D1bEZZyMAWZ2',
-    name: 'Aarav Mehta',
-    email: 'aarav.m@kalajay.in',
-    phone: '+91 98201 00004',
-    department: 'Mumbai Atelier & Logistics',
-    roleId: 'role-fulfilment-agent',
-    roleName: 'Fulfilment & Dispatch Agent',
-    status: 'active',
-  },
-};
-
 export async function POST(request: Request) {
   try {
     const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
     const body: ResolveRequestBody = await request.json();
-    const rawStaffId = (body.staffId || '').trim();
+    const rawInput = (body.username || body.staffId || '').trim();
     const password = body.password;
 
-    if (!rawStaffId) {
+    if (!rawInput) {
       return NextResponse.json(
-        { success: false, error: 'Staff User ID is required.' },
+        { success: false, error: 'Username is required.' },
         { status: 400 }
       );
     }
 
-    const cleanStaffId = rawStaffId.toUpperCase();
+    const normalizedUsername = normalizeUsername(rawInput);
 
-    // 1. Rate Limiting Defense
-    if (!checkRateLimit(`${ip}_${cleanStaffId}`)) {
+    // 1. Rate Limiting Defense (IP + Normalized Username)
+    if (!checkRateLimit(`${ip}_${normalizedUsername}`)) {
       return NextResponse.json(
         {
           success: false,
@@ -125,51 +62,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Lookup in Server-side Durable Store
-    const store = readRbacStore();
-    const index = store.staffIdIndex || {};
-    let resolved = index[cleanStaffId] || BASELINE_STAFF_MAP[cleanStaffId];
-
-    // Check by email if input is an email address
-    if (!resolved && rawStaffId.includes('@')) {
-      const emailLower = rawStaffId.toLowerCase();
-      resolved =
-        Object.values(index).find((s: any) => s.email?.toLowerCase() === emailLower) ||
-        Object.values(BASELINE_STAFF_MAP).find((s: any) => s.email?.toLowerCase() === emailLower);
-    }
-
-    // Fallback to Cloud Firestore /admin_users
-    if (!resolved) {
-      try {
-        const adminUsersRef = collection(db, 'admin_users');
-        const q = query(adminUsersRef, where('staffId', '==', cleanStaffId));
-        const qSnap = await getDocs(q);
-        if (!qSnap.empty) {
-          const docData = qSnap.docs[0].data();
-          resolved = {
-            staffId: docData.staffId,
-            uid: docData.uid || qSnap.docs[0].id,
-            email: docData.email,
-            name: docData.name,
-            department: docData.department,
-            roleId: docData.roleId,
-            roleName: docData.roleName,
-            status: docData.status || 'active',
-            requiresPasswordReset: docData.requiresPasswordReset,
-          };
-        }
-      } catch (err) {
-        // Safe fallback
-      }
-    }
+    // 2. Authoritative Server-side Lookup
+    const resolved = await getStaffUser(normalizedUsername);
 
     // 3. User Enumeration Defense:
-    // If not found, return generic error message without revealing database state
+    // If user is not found, return generic error without revealing database state or email
     if (!resolved) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Authentication rejected: Invalid Staff User ID or security credentials.',
+          error: 'Authentication rejected: Invalid username or security credentials.',
           code: 'AUTH_FAILED',
         },
         { status: 404 }
@@ -177,7 +79,6 @@ export async function POST(request: Request) {
     }
 
     // 4. Account Deactivation Guard:
-    // Deactivated staff accounts are blocked from authentication
     if (resolved.status === 'deactivated') {
       return NextResponse.json(
         {
@@ -211,7 +112,7 @@ export async function POST(request: Request) {
           return NextResponse.json(
             {
               success: false,
-              error: 'Authentication rejected: Invalid Staff User ID or passcode.',
+              error: 'Authentication rejected: Invalid username or passcode.',
               code: 'INVALID_CREDENTIALS',
             },
             { status: 401 }
@@ -221,7 +122,8 @@ export async function POST(request: Request) {
         // Successfully verified password!
         return NextResponse.json({
           success: true,
-          staffId: resolved.staffId,
+          username: resolved.username || normalizedUsername,
+          staffId: resolved.staffId || resolved.id,
           email: resolved.email,
           name: resolved.name,
           department: resolved.department,
@@ -233,24 +135,25 @@ export async function POST(request: Request) {
           localId: authData.localId,
         });
       } catch (apiErr: any) {
-        console.warn('Identity Platform verification fallback:', apiErr?.message);
+        console.warn('Identity Platform verification warning:', apiErr?.message);
       }
     }
 
-    // 6. Pre-auth resolution (used by client-side Firebase Auth gate):
+    // 6. Pre-auth resolution (Only returns non-sensitive metadata for authenticated flow)
     return NextResponse.json({
       success: true,
-      staffId: resolved.staffId,
-      email: resolved.email,
+      username: resolved.username || normalizedUsername,
+      staffId: resolved.staffId || resolved.id,
       name: resolved.name,
       department: resolved.department,
       roleId: resolved.roleId,
       roleName: resolved.roleName,
       requiresPasswordReset: resolved.requiresPasswordReset ?? true,
+      // Only include email if password was verified above
     });
   } catch (err: any) {
     return NextResponse.json(
-      { success: false, error: err?.message || 'Server error resolving Staff User ID.' },
+      { success: false, error: err?.message || 'Server error resolving username.' },
       { status: 500 }
     );
   }

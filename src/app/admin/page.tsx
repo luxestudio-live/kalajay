@@ -59,8 +59,8 @@ import { SEED_ADMIN_USERS } from '@/data/adminSeedData';
 const BASELINE_STAFF_EMAILS = SEED_ADMIN_USERS.map(u => u.email.toLowerCase());
 
 // ===============================================================
-// EXPLICIT ATELIER OPERATIONS LOGIN SCREEN (USER ID BASED)
-// Dedicated administrative authentication view using Staff User ID (e.g. KJ-ADM-001).
+// EXPLICIT ATELIER OPERATIONS LOGIN SCREEN (USERNAME BASED)
+// Dedicated administrative authentication view using unique username (e.g. soumya, ritu.verma).
 // Zero self-registration. All staff accounts are provisioned by the Super Administrator.
 // ===============================================================
 function AdminSecurityGate({
@@ -80,7 +80,7 @@ function AdminSecurityGate({
 
   // State for First-Login Passcode Reset Flow
   const [showResetModal, setShowResetModal] = useState(false);
-  const [pendingStaff, setPendingStaff] = useState<{ email: string; id: string; name: string } | null>(null);
+  const [pendingStaff, setPendingStaff] = useState<{ email: string; id: string; name: string; username?: string } | null>(null);
   const [newPasscode, setNewPasscode] = useState('');
   const [confirmPasscode, setConfirmPasscode] = useState('');
   const [showNewPasscode, setShowNewPasscode] = useState(false);
@@ -91,6 +91,7 @@ function AdminSecurityGate({
   // Read dynamically provisioned staff users from Admin Store
   const [authorizedStaff, setAuthorizedStaff] = useState<Array<{
     id: string;
+    username: string;
     name: string;
     email: string;
     roleName: string;
@@ -98,6 +99,7 @@ function AdminSecurityGate({
   }>>([
     {
       id: 'KJ-ADM-001',
+      username: 'soumya',
       name: 'Soumya (Founder)',
       email: 'soumya@kalajay.in',
       roleName: 'Founder & Head of Maison (Super Administrator)',
@@ -105,18 +107,21 @@ function AdminSecurityGate({
     },
     {
       id: 'KJ-ADM-002',
+      username: 'ritu.verma',
       name: 'Ritu Verma',
       email: 'ritu.verma@kalajay.in',
       roleName: 'Store Operations Manager',
     },
     {
       id: 'KJ-ADM-003',
+      username: 'sunita.craft',
       name: 'Sunita Kumari',
       email: 'sunita.craft@kalajay.in',
       roleName: 'Bihar Atelier & Production Head',
     },
     {
       id: 'KJ-ADM-004',
+      username: 'aarav.mehta',
       name: 'Aarav Mehta',
       email: 'aarav.m@kalajay.in',
       roleName: 'Raw Materials & Inventory Controller',
@@ -137,10 +142,11 @@ function AdminSecurityGate({
           if (Array.isArray(parsed.users)) {
             const combined = parsed.users.map((u: any) => ({
               id: u.staffId || u.id,
+              username: u.username || (u.staffId || u.id).toLowerCase(),
               name: u.name,
               email: u.email.toLowerCase(),
               roleName: u.roleName || 'Atelier Staff',
-              isSuperAdmin: (u.staffId || u.id) === 'KJ-ADM-001' || u.roleId === 'role-super-admin',
+              isSuperAdmin: (u.username === 'soumya' || (u.staffId || u.id) === 'KJ-ADM-001' || u.roleId === 'role-super-admin'),
             }));
             setAuthorizedStaff(combined);
           }
@@ -155,10 +161,11 @@ function AdminSecurityGate({
         if (res.success && Array.isArray(res.users)) {
           const list = res.users.map((u: any) => ({
             id: u.staffId || u.id,
+            username: u.username || (u.staffId || u.id).toLowerCase(),
             name: u.name,
             email: u.email.toLowerCase(),
             roleName: u.roleName || 'Atelier Staff',
-            isSuperAdmin: (u.staffId || u.id) === 'KJ-ADM-001' || u.roleId === 'role-super-admin',
+            isSuperAdmin: (u.username === 'soumya' || (u.staffId || u.id) === 'KJ-ADM-001' || u.roleId === 'role-super-admin'),
           }));
           setAuthorizedStaff(list);
         }
@@ -172,10 +179,13 @@ function AdminSecurityGate({
     setError(null);
     setResetEmailSent(false);
 
-    const cleanInput = userId.trim();
+    let cleanInput = userId.trim();
     if (!cleanInput) {
-      setError('Please enter your provisioned Staff User ID (e.g. KJ-ADM-001).');
+      setError('Please enter your unique Staff Username (e.g. soumya or @soumya).');
       return;
+    }
+    if (cleanInput.startsWith('@')) {
+      cleanInput = cleanInput.substring(1).trim();
     }
 
     if (!password) {
@@ -185,9 +195,10 @@ function AdminSecurityGate({
 
     setIsSubmitting(true);
 
-    // 1. Resolve Staff Account by User ID via Backend Resolver API
+    // 1. Resolve Staff Account by Username via Backend Resolver API
     let resolvedEmail = '';
-    let resolvedStaffId = cleanInput.toUpperCase();
+    let resolvedStaffId = cleanInput.toLowerCase();
+    let resolvedUsername = cleanInput.toLowerCase();
     let resolvedName = '';
     let serverRequiresReset = true;
 
@@ -195,7 +206,7 @@ function AdminSecurityGate({
       const resolveRes = await fetch('/api/admin/auth/resolve/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ staffId: cleanInput, password }),
+        body: JSON.stringify({ username: cleanInput, password }),
       });
       const resolveData = await resolveRes.json();
 
@@ -206,33 +217,36 @@ function AdminSecurityGate({
         } else if (resolveData.code === 'RATE_LIMITED') {
           setError('Too many login attempts. Access temporarily restricted. Please try again in 1 minute.');
         } else if (resolveData.code === 'INVALID_CREDENTIALS') {
-          setError('Authentication rejected. Invalid Staff User ID or passcode.');
+          setError('Authentication rejected. Invalid username or passcode.');
         } else {
           setError(
-            `Access Denied: Staff User ID "${cleanInput}" was not recognized. Administrative accounts must be provisioned internally by the Super Administrator.`
+            `Access Denied: Username "${cleanInput}" was not recognized. Administrative accounts must be provisioned internally by the Super Administrator.`
           );
         }
         return;
       }
 
       resolvedEmail = resolveData.email;
-      resolvedStaffId = resolveData.staffId;
+      resolvedStaffId = resolveData.staffId || resolveData.username;
+      resolvedUsername = resolveData.username || cleanInput.toLowerCase();
       resolvedName = resolveData.name;
       serverRequiresReset = resolveData.requiresPasswordReset !== false;
     } catch {
       // Local fallback in case network hiccup
       const staffObj = authorizedStaff.find(
         s =>
+          s.username.toLowerCase() === cleanInput.toLowerCase() ||
           s.id.toUpperCase() === cleanInput.toUpperCase() ||
           s.email.toLowerCase() === cleanInput.toLowerCase()
       );
       if (!staffObj) {
         setIsSubmitting(false);
-        setError(`Access Denied: Staff User ID "${cleanInput}" was not recognized.`);
+        setError(`Access Denied: Username "${cleanInput}" was not recognized.`);
         return;
       }
       resolvedEmail = staffObj.email;
       resolvedStaffId = staffObj.id;
+      resolvedUsername = staffObj.username || staffObj.id.toLowerCase();
       resolvedName = staffObj.name;
     }
 
@@ -255,12 +269,12 @@ function AdminSecurityGate({
       setIsSubmitting(false);
 
       if (needsReset) {
-        setPendingStaff({ email: resolvedEmail, id: resolvedStaffId, name: resolvedName });
+        setPendingStaff({ email: resolvedEmail, id: resolvedStaffId, name: resolvedName, username: resolvedUsername });
         setShowResetModal(true);
         return;
       }
 
-      onAuthenticated(resolvedEmail, resolvedStaffId);
+      onAuthenticated(resolvedEmail, resolvedUsername || resolvedStaffId);
     } catch (authErr: any) {
       setIsSubmitting(false);
       if (
@@ -268,7 +282,7 @@ function AdminSecurityGate({
         authErr.code === 'auth/wrong-password' ||
         authErr.code === 'auth/user-not-found'
       ) {
-        setError('Authentication rejected. Invalid Staff User ID or Passcode.');
+        setError('Authentication rejected. Invalid username or passcode.');
       } else if (authErr.code === 'auth/too-many-requests') {
         setError('Too many failed attempts. Access temporarily restricted. Try again later or use password recovery.');
       } else {
@@ -277,8 +291,8 @@ function AdminSecurityGate({
     }
   };
 
-  const handleFillCredentials = (staffId: string) => {
-    setUserId(staffId);
+  const handleFillCredentials = (identifier: string) => {
+    setUserId(identifier.startsWith('@') ? identifier : `@${identifier}`);
     setPassword('');
     setError(null);
     setResetEmailSent(false);
@@ -443,7 +457,7 @@ function AdminSecurityGate({
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-[#9E5430]" />
               <span className="text-xs font-semibold tracking-wider uppercase text-[#372921]">
-                Staff User ID Login
+                Staff Username Login
               </span>
             </div>
             <span className="text-[10px] bg-[#FAF7F2] text-[#9E5430] px-2 py-0.5 rounded border border-[#EAE2D8] font-mono font-bold">
@@ -468,16 +482,24 @@ function AdminSecurityGate({
           <form onSubmit={handleStaffLogin} className="space-y-4">
             <div>
               <label className="block text-[11px] uppercase tracking-wider text-[#76695F] font-semibold mb-1.5">
-                Staff User ID (e.g. KJ-ADM-001)
+                Staff Username (e.g. soumya or @soumya)
               </label>
-              <input
-                type="text"
-                required
-                value={userId}
-                onChange={e => setUserId(e.target.value)}
-                placeholder="KJ-ADM-001"
-                className="w-full px-3.5 py-2.5 bg-[#FAF7F2] border border-[#DED3C5] rounded-sm text-xs text-[#372921] focus:outline-none focus:border-[#9E5430] transition-colors font-mono tracking-wider font-semibold uppercase placeholder:normal-case"
-              />
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#9E5430]">
+                  @
+                </span>
+                <input
+                  type="text"
+                  required
+                  value={userId.startsWith('@') ? userId.substring(1) : userId}
+                  onChange={e => {
+                    const val = e.target.value.trim().toLowerCase();
+                    setUserId(val);
+                  }}
+                  placeholder="soumya"
+                  className="w-full pl-8 pr-3.5 py-2.5 bg-[#FAF7F2] border border-[#DED3C5] rounded-sm text-xs text-[#372921] focus:outline-none focus:border-[#9E5430] transition-colors font-mono tracking-wider font-semibold lowercase placeholder:normal-case"
+                />
+              </div>
               <span className="text-[10px] text-[#76695F] mt-1 block">
                 Provisioned by Super Administrator upon appointment.
               </span>
@@ -523,11 +545,11 @@ function AdminSecurityGate({
               className="w-full py-3.5 bg-[#372921] hover:bg-[#503A2E] text-white text-xs uppercase tracking-widest font-semibold rounded-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
             >
               <KeyRound className="w-3.5 h-3.5 text-[#C5A880]" />
-              <span>{isSubmitting ? 'Authenticating User ID...' : 'Unlock Operations Console'}</span>
+              <span>{isSubmitting ? 'Authenticating Username...' : 'Unlock Operations Console'}</span>
             </button>
           </form>
 
-          {/* Collapsible Directory of Provisioned Personnel with User IDs */}
+          {/* Collapsible Directory of Provisioned Personnel with Usernames */}
           <div className="pt-3 border-t border-[#EAE2D8]">
             <button
               type="button"
@@ -536,7 +558,7 @@ function AdminSecurityGate({
             >
               <span className="flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5 text-[#9E5430]" />
-                <span>Provisioned Staff User IDs ({authorizedStaff.length})</span>
+                <span>Provisioned Staff Accounts ({authorizedStaff.length})</span>
               </span>
               {showDirectory ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </button>
@@ -547,14 +569,14 @@ function AdminSecurityGate({
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => handleFillCredentials(staff.id)}
+                    onClick={() => handleFillCredentials(staff.username || staff.id.toLowerCase())}
                     className="w-full p-2.5 rounded bg-[#FAF7F2] hover:bg-[#F0E9DF] border border-[#EAE2D8] flex items-center justify-between text-left transition-colors cursor-pointer group"
-                    title={`Click to select User ID: ${staff.id}`}
+                    title={`Click to select Username: @${staff.username || staff.id.toLowerCase()}`}
                   >
                     <div className="min-w-0 pr-2">
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-bold text-xs text-[#9E5430] bg-[#9E5430]/10 px-1.5 py-0.5 rounded">
-                          {staff.id}
+                          @{staff.username || staff.id.toLowerCase()}
                         </span>
                         <strong className="text-[#372921] text-[11px] block truncate">{staff.name}</strong>
                         {staff.isSuperAdmin && (

@@ -90,6 +90,7 @@ interface AdminStoreContextType {
   // Staff User Management with Cryptographic Credentials
   createAdminUser: (data: {
     name: string;
+    username?: string;
     email: string;
     phone?: string;
     roleId: string;
@@ -581,9 +582,10 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     return { success: true };
   };
 
-  // Staff User Management with Cryptographic Credentials
+  // Staff User Management with Cryptographic Credentials & Usernames
   const createAdminUser = async (data: {
     name: string;
+    username?: string;
     email: string;
     phone?: string;
     roleId: string;
@@ -598,8 +600,10 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          requestingStaffId: 'KJ-ADM-001',
+          requestingStaffId: 'soumya',
+          requestingUsername: 'soumya',
           name: data.name,
+          username: data.username,
           email: data.email,
           phone: data.phone,
           department: data.department,
@@ -659,8 +663,10 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          requestingStaffId: 'KJ-ADM-001',
+          requestingStaffId: 'soumya',
+          requestingUsername: 'soumya',
           targetStaffId: userId,
+          targetUsername: userId,
           updates,
         }),
       });
