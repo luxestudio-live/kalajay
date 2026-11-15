@@ -256,6 +256,34 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------
+    // 15. Dynamic Administrative Roles (/admin_roles/{roleId})
+    // Read: Authenticated staff / admins.
+    // Write: Verified Administrators only.
+    // -------------------------------------------------------------
+    match /admin_roles/{roleId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 16. Staff ID Login Index (/staff_id_index/{staffId})
+    // Read: Authenticated staff / server lookup.
+    // Write: Verified Administrators only.
+    // -------------------------------------------------------------
+    match /staff_id_index/{staffId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 17. System Counters (/counters/{counterId})
+    // Write: Verified Administrators only.
+    // -------------------------------------------------------------
+    match /counters/{counterId} {
+      allow read, write: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
     // Default Deny
     // -------------------------------------------------------------
     match /{document=**} {

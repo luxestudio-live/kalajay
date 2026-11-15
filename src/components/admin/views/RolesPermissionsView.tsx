@@ -50,6 +50,16 @@ export default function RolesPermissionsView() {
   };
 
   const startEditRole = (role: AdminRole) => {
+    if (role.id === 'role-super-admin') {
+      showModal({
+        title: 'Immutable System Role',
+        subtitle: 'Super Admin Access Policy',
+        icon: 'shield',
+        message: 'The Super Admin role is an immutable system archetype providing full operational and architectural privileges across all modules. It cannot be edited or stripped of permissions.',
+        confirmLabel: 'Understood',
+      });
+      return;
+    }
     setEditingRoleId(role.id);
     setRoleName(role.name);
     setRoleDescription(role.description);
@@ -57,8 +67,8 @@ export default function RolesPermissionsView() {
     setActiveTab('editor');
   };
 
-  const handleCloneRole = (role: AdminRole) => {
-    const cloned = createRole({
+  const handleCloneRole = async (role: AdminRole) => {
+    const cloned = await createRole({
       name: `${role.name} (Copy)`,
       description: `Cloned from ${role.name}. Scoped operational rights.`,
       isSystem: false,
@@ -69,8 +79,8 @@ export default function RolesPermissionsView() {
     setTimeout(() => setStatusMessage(null), 3000);
   };
 
-  const handleDelete = (role: AdminRole) => {
-    const res = deleteRole(role.id);
+  const handleDelete = async (role: AdminRole) => {
+    const res = await deleteRole(role.id);
     if (!res.success) {
       setStatusMessage({ type: 'error', text: res.error || 'Failed to delete role.' });
     } else {
@@ -144,7 +154,7 @@ export default function RolesPermissionsView() {
     }
   };
 
-  const handleSaveRole = (e: React.FormEvent) => {
+  const handleSaveRole = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!roleName.trim()) {
       showModal({
@@ -156,14 +166,14 @@ export default function RolesPermissionsView() {
     }
 
     if (editingRoleId) {
-      updateRole(editingRoleId, {
+      await updateRole(editingRoleId, {
         name: roleName,
         description: roleDescription,
         permissions: permissionsState,
       });
       setStatusMessage({ type: 'success', text: `Saved updates to "${roleName}".` });
     } else {
-      createRole({
+      await createRole({
         name: roleName,
         description: roleDescription,
         isSystem: false,

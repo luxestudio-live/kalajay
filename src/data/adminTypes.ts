@@ -64,8 +64,12 @@ export interface AdminUser {
   roleName: string;
   department: string;
   status: 'active' | 'deactivated';
+  staffId?: string;
+  uid?: string;
+  requiresPasswordReset?: boolean;
   lastLogin?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface HomepageSectionConfig {

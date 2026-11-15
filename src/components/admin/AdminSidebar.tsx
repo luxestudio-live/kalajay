@@ -322,6 +322,9 @@ export default function AdminSidebar({
         <div className="flex-1 overflow-y-auto py-3 px-2 space-y-1 scrollbar-thin scrollbar-thumb-[#372921]">
           {NAV_GROUPS.map(group => {
             const hasAccess = isModuleAccessible(group.id);
+            // Hide navigation link entirely if role lacks permission
+            if (!hasAccess) return null;
+
             const isGroupActive = activeModule === group.id;
             const isExpanded = expandedGroups[group.id] || false;
             const Icon = group.icon;
@@ -391,6 +394,7 @@ export default function AdminSidebar({
                     {group.items.map(subItem => {
                       const isSubActive = activeSubPage === subItem.id;
                       const isSubAccessible = isPageAccessible(subItem.id);
+                      if (!isSubAccessible) return null;
 
                       return (
                         <button

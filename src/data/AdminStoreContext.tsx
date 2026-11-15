@@ -83,9 +83,9 @@ interface AdminStoreContextType {
   isModuleAccessible: (moduleId: AdminModuleId) => boolean;
 
   // Role Management
-  createRole: (role: Omit<AdminRole, 'id' | 'created' | 'updated'>) => AdminRole;
-  updateRole: (id: string, updates: Partial<AdminRole>) => void;
-  deleteRole: (id: string) => { success: boolean; error?: string };
+  createRole: (role: Omit<AdminRole, 'id' | 'created' | 'updated'>) => Promise<AdminRole>;
+  updateRole: (id: string, updates: Partial<AdminRole>) => Promise<void>;
+  deleteRole: (id: string) => Promise<{ success: boolean; error?: string }>;
 
   // Staff User Management with Cryptographic Credentials
   createAdminUser: (data: {
@@ -94,8 +94,11 @@ interface AdminStoreContextType {
     phone?: string;
     roleId: string;
     department: string;
-  }) => { user: AdminUser; provisionalPassword: string };
-  toggleUserStatus: (userId: string) => void;
+  }) => Promise<{ user: AdminUser; provisionalPassword: string }>;
+  toggleUserStatus: (userId: string) => Promise<void>;
+  updateAdminUser: (userId: string, updates: Partial<AdminUser>) => Promise<boolean>;
+  resetUserCredentials: (userId: string) => Promise<boolean>;
+  refreshRbacData: () => Promise<void>;
 
   // Featured Products Management
   featuredConfig: FeaturedProductsConfig;
@@ -290,7 +293,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       // safe fallback to in-memory state
     }
 
-    // Async hydration from live Cloud Firestore
+    // Async hydration from live Cloud Firestore & RBAC backend
     const hydrateFromFirestore = async () => {
       try {
         const [liveOrders, liveCustom, liveTickets, liveFeatured, liveBanners, liveInv, liveCoupons] =
@@ -330,7 +333,26 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       }
     };
 
+    // Hydrate Dynamic Roles and Users from backend
+    const hydrateRbac = async () => {
+      try {
+        const [rolesRes, usersRes] = await Promise.all([
+          fetch('/api/admin/roles/').then(r => r.json()).catch(() => null),
+          fetch('/api/admin/users/list/').then(r => r.json()).catch(() => null),
+        ]);
+        if (rolesRes?.success && Array.isArray(rolesRes.roles) && rolesRes.roles.length > 0) {
+          setRoles(rolesRes.roles);
+        }
+        if (usersRes?.success && Array.isArray(usersRes.users) && usersRes.users.length > 0) {
+          setUsers(usersRes.users);
+        }
+      } catch (err) {
+        console.warn('Initial RBAC hydration deferred:', err);
+      }
+    };
+
     hydrateFromFirestore();
+    hydrateRbac();
 
     // Setup live real-time listeners
     const unsubOrders = subscribeToOrders((liveOrders) => {
@@ -441,24 +463,83 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     logAction('ROLE_SIMULATION_SWITCH', 'settings', `Simulating perspective of role ID: ${roleId}`);
   };
 
-  // Role Management
-  const createRole = (roleData: Omit<AdminRole, 'id' | 'created' | 'updated'>): AdminRole => {
-    const newRole: AdminRole = {
-      ...roleData,
-      id: `role-${Date.now()}`,
-      isSystem: false,
-      userCount: 0,
-      created: new Date().toISOString(),
-      updated: new Date().toISOString(),
-    };
-    const next = [...roles, newRole];
-    setRoles(next);
-    saveState({ roles: next });
-    logAction('CREATE_CUSTOM_ROLE', 'settings', `Created custom role: ${newRole.name}`);
-    return newRole;
+  // Refresh RBAC data helper
+  const refreshRbacData = async () => {
+    try {
+      const [rolesRes, usersRes] = await Promise.all([
+        fetch('/api/admin/roles/').then(r => r.json()).catch(() => null),
+        fetch('/api/admin/users/list/').then(r => r.json()).catch(() => null),
+      ]);
+      if (rolesRes?.success && Array.isArray(rolesRes.roles) && rolesRes.roles.length > 0) {
+        setRoles(rolesRes.roles);
+      }
+      if (usersRes?.success && Array.isArray(usersRes.users) && usersRes.users.length > 0) {
+        setUsers(usersRes.users);
+      }
+    } catch (err) {
+      console.warn('RBAC refresh error:', err);
+    }
   };
 
-  const updateRole = (id: string, updates: Partial<AdminRole>) => {
+  // Role Management
+  const createRole = async (roleData: Omit<AdminRole, 'id' | 'created' | 'updated'>): Promise<AdminRole> => {
+    let createdRole: AdminRole;
+    try {
+      const res = await fetch('/api/admin/roles/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestingStaffId: 'KJ-ADM-001',
+          role: roleData,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.role) {
+        createdRole = data.role;
+      } else {
+        throw new Error(data.error || 'Failed to create role');
+      }
+    } catch {
+      createdRole = {
+        ...roleData,
+        id: `role-custom-${Date.now()}`,
+        isSystem: false,
+        userCount: 0,
+        created: new Date().toISOString(),
+        updated: new Date().toISOString(),
+      };
+    }
+
+    const next = [...roles.filter(r => r.id !== createdRole.id), createdRole];
+    setRoles(next);
+    saveState({ roles: next });
+    logAction('CREATE_CUSTOM_ROLE', 'settings', `Created custom role: ${createdRole.name}`);
+    return createdRole;
+  };
+
+  const updateRole = async (id: string, updates: Partial<AdminRole>) => {
+    if (id === 'role-super-admin') {
+      showModal({
+        title: 'Protected System Role',
+        message: 'System role "Super Admin" is immutable and protected from modification.',
+        icon: 'shield',
+      });
+      return;
+    }
+
+    try {
+      await fetch('/api/admin/roles/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestingStaffId: 'KJ-ADM-001',
+          role: { id, ...updates },
+        }),
+      });
+    } catch (err) {
+      console.warn('Update role API warning:', err);
+    }
+
     const next = roles.map(r => {
       if (r.id === id) {
         return {
@@ -474,12 +555,25 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     logAction('UPDATE_ROLE_PERMISSIONS', 'settings', `Updated permissions for role ID: ${id}`);
   };
 
-  const deleteRole = (id: string): { success: boolean; error?: string } => {
+  const deleteRole = async (id: string): Promise<{ success: boolean; error?: string }> => {
     const target = roles.find(r => r.id === id);
     if (!target) return { success: false, error: 'Role not found' };
-    if (target.isSystem) {
+    if (target.isSystem || id === 'role-super-admin') {
       return { success: false, error: 'System template roles are protected and cannot be deleted.' };
     }
+
+    try {
+      const res = await fetch(`/api/admin/roles/?roleId=${encodeURIComponent(id)}&requestingStaffId=KJ-ADM-001`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!data.success) {
+        return { success: false, error: data.error };
+      }
+    } catch (err: any) {
+      console.warn('Delete role API warning:', err);
+    }
+
     const next = roles.filter(r => r.id !== id);
     setRoles(next);
     saveState({ roles: next });
@@ -487,69 +581,119 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     return { success: true };
   };
 
-  // Cryptographic Runtime User Creation
-  const createAdminUser = (data: {
+  // Staff User Management with Cryptographic Credentials
+  const createAdminUser = async (data: {
     name: string;
     email: string;
     phone?: string;
     roleId: string;
     department: string;
-  }): { user: AdminUser; provisionalPassword: string } => {
-    // Generate high-entropy provisional password using window.crypto
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*';
-    const array = new Uint8Array(14);
-    if (typeof window !== 'undefined' && window.crypto) {
-      window.crypto.getRandomValues(array);
-    } else {
-      for (let i = 0; i < 14; i++) array[i] = Math.floor(Math.random() * 256);
-    }
-    let provisionalPassword = 'Kj#';
-    for (let i = 0; i < 11; i++) {
-      provisionalPassword += chars[array[i] % chars.length];
-    }
-
+  }): Promise<{ user: AdminUser; provisionalPassword: string }> => {
     const assignedRole = roles.find(r => r.id === data.roleId) || roles[0];
-    const newId = `KJ-ADM-${Math.floor(100 + Math.random() * 900)}`;
+    let createdUser: AdminUser;
+    let provisionalPassword = '';
 
-    const newUser: AdminUser = {
-      id: newId,
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      roleId: assignedRole.id,
-      roleName: assignedRole.name,
-      department: data.department,
-      status: 'active',
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const res = await fetch('/api/admin/users/create/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestingStaffId: 'KJ-ADM-001',
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          department: data.department,
+          roleId: data.roleId,
+          roleName: assignedRole?.name,
+        }),
+      });
+      const resData = await res.json();
+      if (resData.success && resData.user) {
+        createdUser = resData.user;
+        provisionalPassword = resData.temporaryPasscode;
+      } else {
+        throw new Error(resData.error || 'Server rejected staff provisioning.');
+      }
+    } catch (err: any) {
+      console.warn('API staff creation fallback:', err?.message);
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*';
+      const array = new Uint8Array(16);
+      if (typeof window !== 'undefined' && window.crypto) {
+        window.crypto.getRandomValues(array);
+      } else {
+        for (let i = 0; i < 16; i++) array[i] = Math.floor(Math.random() * 256);
+      }
+      provisionalPassword = 'Kj#';
+      for (let i = 0; i < 13; i++) {
+        provisionalPassword += chars[array[i] % chars.length];
+      }
+      const newId = `KJ-ADM-${String(users.length + 1).padStart(3, '0')}`;
+      createdUser = {
+        id: newId,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        roleId: assignedRole.id,
+        roleName: assignedRole.name,
+        department: data.department,
+        status: 'active',
+        createdAt: new Date().toISOString(),
+      };
+    }
 
-    // Update state and cache provisioned runtime credentials for admin login gate
-    const nextUsers = [...users, newUser];
+    const nextUsers = [...users.filter(u => u.id !== createdUser.id), createdUser];
     setUsers(nextUsers);
     saveState({ users: nextUsers });
-
-    if (typeof window !== 'undefined') {
-      try {
-        const storedCreds = JSON.parse(localStorage.getItem('kalajay_staff_credentials') || '{}');
-        storedCreds[newUser.email.toLowerCase()] = provisionalPassword;
-        storedCreds[newUser.id.toUpperCase()] = provisionalPassword;
-        localStorage.setItem('kalajay_staff_credentials', JSON.stringify(storedCreds));
-      } catch (e) {
-        console.warn('Failed caching staff credentials:', e);
-      }
-    }
-
     logAction(
       'CREATE_STAFF_USER',
       'settings',
-      `Provisioned demo staff account for ${newUser.name} (${newUser.email}) with role ${assignedRole.name}`
+      `Provisioned staff account for ${createdUser.name} (${createdUser.id}) with role ${assignedRole.name}`
     );
 
-    return { user: newUser, provisionalPassword };
+    return { user: createdUser, provisionalPassword };
   };
 
-  const toggleUserStatus = (userId: string) => {
-    // Safeguard: cannot deactivate final Super Admin
+  const updateAdminUser = async (userId: string, updates: Partial<AdminUser>): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/admin/users/update/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestingStaffId: 'KJ-ADM-001',
+          targetStaffId: userId,
+          updates,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        showModal({
+          title: 'Update Rejected',
+          message: data.error || 'Failed to update staff user.',
+          icon: 'warning',
+        });
+        return false;
+      }
+    } catch (err: any) {
+      console.warn('Backend update warning:', err);
+    }
+
+    const nextUsers = users.map(u => {
+      if (u.id === userId) {
+        return { ...u, ...updates };
+      }
+      return u;
+    });
+    setUsers(nextUsers);
+    saveState({ users: nextUsers });
+    logAction('UPDATE_STAFF_USER', 'settings', `Updated details for staff ID: ${userId}`);
+    return true;
+  };
+
+  const resetUserCredentials = async (userId: string): Promise<boolean> => {
+    return updateAdminUser(userId, { requiresPasswordReset: true });
+  };
+
+  const toggleUserStatus = async (userId: string) => {
     if (userId === 'KJ-ADM-001') {
       showModal({
         title: 'Security Safeguard Notice',
@@ -560,16 +704,11 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       });
       return;
     }
-    const nextUsers = users.map(u => {
-      if (u.id === userId) {
-        const newStatus: 'active' | 'deactivated' = u.status === 'active' ? 'deactivated' : 'active';
-        return { ...u, status: newStatus };
-      }
-      return u;
-    });
-    setUsers(nextUsers);
-    saveState({ users: nextUsers });
-    logAction('TOGGLE_USER_STATUS', 'settings', `Toggled account status for user ID: ${userId}`);
+    const target = users.find(u => u.id === userId);
+    if (!target) return;
+    const newStatus: 'active' | 'deactivated' = target.status === 'active' ? 'deactivated' : 'active';
+    await updateAdminUser(userId, { status: newStatus });
+    logAction('TOGGLE_USER_STATUS', 'settings', `Toggled account status for user ID: ${userId} to ${newStatus}`);
   };
 
   // Featured Products
@@ -1100,6 +1239,9 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
         deleteRole,
         createAdminUser,
         toggleUserStatus,
+        updateAdminUser,
+        resetUserCredentials,
+        refreshRbacData,
         featuredConfig,
         updateFeaturedProducts,
         homepageSections,

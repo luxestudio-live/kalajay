@@ -128,6 +128,7 @@ function AdminSecurityGate({
   const [isSendingReset, setIsSendingReset] = useState(false);
 
   useEffect(() => {
+    // 1. Check local storage cache
     try {
       if (typeof window !== 'undefined') {
         const stored = localStorage.getItem('kalajay_admin_store_v3');
@@ -135,19 +136,35 @@ function AdminSecurityGate({
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed.users)) {
             const combined = parsed.users.map((u: any) => ({
-              id: u.id,
+              id: u.staffId || u.id,
               name: u.name,
               email: u.email.toLowerCase(),
               roleName: u.roleName || 'Atelier Staff',
-              isSuperAdmin: u.id === 'KJ-ADM-001' || u.roleId === 'role-super-admin',
+              isSuperAdmin: (u.staffId || u.id) === 'KJ-ADM-001' || u.roleId === 'role-super-admin',
             }));
             setAuthorizedStaff(combined);
           }
         }
       }
-    } catch {
-      // safe fallback to baseline
-    }
+    } catch {}
+
+    // 2. Fetch live staff list from backend API
+    const fetchStaffDirectory = async () => {
+      try {
+        const res = await fetch('/api/admin/users/list/').then(r => r.json());
+        if (res.success && Array.isArray(res.users)) {
+          const list = res.users.map((u: any) => ({
+            id: u.staffId || u.id,
+            name: u.name,
+            email: u.email.toLowerCase(),
+            roleName: u.roleName || 'Atelier Staff',
+            isSuperAdmin: (u.staffId || u.id) === 'KJ-ADM-001' || u.roleId === 'role-super-admin',
+          }));
+          setAuthorizedStaff(list);
+        }
+      } catch {}
+    };
+    fetchStaffDirectory();
   }, []);
 
   const handleStaffLogin = async (e: React.FormEvent) => {
@@ -161,20 +178,6 @@ function AdminSecurityGate({
       return;
     }
 
-    // 1. Resolve Staff Account by User ID (or associated staff email)
-    const staffObj = authorizedStaff.find(
-      s =>
-        s.id.toUpperCase() === cleanInput.toUpperCase() ||
-        s.email.toLowerCase() === cleanInput.toLowerCase()
-    );
-
-    if (!staffObj) {
-      setError(
-        `Access Denied: Staff User ID "${cleanInput}" was not recognized. Administrative accounts must be provisioned internally by the Super Administrator.`
-      );
-      return;
-    }
-
     if (!password) {
       setError('Please enter your atelier security passcode.');
       return;
@@ -182,12 +185,61 @@ function AdminSecurityGate({
 
     setIsSubmitting(true);
 
+    // 1. Resolve Staff Account by User ID via Backend Resolver API
+    let resolvedEmail = '';
+    let resolvedStaffId = cleanInput.toUpperCase();
+    let resolvedName = '';
+    let serverRequiresReset = true;
+
+    try {
+      const resolveRes = await fetch('/api/admin/auth/resolve/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ staffId: cleanInput }),
+      });
+      const resolveData = await resolveRes.json();
+
+      if (!resolveRes.ok || !resolveData.success) {
+        setIsSubmitting(false);
+        if (resolveData.code === 'ACCOUNT_DEACTIVATED') {
+          setError('This staff account has been deactivated. Please contact your Super Administrator.');
+        } else if (resolveData.code === 'RATE_LIMITED') {
+          setError('Too many login attempts. Access temporarily restricted. Please try again in 1 minute.');
+        } else {
+          setError(
+            `Access Denied: Staff User ID "${cleanInput}" was not recognized. Administrative accounts must be provisioned internally by the Super Administrator.`
+          );
+        }
+        return;
+      }
+
+      resolvedEmail = resolveData.email;
+      resolvedStaffId = resolveData.staffId;
+      resolvedName = resolveData.name;
+      serverRequiresReset = resolveData.requiresPasswordReset !== false;
+    } catch {
+      // Local fallback in case network hiccup
+      const staffObj = authorizedStaff.find(
+        s =>
+          s.id.toUpperCase() === cleanInput.toUpperCase() ||
+          s.email.toLowerCase() === cleanInput.toLowerCase()
+      );
+      if (!staffObj) {
+        setIsSubmitting(false);
+        setError(`Access Denied: Staff User ID "${cleanInput}" was not recognized.`);
+        return;
+      }
+      resolvedEmail = staffObj.email;
+      resolvedStaffId = staffObj.id;
+      resolvedName = staffObj.name;
+    }
+
     // 2. Authenticate strictly via Firebase Authentication
     try {
-      const userCred = await signInWithEmailAndPassword(auth, staffObj.email, password);
+      const userCred = await signInWithEmailAndPassword(auth, resolvedEmail, password);
 
       // 3. Inspect server profile in Firestore to verify first-login password reset enforcement
-      let needsReset = true;
+      let needsReset = serverRequiresReset;
       try {
         const userDocSnap = await getDoc(doc(db, 'users', userCred.user.uid));
         if (userDocSnap.exists()) {
@@ -201,12 +253,12 @@ function AdminSecurityGate({
       setIsSubmitting(false);
 
       if (needsReset) {
-        setPendingStaff({ email: staffObj.email, id: staffObj.id, name: staffObj.name });
+        setPendingStaff({ email: resolvedEmail, id: resolvedStaffId, name: resolvedName });
         setShowResetModal(true);
         return;
       }
 
-      onAuthenticated(staffObj.email, staffObj.id);
+      onAuthenticated(resolvedEmail, resolvedStaffId);
     } catch (authErr: any) {
       setIsSubmitting(false);
       if (
@@ -240,20 +292,36 @@ function AdminSecurityGate({
       return;
     }
 
-    const staffObj = authorizedStaff.find(
-      s =>
-        s.id.toUpperCase() === cleanInput.toUpperCase() ||
-        s.email.toLowerCase() === cleanInput.toLowerCase()
-    );
+    let targetEmail = '';
+    try {
+      const res = await fetch('/api/admin/auth/resolve/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ staffId: cleanInput }),
+      });
+      const data = await res.json();
+      if (data.success && data.email) {
+        targetEmail = data.email;
+      }
+    } catch {}
 
-    if (!staffObj) {
+    if (!targetEmail) {
+      const staffObj = authorizedStaff.find(
+        s =>
+          s.id.toUpperCase() === cleanInput.toUpperCase() ||
+          s.email.toLowerCase() === cleanInput.toLowerCase()
+      );
+      if (staffObj) targetEmail = staffObj.email;
+    }
+
+    if (!targetEmail) {
       setError(`Staff User ID "${cleanInput}" not found in staff directory.`);
       return;
     }
 
     setIsSendingReset(true);
     try {
-      await sendPasswordResetEmail(auth, staffObj.email);
+      await sendPasswordResetEmail(auth, targetEmail);
       setResetEmailSent(true);
     } catch (err: any) {
       setError(err?.message || 'Failed to dispatch password recovery email.');
@@ -296,7 +364,22 @@ function AdminSecurityGate({
       // 1. Synchronize new password in Firebase Authentication
       await updatePassword(currentUser, newPasscode);
 
-      // 2. Synchronize with Cloud Firestore (/users/{uid})
+      // 2. Synchronize via backend API to clear reset requirements
+      try {
+        await fetch('/api/admin/users/update/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            requestingStaffId: 'KJ-ADM-001',
+            targetStaffId: pendingStaff.id,
+            updates: {
+              requiresPasswordReset: false,
+            },
+          }),
+        });
+      } catch {}
+
+      // 3. Synchronize with Cloud Firestore (/users/{uid})
       await setDoc(
         doc(db, 'users', currentUser.uid),
         {
