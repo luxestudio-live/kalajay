@@ -204,7 +204,11 @@ export interface AdminOrder {
   timeline: Array<{ title: string; timestamp: string; note?: string }>;
   artisanNote?: string;
   courier?: string;
+  courierType?: 'internal' | 'commercial';
   trackingAwb?: string;
+  trackingAwbType?: 'internal' | 'commercial';
+  isInternalTracking?: boolean;
+  userId?: string;
   createdAt: string;
 }
 

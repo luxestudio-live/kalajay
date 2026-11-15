@@ -6,6 +6,7 @@ import { PRODUCTS, BRAND_CONFIG } from '@/data/catalogue';
 import { AdminOrder } from '@/data/adminTypes';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
+import { verifyFirebaseIdToken } from '@/lib/serverRbac';
 
 interface CreateOrderRequestBody {
   customerName: string;
@@ -180,22 +181,77 @@ export async function POST(request: Request) {
       }
     }
 
-    // 4. Server-Authoritative Shipping & 3% GST Calculation
+    // 4. Server-Authoritative Shipping & Business-Configurable GST Calculation (Concern 7)
     const discountedSubtotal = Math.max(0, calculatedSubtotal - calculatedDiscount);
-    const freeShippingThreshold = BRAND_CONFIG.shipping?.freeThreshold || 599;
-    const calculatedShipping = discountedSubtotal >= freeShippingThreshold ? 0 : 79;
-    const calculatedTax = Math.round(discountedSubtotal * 0.03); // 3% GST for Indian handcrafted goods
+    const freeShippingThreshold = BRAND_CONFIG.shipping?.freeThreshold ?? 599;
+    const standardShippingRate = BRAND_CONFIG.shipping?.standardRate ?? 79;
+    const calculatedShipping = discountedSubtotal >= freeShippingThreshold ? 0 : standardShippingRate;
+    const configuredGstRate = (BRAND_CONFIG as any).tax?.gstRate ?? 0.03;
+    const calculatedTax = Math.round(discountedSubtotal * configuredGstRate);
     const calculatedTotal = discountedSubtotal + calculatedShipping + calculatedTax;
 
-    // 5. Canonical Payload Hash & Durable Idempotency Enforcement (Requirement 3)
+    // 5. Authoritative Customer Ownership Resolution (Concern 2)
+    // Never trust client-supplied userId or email blindly.
+    // If Authorization header is provided, cryptographically verify with Firebase.
+    const authHeader = request.headers.get('authorization') || '';
+    let authenticatedUid: string | undefined = undefined;
+    let authenticatedEmail: string | undefined = undefined;
+
+    if (authHeader.startsWith('Bearer ')) {
+      const token = authHeader.slice(7).trim();
+      const verifyRes = await verifyFirebaseIdToken(token);
+      if (verifyRes.valid && verifyRes.uid) {
+        authenticatedUid = verifyRes.uid;
+        authenticatedEmail = verifyRes.email;
+      } else {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Authentication Rejected: Invalid or expired Firebase authentication token.',
+            code: 'AUTH_TOKEN_INVALID',
+          },
+          { status: 401 }
+        );
+      }
+    }
+
+    // Security Guard: If client supplied a userId in the body, it MUST match the verified authenticated token UID.
+    // An unauthenticated caller cannot supply a userId without a valid Bearer token (reject identity spoofing).
+    if (body.userId) {
+      if (!authenticatedUid) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Authentication Required: Cannot bind order to patron account without a valid Firebase authentication token.',
+            code: 'UNAUTHENTICATED_USER_ID_CLAIM',
+          },
+          { status: 401 }
+        );
+      }
+      if (body.userId !== authenticatedUid) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Identity Mismatch: Provided userId does not match the authenticated patron credentials.',
+            code: 'USER_IDENTITY_MISMATCH',
+          },
+          { status: 403 }
+        );
+      }
+    }
+
+    const finalUserId = authenticatedUid;
     const normalizedEmail = (body.customerEmail || 'guest@kalajay.in').trim().toLowerCase();
+    const finalCustomerEmail = authenticatedEmail || normalizedEmail;
+
+    // 6. Canonical Payload Hash & Durable Idempotency Enforcement (Requirement 3)
     const sortedItems = [...verifiedOrderItems]
       .sort((a, b) => a.sku.localeCompare(b.sku))
       .map(i => `${i.sku}:${i.quantity}:${i.price}`)
       .join('|');
 
     const canonicalPayload = JSON.stringify({
-      email: normalizedEmail,
+      email: finalCustomerEmail,
       phone: cleanPhone,
       pincode: body.shippingAddress.pincode.trim(),
       items: sortedItems,
@@ -225,7 +281,7 @@ export async function POST(request: Request) {
       }
 
       // Reject if bound to different customer
-      if (cachedEntry.customerEmail && cachedEntry.customerEmail.toLowerCase() !== normalizedEmail) {
+      if (cachedEntry.customerEmail && cachedEntry.customerEmail.toLowerCase() !== finalCustomerEmail) {
         return NextResponse.json(
           {
             success: false,
@@ -244,7 +300,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 6. Generate Cryptographic Order Reference
+    // 7. Generate Cryptographic Order Reference
     const generatedOrderNumber = `KJ-${Math.floor(100000 + Math.random() * 900000)}`;
 
     const payMethodMapped: AdminOrder['paymentMethod'] =
@@ -254,14 +310,14 @@ export async function POST(request: Request) {
         ? 'Credit/Debit Card'
         : 'WhatsApp Direct';
 
-    // 7. Payment Verification Enforcement (Requirement 5 & 7)
+    // 8. Payment Verification Enforcement (Concern 4)
     const initialPaymentStatus: AdminOrder['paymentStatus'] = 'pending';
     const initialFulfillmentStatus: AdminOrder['fulfillmentStatus'] = 'unfulfilled';
 
     const orderRecord: AdminOrder = {
       id: generatedOrderNumber,
       customerName: body.customerName.trim(),
-      customerEmail: normalizedEmail,
+      customerEmail: finalCustomerEmail,
       customerPhone: cleanPhone,
       items: verifiedOrderItems,
       subtotal: calculatedSubtotal,
@@ -292,9 +348,12 @@ export async function POST(request: Request) {
       ],
       artisanNote: 'Queued for loom allocation upon payment confirmation.',
       courier: 'Kalajay In-House Direct Dispatch',
+      courierType: 'internal',
       trackingAwb: `KJ-DISP-${Math.floor(10000000 + Math.random() * 90000000)}`,
+      trackingAwbType: 'internal',
+      isInternalTracking: true,
       createdAt: new Date().toISOString(),
-      ...(body.userId ? { userId: body.userId } : {}),
+      ...(finalUserId ? { userId: finalUserId } : {}),
     };
 
     const resultPayload = {

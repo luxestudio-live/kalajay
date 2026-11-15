@@ -53,14 +53,20 @@ service cloud.firestore {
              data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
              (!('email' in data) || (data.email is string && data.email.size() <= 150)) &&
              (!('phone' in data) || (data.phone is string && data.phone.size() <= 25)) &&
-             (!('rewardPoints' in data) || (data.rewardPoints is number && data.rewardPoints >= 0)) &&
-             // Privilege escalation guards: non-admins cannot self-assign roles, staff IDs, or bypass password reset
+             // Privilege escalation & business data integrity guards (Concern 3)
              (
                isAdmin() || (
                  (!('role' in data) || data.role == 'customer' || (resource != null && data.role == resource.data.role)) &&
                  (!('isAdmin' in data) || data.isAdmin == false || (resource != null && data.isAdmin == resource.data.isAdmin)) &&
                  (!('staffId' in data) || (resource != null && data.staffId == resource.data.staffId)) &&
-                 (!('requiresPasswordReset' in data) || (resource != null && data.requiresPasswordReset == resource.data.requiresPasswordReset))
+                 (!('requiresPasswordReset' in data) || (resource != null && data.requiresPasswordReset == resource.data.requiresPasswordReset)) &&
+                 // Reward Points & Loyalty Tier Protection (Concern 3):
+                 // On creation: welcome points capped at 300, tier must be default Kalajay Circle / Silver
+                 // On update: non-admins cannot inflate reward points or alter loyalty tier
+                 (
+                   (resource == null && (!('rewardPoints' in data) || data.rewardPoints <= 300) && (!('tier' in data) || data.tier in ['Kalajay Circle', 'Silver'])) ||
+                   (resource != null && (!('rewardPoints' in data) || data.rewardPoints <= resource.data.rewardPoints) && (!('tier' in data) || data.tier == resource.data.tier))
+                 )
                )
              );
     }
@@ -71,7 +77,15 @@ service cloud.firestore {
              data.total is number && data.total >= 0 &&
              data.items is list && data.items.size() > 0 && data.items.size() <= 50 &&
              data.shippingAddress is map &&
-             data.fulfillmentStatus in ['unfulfilled', 'in_loom', 'quality_checked', 'shipped', 'delivered', 'rto'];
+             data.fulfillmentStatus in ['unfulfilled', 'in_loom', 'quality_checked', 'shipped', 'delivered', 'rto'] &&
+             // Payment Status & Fulfillment Guards (Concern 3 & 4):
+             // Direct client submissions cannot self-grant 'paid' status or trigger fulfillment
+             (
+               isAdmin() || (
+                 data.paymentStatus == 'pending' &&
+                 data.fulfillmentStatus == 'unfulfilled'
+               )
+             );
     }
 
     function isValidCustomEnquiry(data) {

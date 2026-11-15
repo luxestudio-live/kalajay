@@ -31,6 +31,8 @@ interface SimulatedOrder {
   artisanNote: string;
   awbNumber: string;
   courier: string;
+  paymentStatus?: string;
+  isInternalTracking?: boolean;
 }
 
 const KNOWN_ORDERS: Record<string, SimulatedOrder> = {
@@ -145,15 +147,20 @@ function TrackOrderContent() {
             ? 'delivered'
             : liveDoc.fulfillmentStatus === 'shipped'
             ? 'transit'
-            : liveDoc.fulfillmentStatus === 'in_loom'
-            ? 'loom'
-            : 'sealed';
+            : liveDoc.fulfillmentStatus === 'quality_checked'
+            ? 'sealed'
+            : 'loom';
+
+        const rawAwb = liveDoc.trackingAwb || 'KJ-DISP-' + Math.floor(10000000 + Math.random() * 90000000);
+        const isInternal = rawAwb.startsWith('KJ-DISP-') || (liveDoc.courier || '').includes('Kalajay In-House');
 
         setActiveOrder({
           orderId: liveDoc.id,
           placedDate: liveDoc.createdAt ? new Date(liveDoc.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recent',
           estimatedDelivery: '3 to 5 Business Days',
           status: mappedStatus,
+          paymentStatus: liveDoc.paymentStatus || 'pending',
+          isInternalTracking: isInternal,
           items: (liveDoc.items || []).map((it: any) => ({
             name: it.name,
             variant: `${it.sku || it.productId || 'KJ-ATELIER'} · Qty ${it.quantity || 1}`,
@@ -164,7 +171,7 @@ function TrackOrderContent() {
           customerName: liveDoc.customerName,
           city: `${liveDoc.shippingAddress?.city || 'India'}, ${liveDoc.shippingAddress?.state || ''}`,
           artisanNote: liveDoc.artisanNote || 'Handcrafted on Bihar artisan loom with heirloom-grade bead tension.',
-          awbNumber: liveDoc.trackingAwb || 'KJ-DISP-' + Math.floor(10000000 + Math.random() * 90000000),
+          awbNumber: rawAwb,
           courier: liveDoc.courier || 'Kalajay In-House Direct Dispatch',
         });
         setError(false);
@@ -335,6 +342,15 @@ function TrackOrderContent() {
                   }`}>
                     {activeOrder.status === 'transit' ? 'In Express Transit' : activeOrder.status === 'sealed' ? 'Wax-Sealed & Staged' : 'On Artisan Looms'}
                   </span>
+                  {activeOrder.paymentStatus && (
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] uppercase font-sans tracking-refined font-semibold ${
+                      activeOrder.paymentStatus === 'paid'
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : 'bg-amber-50 text-amber-800 border border-amber-200'
+                    }`}>
+                      {activeOrder.paymentStatus === 'paid' ? 'Payment Verified' : 'Payment: Pending Verification'}
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-ink-muted mt-1 font-light">
                   Booked on {activeOrder.placedDate} · Destined for <strong className="font-medium text-plum">{activeOrder.city}</strong>
@@ -414,7 +430,20 @@ function TrackOrderContent() {
                   </div>
                   <h4 className="font-serif text-base text-plum font-normal">Atelier Direct Transit</h4>
                   <p className="text-[11px] text-ink-muted leading-relaxed mt-1 font-light">
-                    Dispatched via {activeOrder.courier}. Ref: <strong className="text-plum font-mono">{activeOrder.awbNumber}</strong>
+                    {activeOrder.isInternalTracking || (activeOrder.awbNumber || '').startsWith('KJ-DISP-') ? (
+                      <>
+                        Dispatched via <strong className="text-plum">{activeOrder.courier}</strong> · Internal Dispatch Ref:{' '}
+                        <strong className="text-plum font-mono">{activeOrder.awbNumber}</strong>
+                        <span className="block text-[10px] text-ink-light italic mt-0.5">
+                          (Pre-allocated internal tracking reference. Commercial courier tracking details will be updated upon physical courier handover.)
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        Commercial Courier: <strong className="text-plum">{activeOrder.courier}</strong> · AWB Tracking:{' '}
+                        <strong className="text-plum font-mono">{activeOrder.awbNumber}</strong>
+                      </>
+                    )}
                   </p>
                   <span className="text-[10px] font-mono block mt-2 text-rosewood">
                     {getStepActive(activeOrder.status, 3) ? '● Out for Delivery' : '○ Scheduled for Dispatch'}

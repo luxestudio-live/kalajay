@@ -676,8 +676,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const addPatronOrder = (order: Order) => {
     if (!user) return;
     const existing = user.orders || [];
-    if (existing.some((o) => o.id === order.id)) return;
-    const updatedOrders = [order, ...existing];
+    const orderMap = new Map<string, Order>();
+    orderMap.set(order.id, order);
+    for (const ord of existing) {
+      if (ord && ord.id && !orderMap.has(ord.id)) {
+        orderMap.set(ord.id, ord);
+      }
+    }
+    const updatedOrders = Array.from(orderMap.values());
     const updatedUser: User = { ...user, orders: updatedOrders };
     saveUserSession(updatedUser);
     if (firebaseUser) {

@@ -281,7 +281,7 @@ export default function Footer() {
               © {new Date().getFullYear()} Kalajay Creations Private Limited. All rights reserved.
             </div>
             <div className="text-[11px] text-[#DED3C5]/70">
-              Compliant with DPDP Act, 2023 &amp; DPDP Rules, 2025 · Consumer Protection (E-Commerce) Rules, 2020
+              Engineered with DPDP Act, 2023 Technical Safeguards · Consumer Protection (E-Commerce) Rules, 2020 Framework
             </div>
           </div>
           <div className="flex items-center gap-1.5">

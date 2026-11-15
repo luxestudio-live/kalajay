@@ -81,6 +81,12 @@ export const BRAND_CONFIG = {
     "freeThreshold": 599,
     "standardRate": 79,
     "turnaround": "Made to order. Dispatched within 3-5 business days across India."
+  },
+  "tax": {
+    "gstRate": 0.03,
+    "taxLabel": "GST (3%)",
+    "hsnCode": "71179090",
+    "description": "GST on handcrafted luxury imitation jewelry and artisan beadwork under HSN 7117"
   }
 };
 

@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Compass,
   Package,
+  Clock,
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth, Order } from '@/context/AuthContext';
@@ -22,7 +23,7 @@ import { BRAND_CONFIG, PRODUCTS } from '@/data/catalogue';
 
 export default function CheckoutPage() {
   const { cart, subtotal, deliveryFee, total, formatINR, clearCart } = useCart();
-  const { user, isAuthenticated, addPatronOrder } = useAuth();
+  const { user, firebaseUser, isAuthenticated, addPatronOrder } = useAuth();
 
   const [step, setStep] = useState<'form' | 'success'>('form');
   const [name, setName] = useState('');
@@ -82,9 +83,25 @@ export default function CheckoutPage() {
 
     // 2. Transmit to Trusted Server Endpoint for Authoritative Price, Tax, Shipping & Inventory Check
     try {
+      let authToken = '';
+      if (firebaseUser) {
+        try {
+          authToken = await firebaseUser.getIdToken();
+        } catch (tokenErr) {
+          console.warn('Could not retrieve Firebase ID token for authenticated checkout:', tokenErr);
+        }
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+
       const response = await fetch('/api/orders/create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           customerName: name.trim(),
           customerEmail: email.trim() || 'guest@kalajay.in',
@@ -234,6 +251,13 @@ export default function CheckoutPage() {
               {name || 'Honoured Guest'} <br />
               {address ? `${address}, ${city}, ${stateName} - ${pincode}` : '14 Altamount Road, Mumbai, Maharashtra - 400026'}
             </p>
+            <div className="flex justify-between items-center pt-2 border-t border-border-subtle/80 text-[11px]">
+              <span className="text-ink-muted">Payment Verification:</span>
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-medium font-sans">
+                <Clock className="w-3 h-3 text-amber-600" />
+                <span>Pending Verification ({paymentMethod === 'upi' ? 'UPI Instant' : paymentMethod === 'card' ? 'Credit/Debit Card' : 'WhatsApp Direct'})</span>
+              </span>
+            </div>
           </div>
 
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">

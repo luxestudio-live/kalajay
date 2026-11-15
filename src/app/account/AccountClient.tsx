@@ -130,17 +130,30 @@ export default function AccountClient() {
     }
   }, [isAuthenticated, isLoading, router]);
 
-  // Sync live orders from Firestore chronicle
+  // Sync live orders from Firestore chronicle with multi-device deduplication (Concern 8)
   useEffect(() => {
     if (user && user.id) {
       getPatronOrders(user.id)
         .then((liveOrders) => {
           if (liveOrders && liveOrders.length > 0) {
             const currentOrders = user.orders || [];
-            const existingIds = new Set(currentOrders.map((o) => o.id));
-            const missing = liveOrders.filter((o) => !existingIds.has(o.id));
-            if (missing.length > 0) {
-              updateProfile({ orders: [...currentOrders, ...missing] });
+            const orderMap = new Map<string, Order>();
+            // Seed current orders
+            for (const ord of currentOrders) {
+              if (ord && ord.id) orderMap.set(ord.id, ord);
+            }
+            // Merge live authoritative orders
+            let hasNew = false;
+            for (const ord of liveOrders) {
+              if (ord && ord.id) {
+                if (!orderMap.has(ord.id)) {
+                  hasNew = true;
+                }
+                orderMap.set(ord.id, { ...orderMap.get(ord.id), ...ord });
+              }
+            }
+            if (hasNew || orderMap.size !== currentOrders.length) {
+              updateProfile({ orders: Array.from(orderMap.values()) });
             }
           }
         })
