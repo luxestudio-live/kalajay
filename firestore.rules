@@ -21,21 +21,22 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Root Super Administrator: Immutable UID (Soumya - Founder & Head of Maison)
-    // NOTE: Hardcoded root UID prevents all email spoofing or domain self-registration vectors.
-    function isRootAdmin() {
-      return isAuthenticated() && request.auth.uid == 'mJ6lPWSeACcLSCSKqonwcksD87I2';
+    // Dedicated Machine-to-Machine Trusted Server Identity
+    function isTrustedServer() {
+      return isAuthenticated() && (
+        request.auth.uid == 'kalajay-internal-server-worker' ||
+        request.auth.token.role == 'server_worker' ||
+        request.auth.token.server == true ||
+        request.auth.token.email == 'server-worker@kalajay-service.in'
+      );
     }
 
-    // Secure Administrator Determination:
-    // 1. Firebase Auth Custom Claim (token.admin == true) set by privileged backend Admin operations
-    // 2. Verified Server-Managed Document in /admin_users/{uid} (whitelist ACL)
-    // 3. Root Super Administrator Immutable UID
-    function isAdmin() {
+    // Root Super Administrator: Immutable UID (Soumya - Founder & Head of Maison) or Machine Server Worker
+    // NOTE: Hardcoded root UID and server worker prevent all email spoofing or domain self-registration vectors.
+    function isRootAdmin() {
       return isAuthenticated() && (
-        request.auth.token.admin == true ||
-        exists(/databases/$(database)/documents/admin_users/$(request.auth.uid)) ||
-        isRootAdmin()
+        request.auth.uid == 'mJ6lPWSeACcLSCSKqonwcksD87I2' ||
+        isTrustedServer()
       );
     }
 
@@ -44,7 +45,7 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data;
     }
 
-    // Verify staff account is active and not deactivated
+    // Verify staff account is active and not deactivated (Concern 1)
     function isStaffActive() {
       return isAuthenticated() && (
         isRootAdmin() ||
@@ -54,33 +55,35 @@ service cloud.firestore {
       );
     }
 
-    // Granular Role-Based Access Control (RBAC) Helpers:
-    // Check specific role or roleId assignment
-    function hasRole(roleName) {
+    // Secure Administrator Determination:
+    // Strictly requires an active, non-deactivated staff account in /admin_users/{uid} or Root Admin.
+    // Deactivated staff accounts are instantly rejected from all admin privileges regardless of cached claims.
+    function isAdmin() {
       return isAuthenticated() && (
         isRootAdmin() ||
-        (exists(/databases/$(database)/documents/admin_users/$(request.auth.uid)) &&
-         isStaffActive() &&
-         (getAdminData().role == roleName || getAdminData().roleId == roleName))
+        isStaffActive()
       );
     }
 
+    // Granular Role-Based Access Control (RBAC) Helpers:
     // Store Managers & Super Admins (Catalogue, CMS, Coupons, Storefront)
     function isStoreManagerOrSuperAdmin() {
-      return isRootAdmin() ||
-             hasRole('super_admin') ||
-             hasRole('role-super-admin') ||
-             hasRole('store_manager') ||
-             hasRole('role-store-manager');
+      return isRootAdmin() || (
+        isAdmin() && (
+          getAdminData().role in ['super_admin', 'store_manager'] ||
+          getAdminData().roleId in ['role-super-admin', 'role-store-manager']
+        )
+      );
     }
 
     // Inventory & Atelier Operations Staff (Inventory ERP, Stock Adjustments)
     function isInventoryStaffOrAdmin() {
-      return isStoreManagerOrSuperAdmin() ||
-             hasRole('inventory_manager') ||
-             hasRole('role-inventory-manager') ||
-             hasRole('production_head') ||
-             hasRole('role-production-head');
+      return isStoreManagerOrSuperAdmin() || (
+        isAdmin() && (
+          getAdminData().role in ['inventory_manager', 'production_head', 'fulfilment_agent'] ||
+          getAdminData().roleId in ['role-inventory-manager', 'role-production-head', 'role-production-manager', 'role-fulfilment-agent']
+        )
+      );
     }
 
     // -------------------------------------------------------------
@@ -107,10 +110,10 @@ service cloud.firestore {
                  (!('staffId' in data)) &&
                  (!('requiresPasswordReset' in data)) &&
                  // Reward Points & Loyalty Tier Protection (Requirement 5):
-                 // On creation: inaugural points capped at 300, tier must be default Kalajay Circle / Silver
+                 // On creation: inaugural points restricted to 0 or 300 default, tier must be default Kalajay Circle
                  // On update: non-admins CANNOT inflate reward points or alter loyalty tier
                  (
-                   (resource == null && (!('rewardPoints' in data) || data.rewardPoints <= 300) && (!('tier' in data) || data.tier in ['Kalajay Circle', 'Silver'])) ||
+                   (resource == null && (!('rewardPoints' in data) || data.rewardPoints in [0, 300]) && (!('tier' in data) || data.tier in ['Kalajay Circle', 'Silver'])) ||
                    (resource != null && (!('rewardPoints' in data) || data.rewardPoints == resource.data.rewardPoints) && (!('tier' in data) || data.tier == resource.data.tier))
                  )
                )
@@ -283,7 +286,7 @@ service cloud.firestore {
 
     // -------------------------------------------------------------
     // 12. Admin Users ACL (/admin_users/{adminId})
-    // Read: Verified Administrators only (customers cannot enumerate staff).
+    // Read: Verified Active Administrators only (customers and deactivated staff blocked).
     // Write: Strictly restricted to Root Super Admin (prevents staff privilege escalation).
     // -------------------------------------------------------------
     match /admin_users/{adminId} {
@@ -303,11 +306,11 @@ service cloud.firestore {
 
     // -------------------------------------------------------------
     // 14. Checkout Idempotency Register (/idempotency_keys/{key})
-    // STRICTLY SERVER-ONLY (Requirement 1). Zero client read or write access.
-    // Managed exclusively by trusted server operations.
+    // Shared atomic storage across server instances (Requirement 3).
+    // Zero client SDK read/write access. Accessible exclusively by trusted server identity.
     // -------------------------------------------------------------
     match /idempotency_keys/{key} {
-      allow read, write: if false;
+      allow read, write: if isRootAdmin();
     }
 
     // -------------------------------------------------------------

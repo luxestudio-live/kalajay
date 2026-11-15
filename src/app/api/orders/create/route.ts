@@ -317,6 +317,43 @@ export async function POST(request: Request) {
       }
     }
 
+    // Shared Atomic Firestore Idempotency Check (Cross-Instance Safe)
+    if (db && db.type) {
+      try {
+        await ensureServerAdminAuth();
+        const sharedIdempSnap = await getDoc(doc(db, 'idempotency_keys', sanitizedIdempKey));
+        if (sharedIdempSnap.exists()) {
+          const sharedData = sharedIdempSnap.data();
+          if (sharedData.payloadHash && sharedData.payloadHash !== payloadHash) {
+            return NextResponse.json(
+              {
+                success: false,
+                error: 'Idempotency Conflict: Key reused with mismatched checkout payload parameters across server instances.',
+                code: 'IDEMPOTENCY_PAYLOAD_MISMATCH',
+              },
+              { status: 409 }
+            );
+          }
+          if (sharedData.customerEmail && sharedData.customerEmail.toLowerCase() !== finalCustomerEmail) {
+            return NextResponse.json(
+              {
+                success: false,
+                error: 'Idempotency Conflict: Key is bound to a different customer identity.',
+                code: 'IDEMPOTENCY_CUSTOMER_MISMATCH',
+              },
+              { status: 409 }
+            );
+          }
+          if (sharedData.status === 'completed' && sharedData.response) {
+            return NextResponse.json({
+              ...sharedData.response,
+              isIdempotentReplay: true,
+            });
+          }
+        }
+      } catch {}
+    }
+
     // 7. Generate Cryptographic Order Reference
     const generatedOrderNumber = `KJ-${Math.floor(100000 + Math.random() * 900000)}`;
 
@@ -428,6 +465,18 @@ export async function POST(request: Request) {
             createdAtServer: serverTimestamp(),
             verifiedByServer: true,
           });
+
+          // Atomic idempotency record in shared Firestore storage
+          const idempRef = doc(db, 'idempotency_keys', sanitizedIdempKey);
+          transaction.set(idempRef, {
+            idempotencyKey: sanitizedIdempKey,
+            orderId: generatedOrderNumber,
+            customerEmail: finalCustomerEmail,
+            payloadHash,
+            status: 'completed',
+            response: resultPayload,
+            createdAt: serverTimestamp(),
+          });
         });
       } catch (txErr: any) {
         if (txErr.message?.includes('INSUFFICIENT_STOCK')) {
@@ -441,6 +490,23 @@ export async function POST(request: Request) {
           createdAtServer: serverTimestamp(),
           verifiedByServer: true,
         });
+
+        try {
+          const idempRef = doc(db, 'idempotency_keys', sanitizedIdempKey);
+          await setDoc(
+            idempRef,
+            {
+              idempotencyKey: sanitizedIdempKey,
+              orderId: generatedOrderNumber,
+              customerEmail: finalCustomerEmail,
+              payloadHash,
+              status: 'completed',
+              response: resultPayload,
+              createdAt: serverTimestamp(),
+            },
+            { merge: true }
+          );
+        } catch {}
       }
     }
 
