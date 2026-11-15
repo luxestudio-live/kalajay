@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   Compass,
   Search,
@@ -101,22 +102,43 @@ const KNOWN_ORDERS: Record<string, SimulatedOrder> = {
   },
 };
 
-export default function TrackOrderPage() {
-  const [query, setQuery] = useState('KJ-8924');
-  const [activeOrder, setActiveOrder] = useState<SimulatedOrder | null>(KNOWN_ORDERS['KJ-8924']);
-  const [searched, setSearched] = useState(true);
-  const [error, setError] = useState(false);
+function TrackOrderContent() {
+  const searchParams = useSearchParams();
+  const initialOrderId = (searchParams.get('orderId') || searchParams.get('order') || '').trim();
 
+  const [query, setQuery] = useState(initialOrderId || 'KJ-8924');
+  const [activeOrder, setActiveOrder] = useState<SimulatedOrder | null>(
+    initialOrderId ? null : KNOWN_ORDERS['KJ-8924']
+  );
+  const [searched, setSearched] = useState(!initialOrderId);
+  const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSearch = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const clean = query.trim().toUpperCase();
+  const executeSearch = async (targetQuery: string) => {
+    const clean = targetQuery.trim().toUpperCase();
     if (!clean) return;
 
     setLoading(true);
+    setError(false);
+
     try {
-      const liveDoc = await getFirestoreOrderById(clean);
+      let liveDoc: any = await getFirestoreOrderById(clean);
+
+      if (!liveDoc) {
+        // Fallback to server-side tracking API
+        try {
+          const res = await fetch(`/api/orders/track/?orderId=${encodeURIComponent(clean)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.order) {
+              liveDoc = data.order;
+            }
+          }
+        } catch (apiErr) {
+          console.warn('Server tracking API notice:', apiErr);
+        }
+      }
+
       if (liveDoc) {
         const mappedStatus: SimulatedOrder['status'] =
           liveDoc.fulfillmentStatus === 'delivered'
@@ -132,13 +154,13 @@ export default function TrackOrderPage() {
           placedDate: liveDoc.createdAt ? new Date(liveDoc.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recent',
           estimatedDelivery: '3 to 5 Business Days',
           status: mappedStatus,
-          items: liveDoc.items.map(it => ({
+          items: (liveDoc.items || []).map((it: any) => ({
             name: it.name,
-            variant: `${it.sku} · Qty ${it.quantity}`,
-            price: it.price,
+            variant: `${it.sku || it.productId || 'KJ-ATELIER'} · Qty ${it.quantity || 1}`,
+            price: it.price || 0,
             image: it.image || 'https://www.kalajay.in/v2/p3-2.jpg',
           })),
-          total: liveDoc.total,
+          total: liveDoc.total || 0,
           customerName: liveDoc.customerName,
           city: `${liveDoc.shippingAddress?.city || 'India'}, ${liveDoc.shippingAddress?.state || ''}`,
           artisanNote: liveDoc.artisanNote || 'Handcrafted on Bihar artisan loom with heirloom-grade bead tension.',
@@ -158,12 +180,23 @@ export default function TrackOrderPage() {
       setActiveOrder(KNOWN_ORDERS[clean]);
       setError(false);
     } else {
-      // Authentic error state - order reference does not exist
       setActiveOrder(null);
       setError(true);
     }
     setLoading(false);
     setSearched(true);
+  };
+
+  useEffect(() => {
+    if (initialOrderId) {
+      setQuery(initialOrderId);
+      executeSearch(initialOrderId);
+    }
+  }, [initialOrderId]);
+
+  const handleSearch = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    executeSearch(query);
   };
 
   const getStepActive = (status: SimulatedOrder['status'], step: 1 | 2 | 3) => {
@@ -442,6 +475,23 @@ export default function TrackOrderPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function TrackOrderPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="bg-canvas min-h-screen py-24 flex items-center justify-center">
+          <div className="text-center space-y-3 font-serif text-ink">
+            <Compass className="w-8 h-8 text-gold mx-auto animate-spin" />
+            <p className="text-sm">Connecting to Loom Provenance Chronicle...</p>
+          </div>
+        </div>
+      }
+    >
+      <TrackOrderContent />
+    </Suspense>
   );
 }
 

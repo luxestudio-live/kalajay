@@ -227,6 +227,7 @@ interface AuthContextType {
   setDefaultAddress: (id: string) => void;
   quickDemoLogin: () => void;
   updateUserPassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
+  addPatronOrder: (order: Order) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -672,6 +673,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const addPatronOrder = (order: Order) => {
+    if (!user) return;
+    const existing = user.orders || [];
+    if (existing.some((o) => o.id === order.id)) return;
+    const updatedOrders = [order, ...existing];
+    const updatedUser: User = { ...user, orders: updatedOrders };
+    saveUserSession(updatedUser);
+    if (firebaseUser) {
+      updatePatronProfile(firebaseUser.uid, { orders: updatedOrders }).catch((e) => console.warn(e));
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -692,6 +705,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setDefaultAddress,
         quickDemoLogin,
         updateUserPassword,
+        addPatronOrder,
       }}
     >
       {children}

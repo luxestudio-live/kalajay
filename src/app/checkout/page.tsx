@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   ShieldCheck,
@@ -12,13 +12,17 @@ import {
   MessageCircle,
   Zap,
   ArrowLeft,
-  AlertCircle
+  AlertCircle,
+  Compass,
+  Package,
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { useAuth, Order } from '@/context/AuthContext';
 import { BRAND_CONFIG, PRODUCTS } from '@/data/catalogue';
 
 export default function CheckoutPage() {
   const { cart, subtotal, deliveryFee, total, formatINR, clearCart } = useCart();
+  const { user, isAuthenticated, addPatronOrder } = useAuth();
 
   const [step, setStep] = useState<'form' | 'success'>('form');
   const [name, setName] = useState('');
@@ -32,6 +36,23 @@ export default function CheckoutPage() {
   const [orderNumber, setOrderNumber] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Auto-populate from authenticated patron profile
+  useEffect(() => {
+    if (user) {
+      if (!name && user.name) setName(user.name);
+      if (!email && user.email) setEmail(user.email);
+      if (!phone && user.phone) setPhone(user.phone.replace('+91', '').trim());
+      if (!address && user.addresses && user.addresses.length > 0) {
+        const def = user.addresses.find((a) => a.isDefault) || user.addresses[0];
+        const fullStreet = [def.street, def.apartment].filter(Boolean).join(', ');
+        setAddress(fullStreet);
+        setCity(def.city);
+        setStateName(def.state || 'Maharashtra');
+        setPincode(def.pincode);
+      }
+    }
+  }, [user]);
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,6 +100,7 @@ export default function CheckoutPage() {
             productId: item.code || item.id,
             quantity: item.quantity,
           })),
+          ...(user?.id ? { userId: user.id } : {}),
         }),
       });
 
@@ -92,8 +114,82 @@ export default function CheckoutPage() {
         return;
       }
 
-      // 3. Successful Persistence Confirmed by Server: Transition & Clear
+      // 3. Successful Persistence Confirmed by Server: Sync with Patron Profile
       setOrderNumber(res.orderId);
+      if (user && addPatronOrder) {
+        const newPatronOrder: Order = {
+          id: res.orderId,
+          date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+          totalAmount: res.total,
+          status: 'Hand-Stringing in Bihar',
+          estimatedDelivery: '3 to 5 Business Days',
+          paymentMethod: paymentMethod === 'upi' ? 'UPI Instant' : paymentMethod === 'card' ? 'Credit/Debit Card' : 'WhatsApp Direct',
+          deliveryAddress: {
+            id: `addr-${Date.now()}`,
+            label: 'Home',
+            fullName: name.trim(),
+            phone: cleanPhone,
+            street: address.trim(),
+            city: city.trim(),
+            state: stateName,
+            pincode: pincode.trim(),
+            isDefault: false,
+          },
+          items: cart.map(item => ({
+            id: item.code || item.id,
+            name: item.name,
+            code: item.code,
+            category: item.category || 'Atelier',
+            colorway: item.variantLabel || 'Classic Heirloom',
+            price: item.price,
+            quantity: item.quantity,
+            image: item.image,
+          })),
+          trackingSteps: [
+            {
+              title: 'Ordered & Handcrafted to Order',
+              location: 'Kalajay Digital Flagship',
+              date: 'Just now',
+              completed: true,
+              description: 'Order confirmed and bead lot reserved.',
+            },
+            {
+              title: 'Beads Counted & Hand-Strung',
+              location: 'Kalajay Artisan Studio',
+              date: 'Allocated to Loom',
+              completed: false,
+              current: true,
+              description: 'Hand-strung by master artisan with tensioned crystal fiber.',
+            },
+            {
+              title: 'Quality Check & Wax-Sealed',
+              location: 'Craft House Finishing Studio',
+              date: 'Scheduled',
+              completed: false,
+              description: 'Inspected under calibrated light, packed with canvas dust bag and wax seal.',
+            },
+            {
+              title: 'Dispatched via Kalajay Atelier Team',
+              location: 'Mumbai Hub',
+              date: 'Pending',
+              completed: false,
+              description: 'Direct courier delivery with real-time tracking.',
+            },
+            {
+              title: 'Delivered to Doorstep',
+              location: `${city.trim()}, ${stateName}`,
+              date: 'Expected in 3-5 days',
+              completed: false,
+              description: 'Safe hand-to-hand delivery with signature.',
+            },
+          ],
+          artisanName: 'Master Artisan',
+          artisanLocation: 'Bihar Craft Cluster',
+          artisanNote: 'Queued for artisan loom allocation with tensioned 8-cord crystal fiber.',
+          awbNumber: res.order?.trackingAwb || `KJ-DISP-${Math.floor(10000000 + Math.random() * 90000000)}`,
+        };
+        addPatronOrder(newPatronOrder);
+      }
       setStep('success');
       setIsSubmitting(false);
       clearCart();
@@ -140,12 +236,26 @@ export default function CheckoutPage() {
             </p>
           </div>
 
-          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              href={`/track?orderId=${orderNumber}`}
+              className="w-full sm:w-auto px-6 py-3.5 bg-rosewood hover:bg-plum text-canvas text-xs uppercase tracking-editorial font-semibold rounded-full flex items-center justify-center gap-2 transition-colors shadow-xs"
+            >
+              <Compass className="w-4 h-4 text-gold" />
+              <span>Track Creation Live</span>
+            </Link>
+            <Link
+              href="/account?tab=orders"
+              className="w-full sm:w-auto px-6 py-3.5 bg-canvas border border-border-strong text-plum hover:text-rosewood text-xs uppercase tracking-editorial font-medium rounded-full flex items-center justify-center gap-2 transition-colors"
+            >
+              <Package className="w-4 h-4 text-gold" />
+              <span>View in Portfolio</span>
+            </Link>
             <Link
               href="/shop"
-              className="w-full sm:w-auto px-8 py-3.5 bg-[#372921] hover:bg-[#503A2E] text-[#F7F3EC] text-xs uppercase tracking-editorial font-semibold rounded-full transition-colors"
+              className="w-full sm:w-auto px-6 py-3.5 bg-[#372921] hover:bg-[#503A2E] text-[#F7F3EC] text-xs uppercase tracking-editorial font-semibold rounded-full transition-colors flex items-center justify-center"
             >
-              <span>Explore More Creations</span>
+              <span>Explore More</span>
             </Link>
             <a
               href={`https://wa.me/919740540847?text=Hi%20Kalajay!%20I%20just%20placed%20order%20${orderNumber}%20on%20your%20digital%20flagship.`}

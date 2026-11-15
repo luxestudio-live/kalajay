@@ -33,10 +33,12 @@ import {
   Send,
   UserCheck,
   Sliders,
+  ArrowRight,
 } from 'lucide-react';
 import { useAuth, Address, Order, OrderItem } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { PRODUCTS } from '@/data/catalogue';
+import { getPatronOrders } from '@/lib/firestore';
 
 export default function AccountClient() {
   const router = useRouter();
@@ -127,6 +129,24 @@ export default function AccountClient() {
       router.push('/login?redirect=/account');
     }
   }, [isAuthenticated, isLoading, router]);
+
+  // Sync live orders from Firestore chronicle
+  useEffect(() => {
+    if (user && user.id) {
+      getPatronOrders(user.id)
+        .then((liveOrders) => {
+          if (liveOrders && liveOrders.length > 0) {
+            const currentOrders = user.orders || [];
+            const existingIds = new Set(currentOrders.map((o) => o.id));
+            const missing = liveOrders.filter((o) => !existingIds.has(o.id));
+            if (missing.length > 0) {
+              updateProfile({ orders: [...currentOrders, ...missing] });
+            }
+          }
+        })
+        .catch((e) => console.warn('Patron orders query notice:', e));
+    }
+  }, [user?.id]);
 
   if (isLoading || !user) {
     return (
@@ -580,12 +600,32 @@ export default function AccountClient() {
                 </p>
               </div>
               <span className="text-xs text-ink-muted">
-                Showing <strong className="text-ink">{user.orders.length}</strong> orders
+                Showing <strong className="text-ink">{user.orders?.length || 0}</strong> orders
               </span>
             </div>
 
-            <div className="space-y-6">
-              {user.orders.map((order) => {
+            {!user.orders || user.orders.length === 0 ? (
+              <div className="text-center py-16 bg-canvas-subtle rounded-2xl border border-dashed border-border-medium space-y-4">
+                <div className="w-12 h-12 mx-auto rounded-full bg-champagne/30 text-rosewood flex items-center justify-center">
+                  <Package className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-serif text-lg text-ink font-medium">Your Craft Portfolio is Empty</h3>
+                  <p className="text-xs text-ink-muted max-w-sm mx-auto">
+                    You have not placed any atelier commissions yet. Explore our handcrafted creations to start your collection.
+                  </p>
+                </div>
+                <Link
+                  href="/shop"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-ink text-canvas hover:bg-gold hover:text-ink text-xs uppercase tracking-refined font-semibold transition-all shadow-xs"
+                >
+                  <span>Browse Handcrafted Creations</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {user.orders.map((order) => {
                 const isSelected = selectedOrder?.id === order.id;
 
                 return (
@@ -760,6 +800,7 @@ export default function AccountClient() {
                 );
               })}
             </div>
+            )}
           </div>
         )}
 
