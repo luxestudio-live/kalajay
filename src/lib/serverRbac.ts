@@ -384,6 +384,34 @@ export async function getStaffUser(identifier: string): Promise<AdminUser | null
   return null;
 }
 
+export async function getRoleAsync(roleId: string): Promise<AdminRole | null> {
+  // 1. Check system roles
+  const sysRole = SEED_ROLES.find(r => r.id === roleId);
+  if (sysRole) return sysRole;
+
+  // 2. Authoritative Cloud Firestore lookup (/admin_roles/{roleId})
+  try {
+    const roleSnap = await getDoc(doc(db, 'admin_roles', roleId));
+    if (roleSnap.exists()) {
+      const data = roleSnap.data() as AdminRole;
+      const store = readRbacStore();
+      store.customRoles = store.customRoles || {};
+      store.customRoles[roleId] = data;
+      writeRbacStore(store);
+      return data;
+    }
+  } catch {}
+
+  // 3. Fallback to local store
+  const store = readRbacStore();
+  const customRoles = store.customRoles || {};
+  if (customRoles[roleId]) {
+    return customRoles[roleId];
+  }
+
+  return null;
+}
+
 export function getRole(roleId: string): AdminRole | null {
   const store = readRbacStore();
   const customRoles = store.customRoles || {};
@@ -498,8 +526,8 @@ export async function verifyStaffPermission(
     };
   }
 
-  // 6. Resolve Dynamic / Custom Role
-  const role = getRole(staffUser.roleId);
+  // 6. Resolve Dynamic / Custom Role Authoritatively from Firestore
+  const role = (await getRoleAsync(staffUser.roleId)) || getRole(staffUser.roleId);
   if (!role) {
     return {
       authorized: false,

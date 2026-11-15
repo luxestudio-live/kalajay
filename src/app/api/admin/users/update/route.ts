@@ -225,6 +225,7 @@ export async function POST(request: Request) {
           phone: updatedUser.phone,
           department: updatedUser.department,
           staffRole: updatedUser.roleId,
+          status: updatedUser.status,
           requiresPasswordReset: updatedUser.requiresPasswordReset,
           updatedAt: nowIso,
         },

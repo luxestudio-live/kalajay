@@ -43,6 +43,42 @@ class Mutex {
 
 const staffCreationMutex = new Mutex();
 
+// Cross-process file-based lock with retry to ensure mutual exclusion across independent Node.js server processes
+async function acquireCrossProcessLock(timeoutMs = 8000): Promise<() => void> {
+  const cacheDir = path.join(process.cwd(), '.next', 'cache');
+  if (!fs.existsSync(cacheDir)) {
+    fs.mkdirSync(cacheDir, { recursive: true });
+  }
+  const lockFile = path.join(cacheDir, 'staff_creation.lock');
+  const start = Date.now();
+
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const fd = fs.openSync(lockFile, 'wx');
+      fs.writeSync(fd, `${process.pid}_${Date.now()}`);
+      return () => {
+        try {
+          fs.closeSync(fd);
+          if (fs.existsSync(lockFile)) fs.unlinkSync(lockFile);
+        } catch {}
+      };
+    } catch (err: any) {
+      if (err.code === 'EEXIST') {
+        try {
+          const stat = fs.statSync(lockFile);
+          if (Date.now() - stat.mtimeMs > 10000) {
+            fs.unlinkSync(lockFile);
+          }
+        } catch {}
+        await new Promise(r => setTimeout(r, 40));
+      } else {
+        break;
+      }
+    }
+  }
+  return () => {};
+}
+
 // Cryptographically secure temporary passcode generator
 function generateSecureTemporaryPasscode(): string {
   const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -136,8 +172,9 @@ export async function POST(request: Request) {
     }
     const finalUsername = usernameValidation.normalized;
 
-    // 4. Acquire Critical Section Mutex for Atomic Provisioning & Unique Reservation
+    // 4. Acquire Critical Section Mutex and Cross-Process Lock for Atomic Provisioning & Unique Reservation
     const releaseLock = await staffCreationMutex.lock();
+    const releaseProcessLock = await acquireCrossProcessLock();
 
     try {
       const store = readRbacStore();
@@ -236,7 +273,7 @@ export async function POST(request: Request) {
 
       // 6. Create Account in Firebase Authentication via Identity Platform REST API
       const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyDzdJB2o_mS3JgSJ-MaBNbvpBi35AdcSCc';
-      let firebaseUid = `uid-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+      let firebaseUid = '';
 
       try {
         const signUpRes = await fetch(
@@ -254,11 +291,42 @@ export async function POST(request: Request) {
         );
 
         const signUpData = await signUpRes.json();
-        if (signUpData.localId) {
-          firebaseUid = signUpData.localId;
+        if (!signUpRes.ok || !signUpData.localId) {
+          const errMsg = signUpData.error?.message || 'Failed to provision Firebase Authentication identity.';
+          // Rollback reserved username and staff ID
+          delete usernameIndex[finalUsername];
+          delete staffIdIndex[newStaffId];
+          store.usernameIndex = usernameIndex;
+          store.staffIdIndex = staffIdIndex;
+          writeRbacStore(store);
+
+          return NextResponse.json(
+            {
+              success: false,
+              error: errMsg.includes('EMAIL_EXISTS')
+                ? `An account with email "${cleanEmail}" already exists in Firebase Authentication.`
+                : errMsg,
+              code: 'AUTH_ACCOUNT_CREATION_FAILED',
+            },
+            { status: 400 }
+          );
         }
-      } catch (authErr) {
-        console.warn('Firebase Auth REST signup warning:', authErr);
+        firebaseUid = signUpData.localId;
+      } catch (authErr: any) {
+        // Rollback reservation
+        delete usernameIndex[finalUsername];
+        delete staffIdIndex[newStaffId];
+        store.usernameIndex = usernameIndex;
+        store.staffIdIndex = staffIdIndex;
+        writeRbacStore(store);
+        return NextResponse.json(
+          {
+            success: false,
+            error: authErr?.message || 'Firebase Authentication service unreachable.',
+            code: 'AUTH_SERVICE_UNAVAILABLE',
+          },
+          { status: 503 }
+        );
       }
 
       // 7. Assemble Complete Staff User Record
@@ -361,6 +429,7 @@ export async function POST(request: Request) {
         { status: 201 }
       );
     } finally {
+      releaseProcessLock();
       releaseLock();
     }
   } catch (err: any) {

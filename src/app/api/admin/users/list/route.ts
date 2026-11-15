@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { suggestUsername, verifyStaffPermission } from '@/lib/serverRbac';
+import { db } from '@/lib/firebase';
+import { collection, getDocs } from 'firebase/firestore';
 
 function getRbacStorePath(): string {
   const cacheDir = path.join(process.cwd(), '.next', 'cache');
@@ -95,6 +97,22 @@ export async function GET(request: Request) {
         username: u.username || suggestUsername(u.name),
       });
     });
+
+    // Authoritative Cloud Firestore /admin_users sync
+    try {
+      const fsUsersSnap = await getDocs(collection(db, 'admin_users'));
+      fsUsersSnap.forEach(d => {
+        const data = d.data();
+        const key = data.staffId || data.id || d.id;
+        if (key) {
+          userMap.set(key, {
+            ...data,
+            id: key,
+            username: data.username || suggestUsername(data.name || ''),
+          });
+        }
+      });
+    } catch (fsErr) {}
 
     const allUsers = Array.from(userMap.values()).sort((a, b) =>
       (a.staffId || a.id).localeCompare(b.staffId || b.id)

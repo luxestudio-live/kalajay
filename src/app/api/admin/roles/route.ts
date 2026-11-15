@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { db } from '@/lib/firebase';
-import { doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, collection, getDocs } from 'firebase/firestore';
 import { SEED_ROLES } from '@/data/adminPermissions';
 import { AdminRole } from '@/data/adminTypes';
 import { readRbacStore, writeRbacStore, verifyStaffPermission } from '@/lib/serverRbac';
@@ -12,6 +12,19 @@ export async function GET() {
     const store = readRbacStore();
     const customRoles = store.customRoles || {};
     const usersMap = store.users || {};
+
+    // 1. Authoritatively fetch any custom roles stored in Cloud Firestore (/admin_roles)
+    try {
+      const fsSnap = await getDocs(collection(db, 'admin_roles'));
+      fsSnap.forEach(d => {
+        const data = d.data() as AdminRole;
+        if (data && (data.id || d.id)) {
+          customRoles[data.id || d.id] = data;
+        }
+      });
+    } catch (fsErr) {
+      // Graceful fallback to local durable store if Firestore read fails
+    }
 
     // Calculate user count per role dynamically
     const roleUserCounts: Record<string, number> = {};
