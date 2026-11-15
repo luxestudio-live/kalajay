@@ -234,6 +234,23 @@ export async function updateFirestoreOrderStatus(
   updates: Partial<AdminOrder>
 ): Promise<void> {
   try {
+    if (typeof window !== 'undefined') {
+      const res = await fetch('/api/admin/orders/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId,
+          fulfillmentStatus: updates.fulfillmentStatus,
+          paymentStatus: updates.paymentStatus,
+          trackingAwb: updates.trackingAwb,
+          courier: updates.courier,
+          timeline: updates.timeline,
+          reconciliation: (updates as any).paymentReconciliation,
+        }),
+      });
+      if (res.ok) return;
+    }
+
     if (!db || !db.type) return;
     const orderDocRef = doc(db, 'orders', orderId);
     await setDoc(

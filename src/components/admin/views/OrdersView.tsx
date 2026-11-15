@@ -29,7 +29,7 @@ import { AdminOrder } from '@/data/adminTypes';
 import { PRODUCTS } from '@/data/catalogue';
 
 export default function OrdersView() {
-  const { orders, updateOrderStatus, createManualOrder, can, activeSubPage, setActiveSubPage, logAction } = useAdminStore();
+  const { orders, updateOrderStatus, createManualOrder, can, activeRole, currentUser, activeSubPage, setActiveSubPage, logAction } = useAdminStore();
 
   const [fulfillmentFilter, setFulfillmentFilter] = useState<'all' | 'in_loom' | 'shipped' | 'delivered'>('all');
   const [search, setSearch] = useState('');
@@ -38,6 +38,8 @@ export default function OrdersView() {
   const [statusToUpdate, setStatusToUpdate] = useState<AdminOrder['fulfillmentStatus']>('in_loom');
   const [statusNote, setStatusNote] = useState('');
   const [markPaymentReceived, setMarkPaymentReceived] = useState(false);
+  const [paymentBankRef, setPaymentBankRef] = useState('');
+  const [paymentJustification, setPaymentJustification] = useState('');
 
   // Manual Order Builder State
   const [custName, setCustName] = useState('');
@@ -607,7 +609,7 @@ export default function OrdersView() {
                   <span className="text-[10px] text-[#9E5430] font-medium">Syncs live to Firestore</span>
                 </div>
 
-                {/* Requirement 7: Payment Verification Safeguard */}
+                {/* Requirement 5 & 7: Payment Verification Safeguard & Role Enforcement */}
                 {selectedOrder.paymentStatus !== 'paid' && (
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs space-y-2">
                     <div className="flex items-center gap-2 text-amber-900 font-semibold">
@@ -615,17 +617,61 @@ export default function OrdersView() {
                       <span>Payment Pending Verification ({selectedOrder.paymentMethod})</span>
                     </div>
                     <p className="text-[11px] text-amber-800 leading-relaxed">
-                      This order is not marked paid. In accordance with e-commerce security standards, dispatch and delivery are locked until payment receipt is confirmed.
+                      This order is not marked paid. In accordance with e-commerce security standards, dispatch and loom staging are locked until payment receipt is confirmed.
                     </p>
-                    <label className="flex items-center gap-2 text-amber-950 font-medium cursor-pointer pt-1">
-                      <input
-                        type="checkbox"
-                        checked={markPaymentReceived}
-                        onChange={(e) => setMarkPaymentReceived(e.target.checked)}
-                        className="w-4 h-4 text-[#9E5430] rounded accent-[#9E5430]"
-                      />
-                      <span>Confirm payment received in bank / gateway (Mark as Paid)</span>
-                    </label>
+
+                    {/* Role Gate: Only Superadmin and Store Manager can reconcile payments */}
+                    {(activeRole?.id === 'role-super-admin' || activeRole?.id === 'role-store-manager') ? (
+                      <div className="space-y-2.5 pt-1">
+                        <label className="flex items-center gap-2 text-amber-950 font-medium cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={markPaymentReceived}
+                            onChange={(e) => setMarkPaymentReceived(e.target.checked)}
+                            className="w-4 h-4 text-[#9E5430] rounded accent-[#9E5430]"
+                          />
+                          <span>Confirm manual bank / gateway settlement (Mark as Paid)</span>
+                        </label>
+
+                        {markPaymentReceived && (
+                          <div className="bg-white/80 p-3 rounded border border-amber-300 space-y-2 animate-fade-in text-[11px]">
+                            <div>
+                              <label className="block font-semibold text-[#372921] mb-1">
+                                Bank Reference / UTR Number <span className="text-red-600">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                value={paymentBankRef}
+                                onChange={e => setPaymentBankRef(e.target.value)}
+                                placeholder="e.g. HDFC-UTR-89230498 or RZP-PAY-98124"
+                                className="w-full bg-[#FAF8F5] border border-[#DED3C5] rounded p-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                              />
+                            </div>
+                            <div>
+                              <label className="block font-semibold text-[#372921] mb-1">
+                                Reconciliation Justification <span className="text-red-600">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                value={paymentJustification}
+                                onChange={e => setPaymentJustification(e.target.value)}
+                                placeholder="e.g. Verified in HDFC current account credits statement."
+                                className="w-full bg-[#FAF8F5] border border-[#DED3C5] rounded p-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                              />
+                            </div>
+                            <span className="text-[10px] text-[#76695F] block italic">
+                              Audited Action: Actor ({currentUser?.id || 'STAFF'}), timestamp, and bank UTR will be permanently logged to /audit_logs.
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-[10.5px] text-amber-700 bg-amber-100/60 p-2 rounded border border-amber-200/80">
+                        Restricted: Only Super Administrators and Store Managers possess privilege to manually reconcile unconfirmed payments.
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -660,14 +706,42 @@ export default function OrdersView() {
                   onClick={() => {
                     if (!selectedOrder) return;
 
-                    // Payment Safeguard: Block fulfillment/dispatch of unpaid orders
-                    if (selectedOrder.paymentStatus !== 'paid' && !markPaymentReceived && (statusToUpdate === 'shipped' || statusToUpdate === 'delivered')) {
-                      showToast('Payment Safeguard: Cannot dispatch or deliver an unpaid order. Please confirm payment first.');
+                    // Payment Safeguard: Block fulfillment/dispatch of unpaid orders (Requirement 5)
+                    const isUnpaid = selectedOrder.paymentStatus !== 'paid' && !markPaymentReceived;
+                    if (isUnpaid && statusToUpdate !== 'unfulfilled') {
+                      showToast('Payment Safeguard: Cannot allocate loom, quality-inspect, or dispatch an unpaid order. Payment must be confirmed first.');
                       return;
                     }
 
+                    // Role & reconciliation validation
+                    if (markPaymentReceived) {
+                      const canReconcile = activeRole?.id === 'role-super-admin' || activeRole?.id === 'role-store-manager';
+                      if (!canReconcile) {
+                        showToast('Access Denied: Only Super Administrators and Store Managers can verify payments.');
+                        return;
+                      }
+                      if (!paymentBankRef.trim()) {
+                        showToast('Reconciliation Error: Bank Reference / UTR number is mandatory.');
+                        return;
+                      }
+                      if (!paymentJustification.trim()) {
+                        showToast('Reconciliation Error: Justification for payment confirmation is mandatory.');
+                        return;
+                      }
+                    }
+
+                    const reconciliationData = markPaymentReceived ? {
+                      confirmedBy: currentUser?.id || 'KJ-ADM-001',
+                      confirmedByName: currentUser?.name || 'Administrator',
+                      confirmedByRole: activeRole?.name || 'Super Administrator',
+                      bankReference: paymentBankRef.trim(),
+                      justification: paymentJustification.trim(),
+                      source: selectedOrder.paymentMethod === 'WhatsApp Direct' ? 'manual_bank_transfer' : 'manual_gateway_override',
+                      timestamp: new Date().toISOString(),
+                    } : undefined;
+
                     const nextPaymentStatus = markPaymentReceived ? 'paid' : undefined;
-                    updateOrderStatus(selectedOrder.id, statusToUpdate, statusNote || undefined, nextPaymentStatus);
+                    updateOrderStatus(selectedOrder.id, statusToUpdate, statusNote || undefined, nextPaymentStatus, reconciliationData);
                     setSelectedOrder(prev => prev ? {
                       ...prev,
                       fulfillmentStatus: statusToUpdate,
@@ -684,6 +758,8 @@ export default function OrdersView() {
                     showToast(`Order #${selectedOrder.id} status updated to ${statusToUpdate.replace('_', ' ')}.`);
                     setStatusNote('');
                     setMarkPaymentReceived(false);
+                    setPaymentBankRef('');
+                    setPaymentJustification('');
                   }}
                   className="w-full py-2 bg-[#9E5430] hover:bg-[#874427] text-white rounded-lg text-xs font-semibold transition-colors shadow-xs cursor-pointer"
                 >

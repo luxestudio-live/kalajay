@@ -18,6 +18,8 @@
 .DS_Store
 *.pem
 scratch/
+credentials/
+*.local.json
 
 # debug
 npm-debug.log*

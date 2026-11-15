@@ -133,7 +133,8 @@ interface AdminStoreContextType {
     orderId: string,
     fulfillmentStatus: AdminOrder['fulfillmentStatus'],
     note?: string,
-    paymentStatus?: AdminOrder['paymentStatus']
+    paymentStatus?: AdminOrder['paymentStatus'],
+    reconciliation?: any
   ) => void;
   createManualOrder: (order: Omit<AdminOrder, 'id' | 'createdAt'>) => AdminOrder;
 
@@ -774,7 +775,8 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     orderId: string,
     fulfillmentStatus: AdminOrder['fulfillmentStatus'],
     note?: string,
-    paymentStatus?: AdminOrder['paymentStatus']
+    paymentStatus?: AdminOrder['paymentStatus'],
+    reconciliation?: any
   ) => {
     let updatedOrder: AdminOrder | undefined;
     const next = orders.map(ord => {
@@ -782,7 +784,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
         const newTimeline = [
           ...ord.timeline,
           {
-            title: `Fulfillment Status: ${fulfillmentStatus.toUpperCase()}`,
+            title: `Fulfillment Status: ${fulfillmentStatus.toUpperCase()}${paymentStatus === 'paid' ? ' (Payment Verified)' : ''}`,
             timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
             note,
           },
@@ -792,6 +794,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
           fulfillmentStatus,
           timeline: newTimeline,
           ...(paymentStatus ? { paymentStatus } : {}),
+          ...(reconciliation ? { paymentReconciliation: reconciliation } : {}),
         };
         return updatedOrder;
       }
@@ -805,10 +808,19 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
         fulfillmentStatus,
         timeline: updatedOrder.timeline,
         ...(paymentStatus ? { paymentStatus } : {}),
-      }).catch(() => {});
+        ...(reconciliation ? { paymentReconciliation: reconciliation } : {}),
+      } as any).catch(() => {});
     }
 
-    logAction('ORDER_FULFILLMENT_UPDATE', 'orders', `Order ${orderId} updated to ${fulfillmentStatus}${paymentStatus ? ` (payment: ${paymentStatus})` : ''}`);
+    if (paymentStatus === 'paid' && reconciliation) {
+      logAction(
+        'ORDER_PAYMENT_MANUAL_RECONCILIATION',
+        'orders',
+        `Payment manually reconciled for Order #${orderId} by ${reconciliation.confirmedByName} (${reconciliation.confirmedByRole}). Ref: ${reconciliation.bankReference}. Reason: ${reconciliation.justification}`
+      );
+    } else {
+      logAction('ORDER_FULFILLMENT_UPDATE', 'orders', `Order ${orderId} updated to ${fulfillmentStatus}${paymentStatus ? ` (payment: ${paymentStatus})` : ''}`);
+    }
   };
 
   const createManualOrder = (orderData: Omit<AdminOrder, 'id' | 'createdAt'>): AdminOrder => {

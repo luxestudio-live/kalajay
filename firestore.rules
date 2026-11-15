@@ -20,21 +20,20 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Secure Admin Determination:
-    // 1. Auth Custom Claim (token.admin == true) set by privileged backend Admin SDK
+    // Secure Administrator Determination:
+    // 1. Firebase Auth Custom Claim (token.admin == true) set by privileged backend Admin operations
     // 2. Verified Server-Managed Document in /admin_users/{uid} (whitelist ACL)
-    // 3. Authoritative Staff Whitelist
-    // NOTE: Arbitrary registration with @kalajay.in email domain DOES NOT grant admin privileges.
+    // 3. Root Super Administrator Immutable UID (Soumya - Founder & Head of Maison)
+    // NOTE: Email whitelists and domain matching are strictly removed to prevent spoofing or domain self-registration vectors.
+    function isRootAdmin() {
+      return isAuthenticated() && request.auth.uid == 'mJ6lPWSeACcLSCSKqonwcksD87I2';
+    }
+
     function isAdmin() {
       return isAuthenticated() && (
         request.auth.token.admin == true ||
         exists(/databases/$(database)/documents/admin_users/$(request.auth.uid)) ||
-        request.auth.token.email in [
-          'soumya@kalajay.in',
-          'ritu.verma@kalajay.in',
-          'sunita.craft@kalajay.in',
-          'aarav.m@kalajay.in'
-        ]
+        isRootAdmin()
       );
     }
 
@@ -54,7 +53,16 @@ service cloud.firestore {
              data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
              (!('email' in data) || (data.email is string && data.email.size() <= 150)) &&
              (!('phone' in data) || (data.phone is string && data.phone.size() <= 25)) &&
-             (!('rewardPoints' in data) || (data.rewardPoints is number && data.rewardPoints >= 0));
+             (!('rewardPoints' in data) || (data.rewardPoints is number && data.rewardPoints >= 0)) &&
+             // Privilege escalation guards: non-admins cannot self-assign roles, staff IDs, or bypass password reset
+             (
+               isAdmin() || (
+                 (!('role' in data) || data.role == 'customer' || (resource != null && data.role == resource.data.role)) &&
+                 (!('isAdmin' in data) || data.isAdmin == false || (resource != null && data.isAdmin == resource.data.isAdmin)) &&
+                 (!('staffId' in data) || (resource != null && data.staffId == resource.data.staffId)) &&
+                 (!('requiresPasswordReset' in data) || (resource != null && data.requiresPasswordReset == resource.data.requiresPasswordReset))
+               )
+             );
     }
 
     function isValidOrder(data) {
@@ -237,6 +245,14 @@ service cloud.firestore {
     match /system/{docId} {
       allow read: if docId == 'health';
       allow write: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 14. Checkout Idempotency Register (/idempotency_keys/{key})
+    // Server checkout pipeline writes and verifies unique request hashes.
+    // -------------------------------------------------------------
+    match /idempotency_keys/{key} {
+      allow read, write: if true;
     }
 
     // -------------------------------------------------------------

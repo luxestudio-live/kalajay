@@ -12,8 +12,8 @@ import AccessDenied from '@/components/admin/AccessDenied';
 import LuxuryModal from '@/components/admin/LuxuryModal';
 import { useAuth } from '@/context/AuthContext';
 import { auth, db } from '@/lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
-import { updatePassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { updatePassword, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import {
   ShieldCheck,
   Lock,
@@ -95,7 +95,6 @@ function AdminSecurityGate({
     email: string;
     roleName: string;
     isSuperAdmin?: boolean;
-    defaultPasscode?: string;
   }>>([
     {
       id: 'KJ-ADM-001',
@@ -103,36 +102,35 @@ function AdminSecurityGate({
       email: 'soumya@kalajay.in',
       roleName: 'Founder & Head of Maison (Super Administrator)',
       isSuperAdmin: true,
-      defaultPasscode: 'luxe_kalajay@2026#',
     },
     {
       id: 'KJ-ADM-002',
       name: 'Ritu Verma',
       email: 'ritu.verma@kalajay.in',
       roleName: 'Store Operations Manager',
-      defaultPasscode: 'luxe_kalajay@2026#',
     },
     {
       id: 'KJ-ADM-003',
       name: 'Sunita Kumari',
       email: 'sunita.craft@kalajay.in',
       roleName: 'Bihar Atelier & Production Head',
-      defaultPasscode: 'luxe_kalajay@2026#',
     },
     {
       id: 'KJ-ADM-004',
       name: 'Aarav Mehta',
       email: 'aarav.m@kalajay.in',
       roleName: 'Raw Materials & Inventory Controller',
-      defaultPasscode: 'luxe_kalajay@2026#',
     },
   ]);
+
+  // Secure Password Recovery state
+  const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [isSendingReset, setIsSendingReset] = useState(false);
 
   useEffect(() => {
     try {
       if (typeof window !== 'undefined') {
         const stored = localStorage.getItem('kalajay_admin_store_v3');
-        const storedCreds = JSON.parse(localStorage.getItem('kalajay_staff_credentials') || '{}');
         if (stored) {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed.users)) {
@@ -142,10 +140,6 @@ function AdminSecurityGate({
               email: u.email.toLowerCase(),
               roleName: u.roleName || 'Atelier Staff',
               isSuperAdmin: u.id === 'KJ-ADM-001' || u.roleId === 'role-super-admin',
-              defaultPasscode:
-                storedCreds[u.email.toLowerCase()] ||
-                storedCreds[u.id.toUpperCase()] ||
-                'luxe_kalajay@2026#',
             }));
             setAuthorizedStaff(combined);
           }
@@ -159,6 +153,7 @@ function AdminSecurityGate({
   const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setResetEmailSent(false);
 
     const cleanInput = userId.trim();
     if (!cleanInput) {
@@ -187,88 +182,83 @@ function AdminSecurityGate({
 
     setIsSubmitting(true);
 
-    // 2. Check provisioned runtime credentials or seed passcodes
-    let cachedPasscode: string | null = null;
-    if (typeof window !== 'undefined') {
+    // 2. Authenticate strictly via Firebase Authentication
+    try {
+      const userCred = await signInWithEmailAndPassword(auth, staffObj.email, password);
+
+      // 3. Inspect server profile in Firestore to verify first-login password reset enforcement
+      let needsReset = true;
       try {
-        const creds = JSON.parse(localStorage.getItem('kalajay_staff_credentials') || '{}');
-        cachedPasscode = creds[staffObj.email.toLowerCase()] || creds[staffObj.id.toUpperCase()] || null;
-      } catch {}
-    }
-
-    const validRuntimePasscode =
-      cachedPasscode === password ||
-      password === 'luxe_kalajay@2026#' ||
-      (staffObj.isSuperAdmin && (password === 'founder2026' || password === 'kalajay2026')) ||
-      password === 'kalajay2026' ||
-      password === staffObj.defaultPasscode;
-
-    if (validRuntimePasscode) {
-      // Check if first-time login with default password needs reset option
-      const hasResetBefore =
-        typeof window !== 'undefined' &&
-        localStorage.getItem('kalajay_admin_reset_done_' + staffObj.id.toUpperCase()) === 'true';
-
-      const isUsingDefaultPasscode =
-        password === 'luxe_kalajay@2026#' ||
-        password === 'founder2026' ||
-        password === 'kalajay2026';
-
-      if (isUsingDefaultPasscode && !hasResetBefore) {
-        setPendingStaff({ email: staffObj.email, id: staffObj.id, name: staffObj.name });
-        setShowResetModal(true);
-        setIsSubmitting(false);
-        return;
+        const userDocSnap = await getDoc(doc(db, 'users', userCred.user.uid));
+        if (userDocSnap.exists()) {
+          const uData = userDocSnap.data();
+          needsReset = uData.requiresPasswordReset === true || uData.hasCompletedFirstLoginReset !== true;
+        }
+      } catch (docErr) {
+        console.warn('Profile read note:', docErr);
       }
 
       setIsSubmitting(false);
-      onAuthenticated(staffObj.email, staffObj.id);
-      return;
-    }
 
-    // 3. Fallback: Firebase Auth login
-    const res = await loginWithEmail(staffObj.email, password);
-    setIsSubmitting(false);
-
-    if (res.success) {
-      const hasResetBefore =
-        typeof window !== 'undefined' &&
-        localStorage.getItem('kalajay_admin_reset_done_' + staffObj.id.toUpperCase()) === 'true';
-
-      const isUsingDefaultPasscode = password === 'luxe_kalajay@2026#';
-
-      if (isUsingDefaultPasscode && !hasResetBefore) {
+      if (needsReset) {
         setPendingStaff({ email: staffObj.email, id: staffObj.id, name: staffObj.name });
         setShowResetModal(true);
         return;
       }
 
       onAuthenticated(staffObj.email, staffObj.id);
-    } else {
-      setError(res.error || 'Authentication rejected. Verify your User ID and Passcode.');
+    } catch (authErr: any) {
+      setIsSubmitting(false);
+      if (
+        authErr.code === 'auth/invalid-credential' ||
+        authErr.code === 'auth/wrong-password' ||
+        authErr.code === 'auth/user-not-found'
+      ) {
+        setError('Authentication rejected. Invalid Staff User ID or Passcode.');
+      } else if (authErr.code === 'auth/too-many-requests') {
+        setError('Too many failed attempts. Access temporarily restricted. Try again later or use password recovery.');
+      } else {
+        setError(authErr.message || 'Authentication rejected. Verify credentials.');
+      }
     }
   };
 
-  const handleFillCredentials = (staffId: string, passcode?: string) => {
+  const handleFillCredentials = (staffId: string) => {
     setUserId(staffId);
-    if (passcode) setPassword(passcode);
+    setPassword('');
     setError(null);
+    setResetEmailSent(false);
   };
 
-  const handleSuperAdminBypass = () => {
-    const hasResetBefore =
-      typeof window !== 'undefined' &&
-      localStorage.getItem('kalajay_admin_reset_done_KJ-ADM-001') === 'true';
+  const handleForgotPassword = async () => {
+    setError(null);
+    setResetEmailSent(false);
 
-    if (!hasResetBefore) {
-      setPendingStaff({
-        email: 'soumya@kalajay.in',
-        id: 'KJ-ADM-001',
-        name: 'Soumya (Founder)',
-      });
-      setShowResetModal(true);
-    } else {
-      onAuthenticated('soumya@kalajay.in', 'KJ-ADM-001');
+    const cleanInput = userId.trim();
+    if (!cleanInput) {
+      setError('Please select or enter your Staff User ID (e.g. KJ-ADM-001) first to request password recovery.');
+      return;
+    }
+
+    const staffObj = authorizedStaff.find(
+      s =>
+        s.id.toUpperCase() === cleanInput.toUpperCase() ||
+        s.email.toLowerCase() === cleanInput.toLowerCase()
+    );
+
+    if (!staffObj) {
+      setError(`Staff User ID "${cleanInput}" not found in staff directory.`);
+      return;
+    }
+
+    setIsSendingReset(true);
+    try {
+      await sendPasswordResetEmail(auth, staffObj.email);
+      setResetEmailSent(true);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to dispatch password recovery email.');
+    } finally {
+      setIsSendingReset(false);
     }
   };
 
@@ -278,16 +268,16 @@ function AdminSecurityGate({
 
     if (!pendingStaff) return;
 
-    if (newPasscode.length < 8) {
-      setResetError('Passcode must be at least 8 characters in length.');
+    if (newPasscode.length < 10) {
+      setResetError('Passcode must be at least 10 characters long.');
       return;
     }
-    if (
-      newPasscode === 'luxe_kalajay@2026#' ||
-      newPasscode === 'founder2026' ||
-      newPasscode === 'kalajay2026'
-    ) {
-      setResetError('Please choose a new unique passcode different from the default initial credential.');
+    const hasUpper = /[A-Z]/.test(newPasscode);
+    const hasLower = /[a-z]/.test(newPasscode);
+    const hasDigit = /[0-9]/.test(newPasscode);
+    const hasSpecial = /[^A-Za-z0-9]/.test(newPasscode);
+    if (!hasUpper || !hasLower || !hasDigit || !hasSpecial) {
+      setResetError('Passcode must contain uppercase letters, lowercase letters, numbers, and special symbols.');
       return;
     }
     if (newPasscode !== confirmPasscode) {
@@ -298,53 +288,28 @@ function AdminSecurityGate({
     setIsResetting(true);
 
     try {
-      // 1. Synchronize with Firebase Authentication
-      try {
-        let currentUser = auth.currentUser;
-        if (!currentUser || currentUser.email?.toLowerCase() !== pendingStaff.email.toLowerCase()) {
-          const cred = await signInWithEmailAndPassword(auth, pendingStaff.email, 'luxe_kalajay@2026#');
-          currentUser = cred.user;
-        }
-        if (currentUser) {
-          await updatePassword(currentUser, newPasscode);
-        }
-      } catch (authErr: any) {
-        console.warn('Firebase Auth password update note:', authErr?.message);
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('Authentication session lost. Please sign in again.');
       }
+
+      // 1. Synchronize new password in Firebase Authentication
+      await updatePassword(currentUser, newPasscode);
 
       // 2. Synchronize with Cloud Firestore (/users/{uid})
-      try {
-        if (auth.currentUser) {
-          await setDoc(
-            doc(db, 'users', auth.currentUser.uid),
-            {
-              id: auth.currentUser.uid,
-              staffId: pendingStaff.id,
-              email: pendingStaff.email,
-              requiresPasswordReset: false,
-              hasCompletedFirstLoginReset: true,
-              lastPasswordReset: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            },
-            { merge: true }
-          );
-        }
-      } catch (dbErr: any) {
-        console.warn('Firestore password reset sync note:', dbErr?.message);
-      }
-
-      // 3. Synchronize with Local Storage & mark reset complete
-      if (typeof window !== 'undefined') {
-        try {
-          const creds = JSON.parse(localStorage.getItem('kalajay_staff_credentials') || '{}');
-          creds[pendingStaff.email.toLowerCase()] = newPasscode;
-          creds[pendingStaff.id.toUpperCase()] = newPasscode;
-          localStorage.setItem('kalajay_staff_credentials', JSON.stringify(creds));
-          localStorage.setItem('kalajay_admin_reset_done_' + pendingStaff.id.toUpperCase(), 'true');
-        } catch (storageErr) {
-          console.warn('Local storage sync error:', storageErr);
-        }
-      }
+      await setDoc(
+        doc(db, 'users', currentUser.uid),
+        {
+          id: currentUser.uid,
+          staffId: pendingStaff.id,
+          email: pendingStaff.email,
+          requiresPasswordReset: false,
+          hasCompletedFirstLoginReset: true,
+          lastPasswordReset: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
 
       setResetSuccess('Passcode updated and synchronized with database successfully!');
       setTimeout(() => {
@@ -408,6 +373,13 @@ function AdminSecurityGate({
             </div>
           )}
 
+          {resetEmailSent && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs rounded-sm flex items-center gap-2 animate-fade-in">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>A secure password reset email has been dispatched to your official registered email address.</span>
+            </div>
+          )}
+
           <form onSubmit={handleStaffLogin} className="space-y-4">
             <div>
               <label className="block text-[11px] uppercase tracking-wider text-[#76695F] font-semibold mb-1.5">
@@ -448,6 +420,16 @@ function AdminSecurityGate({
                 placeholder="••••••••••••"
                 className="w-full px-3.5 py-2.5 bg-[#FAF7F2] border border-[#DED3C5] rounded-sm text-xs text-[#372921] focus:outline-none focus:border-[#9E5430] transition-colors"
               />
+              <div className="flex justify-end mt-1.5">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={isSendingReset}
+                  className="text-[10.5px] text-[#9E5430] hover:underline cursor-pointer disabled:opacity-50"
+                >
+                  {isSendingReset ? 'Sending reset link...' : 'Forgot passcode? Send reset link to email'}
+                </button>
+              </div>
             </div>
 
             <button
@@ -459,18 +441,6 @@ function AdminSecurityGate({
               <span>{isSubmitting ? 'Authenticating User ID...' : 'Unlock Operations Console'}</span>
             </button>
           </form>
-
-          {/* Superadmin Primary Direct Access */}
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={handleSuperAdminBypass}
-              className="w-full py-2.5 bg-[#FAF7F2] hover:bg-[#F0E9DF] border border-[#DED3C5] text-[#9E5430] text-xs font-semibold rounded-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-[#C5A880]" />
-              <span>Sign In as Super Administrator (KJ-ADM-001)</span>
-            </button>
-          </div>
 
           {/* Collapsible Directory of Provisioned Personnel with User IDs */}
           <div className="pt-3 border-t border-[#EAE2D8]">
@@ -492,9 +462,9 @@ function AdminSecurityGate({
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => handleFillCredentials(staff.id, staff.defaultPasscode)}
+                    onClick={() => handleFillCredentials(staff.id)}
                     className="w-full p-2.5 rounded bg-[#FAF7F2] hover:bg-[#F0E9DF] border border-[#EAE2D8] flex items-center justify-between text-left transition-colors cursor-pointer group"
-                    title={`Click to auto-fill credentials for User ID: ${staff.id}`}
+                    title={`Click to select User ID: ${staff.id}`}
                   >
                     <div className="min-w-0 pr-2">
                       <div className="flex items-center gap-2">
@@ -511,7 +481,7 @@ function AdminSecurityGate({
                       <span className="text-[10px] text-[#76695F] block truncate mt-0.5">{staff.roleName}</span>
                     </div>
                     <span className="text-[10px] text-[#9E5430] font-medium group-hover:underline shrink-0">
-                      Use ID &crarr;
+                      Select &crarr;
                     </span>
                   </button>
                 ))}
@@ -540,8 +510,7 @@ function AdminSecurityGate({
       {showResetModal && pendingStaff && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div
-            className="fixed inset-0 bg-black/75 backdrop-blur-xs transition-opacity"
-            onClick={handleSkipReset}
+            className="fixed inset-0 bg-black/85 backdrop-blur-xs transition-opacity"
           />
           <div className="min-h-full flex items-center justify-center p-4">
             <div className="relative w-full max-w-md bg-white rounded-sm shadow-2xl border-2 border-[#9E5430] overflow-hidden animate-fade-in p-6 sm:p-7 space-y-5">
@@ -591,11 +560,11 @@ function AdminSecurityGate({
                     required
                     value={newPasscode}
                     onChange={e => setNewPasscode(e.target.value)}
-                    placeholder="Enter at least 8 characters..."
+                    placeholder="Enter at least 10 characters..."
                     className="w-full px-3.5 py-2.5 bg-[#FAF7F2] border border-[#DED3C5] rounded-sm text-xs text-[#372921] focus:outline-none focus:border-[#9E5430] transition-colors"
                   />
                   <span className="text-[10px] text-[#76695F] mt-1 block">
-                    Must be at least 8 characters and different from default initial password.
+                    Must be at least 10 characters with uppercase, lowercase, numbers, and symbols.
                   </span>
                 </div>
 
@@ -625,11 +594,15 @@ function AdminSecurityGate({
 
                   <button
                     type="button"
-                    onClick={handleSkipReset}
+                    onClick={() => {
+                      auth.signOut();
+                      setShowResetModal(false);
+                      setPendingStaff(null);
+                    }}
                     disabled={isResetting}
-                    className="w-full py-2 text-xs text-[#76695F] hover:text-[#372921] transition-colors text-center cursor-pointer font-medium"
+                    className="w-full py-2 text-xs text-[#76695F] hover:text-red-700 transition-colors text-center cursor-pointer font-medium"
                   >
-                    Skip for Now (Remind Me Next Session) &rarr;
+                    Cancel &amp; Disconnect Session
                   </button>
                 </div>
               </form>

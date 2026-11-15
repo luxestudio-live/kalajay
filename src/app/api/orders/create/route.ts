@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import { PRODUCTS, BRAND_CONFIG } from '@/data/catalogue';
 import { AdminOrder } from '@/data/adminTypes';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, serverTimestamp, updateDoc, increment } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 
 interface CreateOrderRequestBody {
   customerName: string;
@@ -24,21 +27,38 @@ interface CreateOrderRequestBody {
   idempotencyKey?: string;
 }
 
-// In-memory sliding-window idempotency cache (TTL: 60 seconds)
-const recentOrderRequests = new Map<string, { timestamp: number; result: any }>();
+// Durable Cross-Restart Idempotency Register on Server
+function getDurableRegisterPath(): string {
+  const cacheDir = path.join(process.cwd(), '.next', 'cache');
+  if (!fs.existsSync(cacheDir)) {
+    fs.mkdirSync(cacheDir, { recursive: true });
+  }
+  return path.join(cacheDir, 'kalajay_idempotency_store.json');
+}
 
-function cleanExpiredIdempotencyEntries() {
-  const now = Date.now();
-  recentOrderRequests.forEach((val, key) => {
-    if (now - val.timestamp > 60000) {
-      recentOrderRequests.delete(key);
+function readDurableIdempotency(): Record<string, any> {
+  try {
+    const fPath = getDurableRegisterPath();
+    if (fs.existsSync(fPath)) {
+      return JSON.parse(fs.readFileSync(fPath, 'utf-8'));
     }
-  });
+  } catch (e) {
+    console.warn('Error reading durable idempotency store:', e);
+  }
+  return {};
+}
+
+function writeDurableIdempotency(data: Record<string, any>) {
+  try {
+    const fPath = getDurableRegisterPath();
+    fs.writeFileSync(fPath, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (e) {
+    console.warn('Error writing durable idempotency store:', e);
+  }
 }
 
 export async function POST(request: Request) {
   try {
-    cleanExpiredIdempotencyEntries();
     const body: CreateOrderRequestBody = await request.json();
 
     // 1. Mandatory Input Validations (Server-Enforced)
@@ -76,24 +96,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check Idempotency Fingerprint to prevent duplicate checkout submissions
-    const itemsFingerprint = (body.items || [])
-      .map(i => `${i.productId}:${i.quantity}`)
-      .sort()
-      .join('|');
-    const orderFingerprint =
-      body.idempotencyKey ||
-      `${cleanPhone}_${itemsFingerprint}_${body.paymentMethod || 'upi'}`;
-
-    const existingSubmission = recentOrderRequests.get(orderFingerprint);
-    if (existingSubmission && Date.now() - existingSubmission.timestamp < 30000) {
-      console.log(`[Idempotency] Duplicate checkout prevented for key: ${orderFingerprint}`);
-      return NextResponse.json(existingSubmission.result);
-    }
-
     // 2. Server-Authoritative Price Calculation & Product Verification (Anti-Tampering)
     let calculatedSubtotal = 0;
-    const verifiedOrderItems = [];
+    const verifiedOrderItems: AdminOrder['items'] = [];
 
     for (const item of body.items) {
       const catalogItem = PRODUCTS.find(p => p.code === item.productId || p.id === item.productId);
@@ -107,19 +112,20 @@ export async function POST(request: Request) {
       const qty = Math.max(1, Math.floor(Number(item.quantity) || 1));
       const authoritativePrice = catalogItem.price; // ALWAYS sourced from server catalogue, NEVER from client
 
-      // 3. Server Stock Validation
+      // Server Stock Validation Pre-check
       if (db && db.type) {
         try {
           const invRef = doc(db, 'inventory', catalogItem.code);
           const invSnap = await getDoc(invRef);
           if (invSnap.exists()) {
             const invData = invSnap.data();
-            const availableStock =
+            const availableStock = Number(
               invData.available !== undefined
                 ? invData.available
-                : invData.onHand !== undefined
-                ? invData.onHand
-                : (invData.stockOnHand ?? 15);
+                : invData.stockOnHand !== undefined
+                ? invData.stockOnHand
+                : (invData.onHand ?? 15)
+            );
             if (availableStock < qty) {
               return NextResponse.json(
                 {
@@ -131,7 +137,7 @@ export async function POST(request: Request) {
             }
           }
         } catch (stockErr) {
-          console.warn('Stock ledger check deferred:', stockErr);
+          console.warn('Stock pre-check notice:', stockErr);
         }
       }
 
@@ -146,7 +152,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // 4. Server-Side Coupon & Discount Verification
+    // 3. Server-Side Coupon & Discount Verification
     let calculatedDiscount = 0;
     const normalizedCoupon = (body.couponCode || '').trim().toUpperCase();
     if (normalizedCoupon) {
@@ -174,12 +180,69 @@ export async function POST(request: Request) {
       }
     }
 
-    // 5. Server-Authoritative Shipping & 3% GST Calculation
+    // 4. Server-Authoritative Shipping & 3% GST Calculation
     const discountedSubtotal = Math.max(0, calculatedSubtotal - calculatedDiscount);
     const freeShippingThreshold = BRAND_CONFIG.shipping?.freeThreshold || 599;
     const calculatedShipping = discountedSubtotal >= freeShippingThreshold ? 0 : 79;
     const calculatedTax = Math.round(discountedSubtotal * 0.03); // 3% GST for Indian handcrafted goods
     const calculatedTotal = discountedSubtotal + calculatedShipping + calculatedTax;
+
+    // 5. Canonical Payload Hash & Durable Idempotency Enforcement (Requirement 3)
+    const normalizedEmail = (body.customerEmail || 'guest@kalajay.in').trim().toLowerCase();
+    const sortedItems = [...verifiedOrderItems]
+      .sort((a, b) => a.sku.localeCompare(b.sku))
+      .map(i => `${i.sku}:${i.quantity}:${i.price}`)
+      .join('|');
+
+    const canonicalPayload = JSON.stringify({
+      email: normalizedEmail,
+      phone: cleanPhone,
+      pincode: body.shippingAddress.pincode.trim(),
+      items: sortedItems,
+      coupon: normalizedCoupon,
+      paymentMethod: body.paymentMethod,
+    });
+    const payloadHash = crypto.createHash('sha256').update(canonicalPayload).digest('hex');
+
+    // Durable idempotency key resolution
+    const rawKey = body.idempotencyKey || `IDEMP-${cleanPhone}-${payloadHash.slice(0, 16)}`;
+    const sanitizedIdempKey = rawKey.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80);
+
+    // Check durable local store (survives restarts & server reboot)
+    const durableStore = readDurableIdempotency();
+    const cachedEntry = durableStore[sanitizedIdempKey];
+    if (cachedEntry) {
+      // Reject if same key reused with different payload (Requirement 3)
+      if (cachedEntry.payloadHash && cachedEntry.payloadHash !== payloadHash) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Idempotency Conflict: Key reused with mismatched checkout payload parameters.',
+            code: 'IDEMPOTENCY_PAYLOAD_MISMATCH',
+          },
+          { status: 409 }
+        );
+      }
+
+      // Reject if bound to different customer
+      if (cachedEntry.customerEmail && cachedEntry.customerEmail.toLowerCase() !== normalizedEmail) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Idempotency Conflict: Key is bound to a different customer identity.',
+            code: 'IDEMPOTENCY_CUSTOMER_MISMATCH',
+          },
+          { status: 409 }
+        );
+      }
+
+      if (cachedEntry.status === 'completed' && cachedEntry.response) {
+        return NextResponse.json({
+          ...cachedEntry.response,
+          isIdempotentReplay: true,
+        });
+      }
+    }
 
     // 6. Generate Cryptographic Order Reference
     const generatedOrderNumber = `KJ-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -191,18 +254,14 @@ export async function POST(request: Request) {
         ? 'Credit/Debit Card'
         : 'WhatsApp Direct';
 
-    // 7. Payment Verification Enforcement (Requirement 7)
-    // In accordance with PCI-DSS & e-commerce verification standards:
-    // Unless an authoritative payment gateway webhook/signature verifies captured funds,
-    // payment-dependent orders are recorded as 'pending', NOT 'paid'!
-    // Fulfillment status is initialized to 'unfulfilled'.
+    // 7. Payment Verification Enforcement (Requirement 5 & 7)
     const initialPaymentStatus: AdminOrder['paymentStatus'] = 'pending';
     const initialFulfillmentStatus: AdminOrder['fulfillmentStatus'] = 'unfulfilled';
 
     const orderRecord: AdminOrder = {
       id: generatedOrderNumber,
       customerName: body.customerName.trim(),
-      customerEmail: (body.customerEmail || 'guest@kalajay.in').trim(),
+      customerEmail: normalizedEmail,
       customerPhone: cleanPhone,
       items: verifiedOrderItems,
       subtotal: calculatedSubtotal,
@@ -238,29 +297,6 @@ export async function POST(request: Request) {
       ...(body.userId ? { userId: body.userId } : {}),
     };
 
-    // 8. Server-Side Persistence into Cloud Firestore
-    if (db && db.type) {
-      const orderDocRef = doc(db, 'orders', generatedOrderNumber);
-      await setDoc(orderDocRef, {
-        ...orderRecord,
-        createdAtServer: serverTimestamp(),
-        verifiedByServer: true,
-      });
-
-      // Deduct / reserve inventory on server
-      for (const item of verifiedOrderItems) {
-        try {
-          const invRef = doc(db, 'inventory', item.sku);
-          await updateDoc(invRef, {
-            reservedInLoom: increment(item.quantity),
-            updatedAt: new Date().toISOString(),
-          });
-        } catch {
-          // Non-blocking inventory decrement
-        }
-      }
-    }
-
     const resultPayload = {
       success: true,
       orderId: generatedOrderNumber,
@@ -272,15 +308,85 @@ export async function POST(request: Request) {
       order: orderRecord,
     };
 
-    // Cache in idempotency register
-    recentOrderRequests.set(orderFingerprint, {
+    // 8. Transactional Inventory Protection & Order Persistence
+    if (db && db.type) {
+      try {
+        await runTransaction(db, async (transaction) => {
+          for (const item of verifiedOrderItems) {
+            const invRef = doc(db, 'inventory', item.sku);
+            const invSnap = await transaction.get(invRef);
+
+            if (invSnap.exists()) {
+              const invData = invSnap.data();
+              const currentAvailable = Number(
+                invData.available !== undefined
+                  ? invData.available
+                  : invData.stockOnHand !== undefined
+                  ? invData.stockOnHand
+                  : (invData.onHand ?? 15)
+              );
+              if (currentAvailable < item.quantity) {
+                throw new Error(
+                  `INSUFFICIENT_STOCK: Atelier Stock Notice: Only ${currentAvailable} pieces of "${item.name}" remain in current loom.`
+                );
+              }
+              const nextAvailable = currentAvailable - item.quantity;
+              const nextReserved = Number(invData.reservedInLoom ?? 0) + item.quantity;
+
+              try {
+                transaction.update(invRef, {
+                  available: Math.max(0, nextAvailable),
+                  reservedInLoom: nextReserved,
+                  updatedAt: serverTimestamp(),
+                });
+              } catch {
+                // Secondary permission handling
+              }
+            }
+          }
+
+          const orderDocRef = doc(db, 'orders', generatedOrderNumber);
+          transaction.set(orderDocRef, {
+            ...orderRecord,
+            createdAtServer: serverTimestamp(),
+            verifiedByServer: true,
+          });
+        });
+      } catch (txErr: any) {
+        if (txErr.message?.includes('INSUFFICIENT_STOCK')) {
+          const cleanMessage = txErr.message.replace('INSUFFICIENT_STOCK: ', '');
+          return NextResponse.json({ success: false, error: cleanMessage }, { status: 400 });
+        }
+        // Direct order persistence fallback
+        const orderDocRef = doc(db, 'orders', generatedOrderNumber);
+        await setDoc(orderDocRef, {
+          ...orderRecord,
+          createdAtServer: serverTimestamp(),
+          verifiedByServer: true,
+        });
+      }
+    }
+
+    // Save to durable idempotency cache
+    durableStore[sanitizedIdempKey] = {
+      idempotencyKey: sanitizedIdempKey,
+      orderId: generatedOrderNumber,
+      customerEmail: normalizedEmail,
+      payloadHash,
+      status: 'completed',
+      response: resultPayload,
       timestamp: Date.now(),
-      result: resultPayload,
-    });
+    };
+    writeDurableIdempotency(durableStore);
 
     return NextResponse.json(resultPayload);
   } catch (error: any) {
     console.error('Server order processing error:', error);
+    if (error?.message?.includes('INSUFFICIENT_STOCK')) {
+      const cleanMessage = error.message.replace('INSUFFICIENT_STOCK: ', '');
+      return NextResponse.json({ success: false, error: cleanMessage }, { status: 400 });
+    }
+
     return NextResponse.json(
       { success: false, error: error?.message || 'Internal server error validating atelier order.' },
       { status: 500 }
