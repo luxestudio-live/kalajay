@@ -4,6 +4,7 @@ import path from 'path';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { verifyStaffPermission } from '@/lib/serverRbac';
+import { ensureServerAdminAuth } from '@/lib/serverFirebaseAdmin';
 import { PermissionAction } from '@/data/adminTypes';
 
 interface UpdateOrderPayload {
@@ -155,6 +156,7 @@ export async function POST(request: Request) {
 
     // Sync to Cloud Firestore (/orders/{orderId})
     try {
+      await ensureServerAdminAuth();
       const orderRef = doc(db, 'orders', orderId);
       const fsSnap = await getDoc(orderRef);
       if (fsSnap.exists()) {

@@ -7,6 +7,7 @@ import { AdminOrder } from '@/data/adminTypes';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { verifyFirebaseIdToken } from '@/lib/serverRbac';
+import { ensureServerAdminAuth } from '@/lib/serverFirebaseAdmin';
 
 interface CreateOrderRequestBody {
   customerName: string;
@@ -385,6 +386,7 @@ export async function POST(request: Request) {
 
     // 8. Transactional Inventory Protection & Order Persistence
     if (db && db.type) {
+      await ensureServerAdminAuth();
       try {
         await runTransaction(db, async (transaction) => {
           for (const item of verifiedOrderItems) {

@@ -4,13 +4,14 @@ rules_version = '2';
 // KALAJAY HANDCRAFTED LUXURIES — PRODUCTION FIRESTORE SECURITY RULES
 // Database: kalajay-667ff (asia-south1)
 // Architecture: Least-Privilege Role-Based Access Control (RBAC)
+// Security Tier: Zero-Trust Hardened (Production Release)
 // ===============================================================
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // -------------------------------------------------------------
-    // Core Helper Functions
+    // Core Authentication & Identity Helpers
     // -------------------------------------------------------------
     function isAuthenticated() {
       return request.auth != null;
@@ -20,15 +21,16 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Secure Administrator Determination:
-    // 1. Firebase Auth Custom Claim (token.admin == true) set by privileged backend Admin operations
-    // 2. Verified Server-Managed Document in /admin_users/{uid} (whitelist ACL)
-    // 3. Root Super Administrator Immutable UID (Soumya - Founder & Head of Maison)
-    // NOTE: Email whitelists and domain matching are strictly removed to prevent spoofing or domain self-registration vectors.
+    // Root Super Administrator: Immutable UID (Soumya - Founder & Head of Maison)
+    // NOTE: Hardcoded root UID prevents all email spoofing or domain self-registration vectors.
     function isRootAdmin() {
       return isAuthenticated() && request.auth.uid == 'mJ6lPWSeACcLSCSKqonwcksD87I2';
     }
 
+    // Secure Administrator Determination:
+    // 1. Firebase Auth Custom Claim (token.admin == true) set by privileged backend Admin operations
+    // 2. Verified Server-Managed Document in /admin_users/{uid} (whitelist ACL)
+    // 3. Root Super Administrator Immutable UID
     function isAdmin() {
       return isAuthenticated() && (
         request.auth.token.admin == true ||
@@ -37,8 +39,52 @@ service cloud.firestore {
       );
     }
 
+    // Helper to retrieve verified administrative user document
+    function getAdminData() {
+      return get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data;
+    }
+
+    // Verify staff account is active and not deactivated
+    function isStaffActive() {
+      return isAuthenticated() && (
+        isRootAdmin() ||
+        (exists(/databases/$(database)/documents/admin_users/$(request.auth.uid)) &&
+         (!('active' in getAdminData()) || getAdminData().active == true) &&
+         (!('status' in getAdminData()) || getAdminData().status == 'active'))
+      );
+    }
+
+    // Granular Role-Based Access Control (RBAC) Helpers:
+    // Check specific role or roleId assignment
+    function hasRole(roleName) {
+      return isAuthenticated() && (
+        isRootAdmin() ||
+        (exists(/databases/$(database)/documents/admin_users/$(request.auth.uid)) &&
+         isStaffActive() &&
+         (getAdminData().role == roleName || getAdminData().roleId == roleName))
+      );
+    }
+
+    // Store Managers & Super Admins (Catalogue, CMS, Coupons, Storefront)
+    function isStoreManagerOrSuperAdmin() {
+      return isRootAdmin() ||
+             hasRole('super_admin') ||
+             hasRole('role-super-admin') ||
+             hasRole('store_manager') ||
+             hasRole('role-store-manager');
+    }
+
+    // Inventory & Atelier Operations Staff (Inventory ERP, Stock Adjustments)
+    function isInventoryStaffOrAdmin() {
+      return isStoreManagerOrSuperAdmin() ||
+             hasRole('inventory_manager') ||
+             hasRole('role-inventory-manager') ||
+             hasRole('production_head') ||
+             hasRole('role-production-head');
+    }
+
     // -------------------------------------------------------------
-    // Validation Helpers
+    // Data Validation Helpers
     // -------------------------------------------------------------
     function isValidProduct(data) {
       return data.name is string && data.name.size() > 0 && data.name.size() <= 150 &&
@@ -53,37 +99,20 @@ service cloud.firestore {
              data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
              (!('email' in data) || (data.email is string && data.email.size() <= 150)) &&
              (!('phone' in data) || (data.phone is string && data.phone.size() <= 25)) &&
-             // Privilege escalation & business data integrity guards (Concern 3)
+             // Privilege escalation & business data integrity guards (Concern 3 & Requirement 5)
              (
                isAdmin() || (
-                 (!('role' in data) || data.role == 'customer' || (resource != null && data.role == resource.data.role)) &&
-                 (!('isAdmin' in data) || data.isAdmin == false || (resource != null && data.isAdmin == resource.data.isAdmin)) &&
-                 (!('staffId' in data) || (resource != null && data.staffId == resource.data.staffId)) &&
-                 (!('requiresPasswordReset' in data) || (resource != null && data.requiresPasswordReset == resource.data.requiresPasswordReset)) &&
-                 // Reward Points & Loyalty Tier Protection (Concern 3):
-                 // On creation: welcome points capped at 300, tier must be default Kalajay Circle / Silver
-                 // On update: non-admins cannot inflate reward points or alter loyalty tier
+                 (!('role' in data) || data.role == 'customer') &&
+                 (!('isAdmin' in data) || data.isAdmin == false) &&
+                 (!('staffId' in data)) &&
+                 (!('requiresPasswordReset' in data)) &&
+                 // Reward Points & Loyalty Tier Protection (Requirement 5):
+                 // On creation: inaugural points capped at 300, tier must be default Kalajay Circle / Silver
+                 // On update: non-admins CANNOT inflate reward points or alter loyalty tier
                  (
                    (resource == null && (!('rewardPoints' in data) || data.rewardPoints <= 300) && (!('tier' in data) || data.tier in ['Kalajay Circle', 'Silver'])) ||
-                   (resource != null && (!('rewardPoints' in data) || data.rewardPoints <= resource.data.rewardPoints) && (!('tier' in data) || data.tier == resource.data.tier))
+                   (resource != null && (!('rewardPoints' in data) || data.rewardPoints == resource.data.rewardPoints) && (!('tier' in data) || data.tier == resource.data.tier))
                  )
-               )
-             );
-    }
-
-    function isValidOrder(data) {
-      return data.id is string && data.id.size() > 0 &&
-             data.customerName is string && data.customerName.size() > 0 && data.customerName.size() <= 120 &&
-             data.total is number && data.total >= 0 &&
-             data.items is list && data.items.size() > 0 && data.items.size() <= 50 &&
-             data.shippingAddress is map &&
-             data.fulfillmentStatus in ['unfulfilled', 'in_loom', 'quality_checked', 'shipped', 'delivered', 'rto'] &&
-             // Payment Status & Fulfillment Guards (Concern 3 & 4):
-             // Direct client submissions cannot self-grant 'paid' status or trigger fulfillment
-             (
-               isAdmin() || (
-                 data.paymentStatus == 'pending' &&
-                 data.fulfillmentStatus == 'unfulfilled'
                )
              );
     }
@@ -98,67 +127,71 @@ service cloud.firestore {
       return data.customerName is string && data.customerName.size() > 0 && data.customerName.size() <= 120 &&
              data.email is string && data.email.size() > 0 &&
              data.subject is string && data.subject.size() > 0 && data.subject.size() <= 200 &&
-             data.messages is list && data.messages.size() > 0;
+             data.messages is list && data.messages.size() > 0 && data.messages.size() <= 50;
     }
 
     // -------------------------------------------------------------
-    // 1. Products Catalogue
-    // Storefront visitors need public read access to browse the catalogue.
-    // Writes are strictly restricted to verified Administrators.
+    // 1. Products Catalogue (/products/{productId})
+    // Storefront visitors have public read access to browse the catalogue.
+    // Writes are restricted to Store Managers and Super Admins.
+    // Restricted staff (e.g., inventory clerks) CANNOT modify product listings.
     // -------------------------------------------------------------
     match /products/{productId} {
       allow read: if true;
-      allow create: if isAdmin() && isValidProduct(request.resource.data);
-      allow update: if isAdmin() && isValidProduct(request.resource.data);
-      allow delete: if isAdmin();
+      allow create: if isStoreManagerOrSuperAdmin() && isValidProduct(request.resource.data);
+      allow update: if isStoreManagerOrSuperAdmin() && isValidProduct(request.resource.data);
+      allow delete: if isStoreManagerOrSuperAdmin();
     }
 
     // -------------------------------------------------------------
-    // 2. Collections & Categories
-    // Public read for navigation. Admin write only.
+    // 2. Collections & Categories (/categories/{categoryId})
+    // Public read for website navigation. Write restricted to Store Managers & Super Admins.
     // -------------------------------------------------------------
     match /categories/{categoryId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isStoreManagerOrSuperAdmin();
     }
 
     // -------------------------------------------------------------
-    // 3. CMS & Homepage Rails (Featured Curation, Banners)
-    // Public read for website presentation. Admin write only.
+    // 3. CMS & Homepage Rails (/cms/{docId})
+    // Public read for featured creations and banners.
+    // Write restricted to Store Managers & Super Admins.
     // -------------------------------------------------------------
     match /cms/{docId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isStoreManagerOrSuperAdmin();
     }
 
     // -------------------------------------------------------------
-    // 4. Inventory ERP & Stock
+    // 4. Inventory ERP & Stock (/inventory/{sku})
     // Read: Public (to display stock status on product pages).
-    // Write: Strictly restricted to verified Administrators.
+    // Write: Restricted to Inventory Managers, Store Managers, Production Heads, and Super Admins.
     // -------------------------------------------------------------
     match /inventory/{sku} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isInventoryStaffOrAdmin();
     }
 
-    // Stock adjustments audit trail - Admin only
+    // Stock adjustments audit trail - Verified inventory & admin staff only
     match /stock_adjustments/{adjId} {
-      allow read, write: if isAdmin();
+      allow read: if isAdmin();
+      allow write: if isInventoryStaffOrAdmin();
     }
 
     // -------------------------------------------------------------
-    // 5. Coupons & Promotions
+    // 5. Coupons & Promotions (/coupons/{couponId})
     // Public can read active coupons to validate promo codes at checkout.
-    // Create/update/delete restricted to Administrators.
+    // Create/update/delete restricted to Store Managers & Super Admins.
     // -------------------------------------------------------------
     match /coupons/{couponId} {
       allow read: if resource.data.isActive == true || isAdmin();
-      allow write: if isAdmin();
+      allow write: if isStoreManagerOrSuperAdmin();
     }
 
     // -------------------------------------------------------------
     // 6. Patron User Profiles (/users/{userId})
-    // Strictly private: A user may only read/write their own profile.
+    // Private: A user may only read/write their own profile.
+    // Privilege escalation, staffId, loyalty tier, and points inflation blocked.
     // -------------------------------------------------------------
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
@@ -169,31 +202,28 @@ service cloud.firestore {
 
     // -------------------------------------------------------------
     // 7. Orders (/orders/{orderId})
-    // Creation: Permitted for legitimate checkout submissions.
-    // Read: Restricted to the patron who placed the order OR Admin.
-    // Update: STRICTLY ADMIN ONLY. Patrons CANNOT modify orders, prices,
-    // payment status, or tracking stages once placed.
+    // Creation: ZERO DIRECT CLIENT CREATION (Requirement 2).
+    // All orders, including guest orders, MUST be created through the trusted
+    // /api/orders/create backend API to enforce authoritative pricing, 3% GST,
+    // inventory reservation, and payment status initialization.
+    // Read: Restricted to the authenticated patron owner OR Admin.
+    // Update: Strictly restricted to trusted Root Admin / backend update operations.
     // Delete: Disallowed (audit trail protection).
     // -------------------------------------------------------------
     match /orders/{orderId} {
-      allow create: if isValidOrder(request.resource.data) && (
-        !isAuthenticated() ||
-        request.resource.data.userId == request.auth.uid ||
-        request.resource.data.customerEmail == request.auth.token.email ||
-        isAdmin()
-      );
+      allow create: if isRootAdmin();
       allow read: if (
         isAuthenticated() && (
           resource.data.userId == request.auth.uid ||
           (request.auth.token.email != null && resource.data.customerEmail == request.auth.token.email)
         )
       ) || isAdmin();
-      allow update: if isAdmin();
+      allow update: if isRootAdmin();
       allow delete: if false;
     }
 
     // -------------------------------------------------------------
-    // 8. Bespoke Custom Enquiries (/custom_enquiries)
+    // 8. Bespoke Custom Enquiries (/custom_enquiries/{enquiryId})
     // Patrons & guests can submit custom commission requests.
     // Read/Update/Delete is strictly restricted to Admin/Concierge.
     // -------------------------------------------------------------
@@ -203,7 +233,7 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------
-    // 9. Corporate Gifting Enquiries (/corporate_enquiries)
+    // 9. Corporate Gifting Enquiries (/corporate_enquiries/{enquiryId})
     // Prospective institutional clients can submit leads.
     // Read/Update/Delete is strictly restricted to Admin.
     // -------------------------------------------------------------
@@ -213,11 +243,13 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------
-    // 10. Support Tickets (/support_tickets)
-    // Create: Anyone can create a support ticket.
+    // 10. Support Tickets (/support_tickets/{ticketId})
+    // Create: Anyone can create a support ticket with valid schema.
     // Read: Ticket creator (by email/userId match) OR Admin.
-    // Update: Admin can reply/resolve; Creator can append messages only.
-    // Delete: Disallowed.
+    // Update: Admin can reply/resolve; Creator can APPEND messages only (Requirement 6).
+    // Cannot edit or remove previous messages, alter staff replies, change ownership,
+    // or modify ticket status.
+    // Delete: Disallowed for clients (Admin only).
     // -------------------------------------------------------------
     match /support_tickets/{ticketId} {
       allow create: if isValidSupportTicket(request.resource.data);
@@ -230,13 +262,18 @@ service cloud.firestore {
       allow update: if isAdmin() || (
         isAuthenticated() &&
         (resource.data.userId == request.auth.uid || resource.data.email == request.auth.token.email) &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['messages', 'updatedAt'])
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['messages', 'updatedAt']) &&
+        request.resource.data.messages.size() == resource.data.messages.size() + 1 &&
+        request.resource.data.messages.hasAll(resource.data.messages) &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.status == resource.data.status &&
+        request.resource.data.messages.size() <= 50
       );
       allow delete: if isAdmin();
     }
 
     // -------------------------------------------------------------
-    // 11. Security Audit Logs (/audit_logs)
+    // 11. Security Audit Logs (/audit_logs/{logId})
     // Read restricted to Administrators; writes strictly restricted to Root Super Admin.
     // -------------------------------------------------------------
     match /audit_logs/{logId} {
@@ -257,18 +294,20 @@ service cloud.firestore {
     // -------------------------------------------------------------
     // 13. System Health Diagnostics (/system/{docId})
     // Restrict public read to operational health beacon only.
+    // Writes restricted to Root Super Admin.
     // -------------------------------------------------------------
     match /system/{docId} {
       allow read: if docId == 'health';
-      allow write: if isAdmin();
+      allow write: if isRootAdmin();
     }
 
     // -------------------------------------------------------------
     // 14. Checkout Idempotency Register (/idempotency_keys/{key})
-    // Server checkout pipeline writes and verifies unique request hashes.
+    // STRICTLY SERVER-ONLY (Requirement 1). Zero client read or write access.
+    // Managed exclusively by trusted server operations.
     // -------------------------------------------------------------
     match /idempotency_keys/{key} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
 
     // -------------------------------------------------------------
@@ -283,12 +322,11 @@ service cloud.firestore {
 
     // -------------------------------------------------------------
     // 16. Staff ID Login Index (/staff_id_index/{staffId})
-    // Read: Authenticated staff / server lookup.
-    // Write: Verified Administrators only.
+    // STRICTLY SERVER-ONLY (Requirement 3). Zero public enumeration or client modification.
+    // Staff ID mapping operations execute exclusively via secure backend API endpoints.
     // -------------------------------------------------------------
     match /staff_id_index/{staffId} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if false;
     }
 
     // -------------------------------------------------------------
@@ -303,7 +341,7 @@ service cloud.firestore {
 
     // -------------------------------------------------------------
     // 18. Staff Usernames Directory (/admin_usernames/{username})
-    // Strictly restricted against all direct client reads and writes.
+    // STRICTLY SERVER-ONLY (Requirement 3). Zero public enumeration or client modification.
     // Username resolution and availability checks operate exclusively via secure backend API endpoints.
     // -------------------------------------------------------------
     match /admin_usernames/{username} {
