@@ -16,8 +16,6 @@ import {
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { BRAND_CONFIG, PRODUCTS } from '@/data/catalogue';
-import { createFirestoreOrder } from '@/lib/firestore';
-import type { AdminOrder } from '@/data/adminTypes';
 
 export default function CheckoutPage() {
   const { cart, subtotal, deliveryFee, total, formatINR, clearCart } = useCart();
@@ -61,80 +59,48 @@ export default function CheckoutPage() {
 
     setIsSubmitting(true);
 
-    // 2. Server-grade Price & Catalogue Verification (Anti-Tampering)
-    let verifiedSubtotal = 0;
-    const verifiedItems = cart.map(item => {
-      const catalogItem = PRODUCTS.find(p => p.code === item.code || p.id === item.id);
-      const verifiedPrice = catalogItem ? catalogItem.price : item.price;
-      verifiedSubtotal += verifiedPrice * item.quantity;
-      return {
-        productId: item.code || item.id,
-        name: catalogItem?.name || item.name,
-        sku: item.code || item.id,
-        price: verifiedPrice,
-        quantity: item.quantity,
-        image: item.image,
-      };
-    });
+    // 2. Transmit to Trusted Server Endpoint for Authoritative Price, Tax, Shipping & Inventory Check
+    try {
+      const response = await fetch('/api/orders/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerName: name.trim(),
+          customerEmail: email.trim() || 'guest@kalajay.in',
+          customerPhone: cleanPhone,
+          shippingAddress: {
+            addressLine: address.trim(),
+            city: city.trim(),
+            state: stateName,
+            pincode: pincode.trim(),
+          },
+          paymentMethod,
+          items: cart.map(item => ({
+            productId: item.code || item.id,
+            quantity: item.quantity,
+          })),
+        }),
+      });
 
-    const verifiedShipping = verifiedSubtotal >= (BRAND_CONFIG.shipping?.freeThreshold || 599) ? 0 : 79;
-    const verifiedTax = Math.round(verifiedSubtotal * 0.03); // 3% GST on handcrafted accessories
-    const verifiedTotal = verifiedSubtotal + verifiedShipping + verifiedTax;
+      const res = await response.json();
 
-    const generatedOrder = `KJ-${Math.floor(100000 + Math.random() * 900000)}`;
+      if (!response.ok || !res.success) {
+        setSubmitError(
+          res.error || 'Failed to record order in atelier database. Your card was not charged. Please try again.'
+        );
+        setIsSubmitting(false);
+        return;
+      }
 
-    const payMethodMapped =
-      paymentMethod === 'upi'
-        ? ('UPI Instant' as const)
-        : paymentMethod === 'card'
-        ? ('Credit/Debit Card' as const)
-        : ('WhatsApp Direct' as const);
-
-    const orderRecord: AdminOrder = {
-      id: generatedOrder,
-      customerName: name.trim(),
-      customerEmail: email.trim() || 'guest@kalajay.in',
-      customerPhone: phone.trim(),
-      items: verifiedItems,
-      subtotal: verifiedSubtotal,
-      discount: 0,
-      shipping: verifiedShipping,
-      tax: verifiedTax,
-      total: verifiedTotal,
-      paymentStatus: 'paid',
-      paymentMethod: payMethodMapped,
-      fulfillmentStatus: 'in_loom',
-      shippingAddress: {
-        addressLine: address.trim(),
-        city: city.trim(),
-        state: stateName,
-        pincode: pincode.trim(),
-      },
-      timeline: [
-        { title: 'Order Placed & Payment Verified', timestamp: new Date().toISOString(), note: 'Authenticated via Kalajay Digital Flagship' },
-        { title: 'In Loom - Bihar Craft House', timestamp: new Date().toISOString(), note: 'Allocated to master artisan wooden loom' },
-      ],
-      artisanNote: 'Scheduled for artisan weaving with tension-calibrated nylon fiber and genuine glass crystals.',
-      courier: 'Kalajay In-House Direct Dispatch',
-      trackingAwb: `KJ-DISP-${Math.floor(10000000 + Math.random() * 90000000)}`,
-      createdAt: new Date().toISOString(),
-    };
-
-    // 3. Confirm Database Persistence before Success Display
-    const res = await createFirestoreOrder(orderRecord);
-    if (!res.success) {
-      setSubmitError(
-        res.error || 'Failed to record order in atelier database. Your card was not charged. Please try again.'
-      );
+      // 3. Successful Persistence Confirmed by Server: Transition & Clear
+      setOrderNumber(res.orderId);
+      setStep('success');
       setIsSubmitting(false);
-      return;
+      clearCart();
+    } catch (err: any) {
+      setSubmitError(err?.message || 'Network error connecting to atelier server. Please try again.');
+      setIsSubmitting(false);
     }
-
-    // 4. Successful Persistence confirmed: Transition & Clear
-    setOrderNumber(generatedOrder);
-    setStep('success');
-    setIsSubmitting(false);
-    clearCart();
   };
 
   if (step === 'success') {

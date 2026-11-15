@@ -44,6 +44,15 @@ import RolesPermissionsView from '@/components/admin/views/RolesPermissionsView'
 import AuditLogsView from '@/components/admin/views/AuditLogsView';
 import SettingsStoreView from '@/components/admin/views/SettingsStoreView';
 
+// Authoritative Staff Whitelist
+// Privileges cannot be obtained simply by self-registering with a particular email domain
+const AUTHORIZED_STAFF_EMAILS = [
+  'soumya@kalajay.in',
+  'ritu.verma@kalajay.in',
+  'sunita.craft@kalajay.in',
+  'aarav.m@kalajay.in',
+];
+
 // ===============================================================
 // ATELIER OPERATIONS SECURITY GATE
 // Enforces authentication and authorized role verification.
@@ -61,12 +70,11 @@ function AdminSecurityGate({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // If a standard customer is logged in with a non-staff email
+  // If a standard customer or unauthorized user is logged in
   const isPatronSession =
     firebaseUser &&
     firebaseUser.email &&
-    !firebaseUser.email.endsWith('@kalajay.in') &&
-    firebaseUser.email !== 'soumya@kalajay.in';
+    !AUTHORIZED_STAFF_EMAILS.includes(firebaseUser.email.toLowerCase());
 
   const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,8 +85,11 @@ function AdminSecurityGate({
       setError('Please provide your authorized Maison staff email.');
       return;
     }
-    if (!cleanEmail.endsWith('@kalajay.in') && cleanEmail !== 'soumya@kalajay.in') {
-      setError('Access restricted: Staff email must belong to the @kalajay.in domain.');
+    // Strict Whitelist Check - Domain spoofing/arbitrary registration blocked
+    if (!AUTHORIZED_STAFF_EMAILS.includes(cleanEmail)) {
+      setError(
+        'Access Denied: Email is not on the authorized staff whitelist. Administrative privileges cannot be obtained by domain self-registration.'
+      );
       return;
     }
     if (!password) {
@@ -471,9 +482,9 @@ export default function AdminPage() {
       return;
     }
 
-    // Check Firebase Auth state
+    // Check Firebase Auth state against authoritative whitelist
     if (firebaseUser?.email) {
-      if (firebaseUser.email.endsWith('@kalajay.in') || firebaseUser.email === 'soumya@kalajay.in') {
+      if (AUTHORIZED_STAFF_EMAILS.includes(firebaseUser.email.toLowerCase())) {
         setIsStaffAuthenticated(true);
         setActiveStaffEmail(firebaseUser.email);
         sessionStorage.setItem('kalajay_staff_authorized', 'true');

@@ -21,15 +21,12 @@ service cloud.firestore {
     }
 
     // Secure Admin Determination:
-    // 1. Auth Custom Claim (token.admin == true)
-    // 2. Verified @kalajay.in corporate staff email with email_verified == true
-    // 3. Document in /admin_users/{uid} (server-managed ACL)
+    // 1. Auth Custom Claim (token.admin == true) set by privileged backend Admin SDK
+    // 2. Verified Server-Managed Document in /admin_users/{uid} (whitelist ACL)
+    // NOTE: Arbitrary registration with @kalajay.in email domain DOES NOT grant admin privileges.
     function isAdmin() {
       return isAuthenticated() && (
         request.auth.token.admin == true ||
-        (request.auth.token.email != null &&
-         request.auth.token.email.matches('.*@kalajay\\.in$') &&
-         request.auth.token.email_verified == true) ||
         exists(/databases/$(database)/documents/admin_users/$(request.auth.uid))
       );
     }
