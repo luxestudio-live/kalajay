@@ -26,6 +26,7 @@ interface AdminHeaderProps {
   onOpenSearch: () => void;
   onLockConsole?: () => void;
   staffEmail?: string;
+  staffId?: string;
 }
 
 export default function AdminHeader({
@@ -33,6 +34,7 @@ export default function AdminHeader({
   onOpenSearch,
   onLockConsole,
   staffEmail,
+  staffId,
 }: AdminHeaderProps) {
   const {
     activeRole,
@@ -289,10 +291,10 @@ export default function AdminHeader({
               type="button"
               onClick={onLockConsole}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#503A2E] hover:bg-[#874427] text-white text-xs font-semibold tracking-wide transition-all shadow-xs cursor-pointer"
-              title={`Lock administrative console (${staffEmail || 'Authorized Staff'})`}
+              title={`Lock administrative console (${staffId || staffEmail || 'Authorized Staff'})`}
             >
               <Lock className="w-3 h-3 text-[#C5A880]" />
-              <span className="hidden sm:inline">Lock Console</span>
+              <span className="hidden sm:inline font-mono">Lock [{staffId || 'Console'}]</span>
             </button>
           )}
         </div>

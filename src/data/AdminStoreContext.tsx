@@ -530,6 +530,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       try {
         const storedCreds = JSON.parse(localStorage.getItem('kalajay_staff_credentials') || '{}');
         storedCreds[newUser.email.toLowerCase()] = provisionalPassword;
+        storedCreds[newUser.id.toUpperCase()] = provisionalPassword;
         localStorage.setItem('kalajay_staff_credentials', JSON.stringify(storedCreds));
       } catch (e) {
         console.warn('Failed caching staff credentials:', e);
