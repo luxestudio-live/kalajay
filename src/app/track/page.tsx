@@ -119,11 +119,12 @@ function TrackOrderContent() {
   const [searched, setSearched] = useState(!initialOrderId);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [verifyInput, setVerifyInput] = useState('');
+  const [verifyEmail, setVerifyEmail] = useState('');
+  const [verifyExtra, setVerifyExtra] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState('');
 
-  const executeSearch = async (targetQuery: string, verifyValue?: string) => {
+  const executeSearch = async (targetQuery: string, emailVal?: string, extraVal?: string) => {
     const clean = targetQuery.trim().toUpperCase();
     if (!clean) return;
 
@@ -145,12 +146,26 @@ function TrackOrderContent() {
         }
 
         let url = `/api/orders/track/?orderId=${encodeURIComponent(clean)}`;
-        if (verifyValue) {
-          if (verifyValue.includes('@')) {
-            url += `&email=${encodeURIComponent(verifyValue.trim().toLowerCase())}`;
+        const effectiveEmail = emailVal || verifyEmail;
+        const effectiveExtra = extraVal || verifyExtra;
+
+        if (effectiveEmail) {
+          url += `&email=${encodeURIComponent(effectiveEmail.trim().toLowerCase())}`;
+        }
+        if (effectiveExtra) {
+          const digits = effectiveExtra.replace(/\D/g, '');
+          if (digits.length === 6) {
+            url += `&pincode=${encodeURIComponent(digits)}`;
+          } else if (digits.length >= 10) {
+            url += `&phone=${encodeURIComponent(digits)}`;
           } else {
-            url += `&phone=${encodeURIComponent(verifyValue.trim())}`;
+            url += `&key=${encodeURIComponent(effectiveExtra.trim())}`;
           }
+        }
+
+        const urlToken = searchParams.get('token') || searchParams.get('key');
+        if (urlToken && !url.includes('&key=') && !url.includes('&token=')) {
+          url += `&token=${encodeURIComponent(urlToken)}`;
         }
 
         const res = await fetch(url, { headers });
@@ -241,10 +256,17 @@ function TrackOrderContent() {
 
   const handleVerifyGuest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!verifyInput.trim() || !activeOrder) return;
+    if (!verifyEmail.trim() || !activeOrder) {
+      setVerifyError('Please enter the email address used during order placement.');
+      return;
+    }
+    if (!verifyExtra.trim()) {
+      setVerifyError('Please enter your 6-digit delivery pincode or phone number for security verification.');
+      return;
+    }
     setVerifying(true);
     setVerifyError('');
-    await executeSearch(activeOrder.orderId, verifyInput);
+    await executeSearch(activeOrder.orderId, verifyEmail, verifyExtra);
     setVerifying(false);
   };
 
@@ -516,22 +538,29 @@ function TrackOrderContent() {
                     <span className="text-xs font-semibold text-plum tracking-refined uppercase font-sans">Patron Privacy Protection</span>
                   </div>
                   <p className="text-xs text-ink-muted leading-relaxed font-light">
-                    To maintain client confidentiality and privacy, itemized piece details and financial invoices ({activeOrder.itemCount || 1} handcrafted creation{(activeOrder.itemCount || 1) === 1 ? '' : 's'}) are shielded. Enter the email address or phone number associated with this order to view complete contents.
+                    To maintain strict client confidentiality, itemized parcel contents and financial invoices ({activeOrder.itemCount || 1} handcrafted creation{(activeOrder.itemCount || 1) === 1 ? '' : 's'}) are shielded. Authenticate as the account patron or enter your order email along with your delivery pincode or phone to unlock the complete invoice.
                   </p>
-                  <form onSubmit={handleVerifyGuest} className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                  <form onSubmit={handleVerifyGuest} className="flex flex-col sm:flex-row items-center gap-2.5 pt-1">
+                    <input
+                      type="email"
+                      placeholder="Order Email Address"
+                      value={verifyEmail}
+                      onChange={(e) => setVerifyEmail(e.target.value)}
+                      className="w-full sm:w-60 px-3.5 py-2.5 bg-canvas border border-border-strong rounded-sm text-xs text-plum placeholder:text-ink-light focus:outline-none focus:border-gold shadow-2xs"
+                    />
                     <input
                       type="text"
-                      placeholder="Enter order email or phone number"
-                      value={verifyInput}
-                      onChange={(e) => setVerifyInput(e.target.value)}
-                      className="w-full sm:w-72 px-3.5 py-2.5 bg-canvas border border-border-strong rounded-sm text-xs font-mono text-plum placeholder:text-ink-light focus:outline-none focus:border-gold shadow-2xs"
+                      placeholder="Delivery Pincode or Phone"
+                      value={verifyExtra}
+                      onChange={(e) => setVerifyExtra(e.target.value)}
+                      className="w-full sm:w-48 px-3.5 py-2.5 bg-canvas border border-border-strong rounded-sm text-xs font-mono text-plum placeholder:text-ink-light focus:outline-none focus:border-gold shadow-2xs"
                     />
                     <button
                       type="submit"
                       disabled={verifying}
                       className="w-full sm:w-auto px-6 py-2.5 bg-plum hover:bg-rosewood text-canvas text-xs uppercase tracking-editorial font-semibold rounded-sm transition-colors shrink-0 disabled:opacity-50"
                     >
-                      {verifying ? 'Verifying...' : 'Verify & Reveal'}
+                      {verifying ? 'Verifying...' : 'Unlock Parcel Details'}
                     </button>
                   </form>
                   {verifyError && (

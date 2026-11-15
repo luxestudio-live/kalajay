@@ -3,10 +3,12 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { verifyFirebaseIdToken } from '@/lib/serverRbac';
+import { doc, getDoc } from 'firebase/firestore';
+import { verifyFirebaseIdToken, INTERNAL_SERVICE_SECRET } from '@/lib/serverRbac';
 
-// Known demo orders for showroom preview
+// Immutable set of static showroom showcase references ONLY
+const STATIC_SHOWROOM_IDS = new Set(['KJ-8924', 'KJ-7710', 'KJ-6502']);
+
 const KNOWN_ORDERS: Record<string, any> = {
   'KJ-8924': {
     id: 'KJ-8924',
@@ -24,7 +26,7 @@ const KNOWN_ORDERS: Record<string, any> = {
     shipping: 0,
     tax: 55,
     total: 1903,
-    shippingAddress: { city: 'Mumbai', state: 'Maharashtra' },
+    shippingAddress: { city: 'Mumbai', state: 'Maharashtra', pincode: '400050' },
     timeline: [
       { title: 'Hand-Stringing in Bihar', timestamp: '2026-11-01T10:30:00Z', note: '1,400+ beads strung by Sunita Devi' },
       { title: 'Quality Checked & Wax-Sealed', timestamp: '2026-11-02T18:45:00Z', note: 'Inspected under calibrated light' },
@@ -34,7 +36,7 @@ const KNOWN_ORDERS: Record<string, any> = {
     courier: 'Kalajay In-House Direct Dispatch',
     trackingAwb: 'KJ-DISP-84729103',
     createdAt: '2026-11-01T10:30:00Z',
-    isDemo: true,
+    isStaticShowroomDemo: true,
   },
   'KJ-7710': {
     id: 'KJ-7710',
@@ -51,7 +53,7 @@ const KNOWN_ORDERS: Record<string, any> = {
     shipping: 0,
     tax: 72,
     total: 2471,
-    shippingAddress: { city: 'New Delhi', state: 'Delhi' },
+    shippingAddress: { city: 'New Delhi', state: 'Delhi', pincode: '110001' },
     timeline: [
       { title: 'Hand-Stringing Complete', timestamp: '2026-10-30T14:00:00Z', note: 'Brass structural frame tensioned' },
       { title: 'Wax-Sealed in Mumbai', timestamp: '2026-10-31T11:00:00Z', note: 'Kalajay insignia wax seal applied' }
@@ -60,7 +62,7 @@ const KNOWN_ORDERS: Record<string, any> = {
     courier: 'Kalajay Atelier Direct Delivery',
     trackingAwb: 'KJ-DISP-99381024',
     createdAt: '2026-10-30T14:00:00Z',
-    isDemo: true,
+    isStaticShowroomDemo: true,
   },
   'KJ-6502': {
     id: 'KJ-6502',
@@ -77,7 +79,7 @@ const KNOWN_ORDERS: Record<string, any> = {
     shipping: 150,
     tax: 30,
     total: 1179,
-    shippingAddress: { city: 'Bengaluru', state: 'Karnataka' },
+    shippingAddress: { city: 'Bengaluru', state: 'Karnataka', pincode: '560001' },
     timeline: [
       { title: 'Scheduled on Loom', timestamp: '2026-11-02T08:00:00Z', note: 'Bead count 420 faceted glass crystals' }
     ],
@@ -85,14 +87,14 @@ const KNOWN_ORDERS: Record<string, any> = {
     courier: 'Scheduled via Kalajay Atelier Team',
     trackingAwb: 'Pending Craft House Dispatch',
     createdAt: '2026-11-02T08:00:00Z',
-    isDemo: true,
+    isStaticShowroomDemo: true,
   },
 };
 
 // =========================================================================
-// PRODUCTION-SAFE SHARED DISTRIBUTED RATE LIMITER
-// Uses SHA-256 hashed IP identifiers to respect DPDP privacy guidelines.
-// Coordinated across instances via in-memory LRU + Firestore shared documents.
+// TRUSTED SERVER-SIDE RATE LIMITING
+// /tracking_ratelimits is closed to all direct client access (allow read, write: if false;).
+// State is managed by trusted server-side memory + server-only storage.
 // =========================================================================
 
 interface RateLimitRecord {
@@ -109,44 +111,41 @@ function hashIp(rawIp: string): string {
   return crypto.createHash('sha256').update(rawIp + salt).digest('hex').substring(0, 32);
 }
 
-async function getSharedRateLimit(ipHash: string): Promise<RateLimitRecord> {
-  const now = Date.now();
-  // 1. Check local memory cache
-  const cached = memoryRateLimitCache.get(ipHash);
-  if (cached && now - cached.windowStart < 60 * 1000) {
-    return cached;
+function getRatelimitFilePath(): string {
+  const dir = path.join(process.cwd(), '.next', 'cache');
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
   }
-
-  // 2. Query shared Firestore collection (cross-instance coordination)
-  try {
-    if (db && db.type) {
-      const snap = await getDoc(doc(db, 'tracking_ratelimits', ipHash));
-      if (snap.exists()) {
-        const data = snap.data() as RateLimitRecord;
-        memoryRateLimitCache.set(ipHash, data);
-        return data;
-      }
-    }
-  } catch {}
-
-  return { count: 0, windowStart: now, failedAttempts: 0 };
+  return path.join(dir, 'kalajay_server_tracking_limits.json');
 }
 
-async function saveSharedRateLimit(ipHash: string, record: RateLimitRecord): Promise<void> {
-  memoryRateLimitCache.set(ipHash, record);
-
-  // Sync to shared Firestore in background (non-blocking)
+function readServerRateLimits(): Record<string, RateLimitRecord> {
   try {
-    if (db && db.type) {
-      setDoc(doc(db, 'tracking_ratelimits', ipHash), record, { merge: true }).catch(() => {});
+    const fPath = getRatelimitFilePath();
+    if (fs.existsSync(fPath)) {
+      return JSON.parse(fs.readFileSync(fPath, 'utf-8'));
     }
+  } catch {}
+  return {};
+}
+
+function writeServerRateLimits(data: Record<string, RateLimitRecord>) {
+  try {
+    const fPath = getRatelimitFilePath();
+    fs.writeFileSync(fPath, JSON.stringify(data, null, 2), 'utf-8');
   } catch {}
 }
 
-async function checkRateLimit(ip: string): Promise<{ allowed: boolean; error?: string }> {
+async function checkServerRateLimit(ip: string): Promise<{ allowed: boolean; error?: string }> {
   const ipHash = hashIp(ip);
   const now = Date.now();
-  const record = await getSharedRateLimit(ipHash);
+
+  let record = memoryRateLimitCache.get(ipHash);
+  if (!record) {
+    const persistent = readServerRateLimits();
+    record = persistent[ipHash] || { count: 0, windowStart: now, failedAttempts: 0 };
+    memoryRateLimitCache.set(ipHash, record);
+  }
 
   if (record.lockedUntil && record.lockedUntil > now) {
     const remainingSec = Math.ceil((record.lockedUntil - now) / 1000);
@@ -162,7 +161,11 @@ async function checkRateLimit(ip: string): Promise<{ allowed: boolean; error?: s
   }
 
   record.count++;
-  await saveSharedRateLimit(ipHash, record);
+  memoryRateLimitCache.set(ipHash, record);
+
+  const persistent = readServerRateLimits();
+  persistent[ipHash] = record;
+  writeServerRateLimits(persistent);
 
   if (record.count > 45) {
     return {
@@ -177,37 +180,44 @@ async function checkRateLimit(ip: string): Promise<{ allowed: boolean; error?: s
 async function recordFailedAttempt(ip: string) {
   const ipHash = hashIp(ip);
   const now = Date.now();
-  const record = await getSharedRateLimit(ipHash);
+  let record = memoryRateLimitCache.get(ipHash) || { count: 1, windowStart: now, failedAttempts: 0 };
   record.failedAttempts = (record.failedAttempts || 0) + 1;
   if (record.failedAttempts >= 8) {
-    record.lockedUntil = now + 5 * 60 * 1000; // 5-minute lockout on repeated scanning
+    record.lockedUntil = now + 5 * 60 * 1000;
     record.failedAttempts = 0;
   }
-  await saveSharedRateLimit(ipHash, record);
+  memoryRateLimitCache.set(ipHash, record);
+
+  const persistent = readServerRateLimits();
+  persistent[ipHash] = record;
+  writeServerRateLimits(persistent);
 }
 
 async function recordSuccess(ip: string) {
   const ipHash = hashIp(ip);
-  const record = await getSharedRateLimit(ipHash);
-  if (record.failedAttempts > 0) {
+  const record = memoryRateLimitCache.get(ipHash);
+  if (record && record.failedAttempts > 0) {
     record.failedAttempts = 0;
-    await saveSharedRateLimit(ipHash, record);
+    memoryRateLimitCache.set(ipHash, record);
+    const persistent = readServerRateLimits();
+    persistent[ipHash] = record;
+    writeServerRateLimits(persistent);
   }
-}
-
-// Fallback durable store reader for local file cache
-function readDurableStore(fileName: string): Record<string, any> {
-  try {
-    const fPath = path.join(process.cwd(), '.next', 'cache', fileName);
-    if (fs.existsSync(fPath)) {
-      return JSON.parse(fs.readFileSync(fPath, 'utf-8'));
-    }
-  } catch {}
-  return {};
 }
 
 function cleanDigits(val: string): string {
   return (val || '').replace(/\D/g, '');
+}
+
+/**
+ * Computes deterministic guest order access token
+ */
+function generateGuestAccessToken(orderId: string, customerEmail: string): string {
+  return crypto
+    .createHmac('sha256', INTERNAL_SERVICE_SECRET)
+    .update(`${orderId}:${customerEmail.toLowerCase().trim()}`)
+    .digest('hex')
+    .substring(0, 24);
 }
 
 export async function GET(request: Request) {
@@ -215,7 +225,7 @@ export async function GET(request: Request) {
     const forwardedFor = request.headers.get('x-forwarded-for') || '';
     const clientIp = forwardedFor.split(',')[0].trim() || '127.0.0.1';
 
-    const rateCheck = await checkRateLimit(clientIp);
+    const rateCheck = await checkServerRateLimit(clientIp);
     if (!rateCheck.allowed) {
       return NextResponse.json(
         { success: false, error: rateCheck.error || 'Too many lookup requests.' },
@@ -241,6 +251,7 @@ export async function GET(request: Request) {
     }
 
     let foundOrder: any = null;
+    let isFromDatabase = false;
 
     // 1. Authoritative Firestore Document Lookup (/orders/{orderId})
     try {
@@ -248,35 +259,47 @@ export async function GET(request: Request) {
         const orderSnap = await getDoc(doc(db, 'orders', orderId));
         if (orderSnap.exists()) {
           foundOrder = { id: orderSnap.id, ...orderSnap.data() };
+          isFromDatabase = true;
         }
       }
-    } catch (e) {
-      // Permission or network fallback
-    }
+    } catch {}
 
     // 2. Check update store (for recent status modifications)
     if (!foundOrder) {
-      const updateStore = readDurableStore('kalajay_orders_update_store.json');
-      if (updateStore[orderId]) {
-        foundOrder = updateStore[orderId];
+      const updateStorePath = path.join(process.cwd(), '.next', 'cache', 'kalajay_orders_update_store.json');
+      if (fs.existsSync(updateStorePath)) {
+        try {
+          const updateStore = JSON.parse(fs.readFileSync(updateStorePath, 'utf-8'));
+          if (updateStore[orderId]) {
+            foundOrder = updateStore[orderId];
+            isFromDatabase = true;
+          }
+        } catch {}
       }
     }
 
     // 3. Search in durable idempotency store (all placed orders)
     if (!foundOrder) {
-      const idempStore = readDurableStore('kalajay_idempotency_store.json');
-      for (const key of Object.keys(idempStore)) {
-        const entry = idempStore[key];
-        if (entry?.orderId === orderId || entry?.response?.orderId === orderId) {
-          foundOrder = entry.response?.order;
-          break;
-        }
+      const idempStorePath = path.join(process.cwd(), '.next', 'cache', 'kalajay_idempotency_store.json');
+      if (fs.existsSync(idempStorePath)) {
+        try {
+          const idempStore = JSON.parse(fs.readFileSync(idempStorePath, 'utf-8'));
+          for (const key of Object.keys(idempStore)) {
+            const entry = idempStore[key];
+            if (entry?.orderId === orderId || entry?.response?.orderId === orderId) {
+              foundOrder = entry.response?.order;
+              isFromDatabase = true;
+              break;
+            }
+          }
+        } catch {}
       }
     }
 
-    // 4. Fallback to showroom demo orders
-    if (!foundOrder && KNOWN_ORDERS[orderId]) {
+    // 4. Fallback ONLY to static showroom demo records (if not in real database)
+    if (!foundOrder && STATIC_SHOWROOM_IDS.has(orderId) && KNOWN_ORDERS[orderId]) {
       foundOrder = KNOWN_ORDERS[orderId];
+      isFromDatabase = false;
     }
 
     if (!foundOrder) {
@@ -290,14 +313,18 @@ export async function GET(request: Request) {
     await recordSuccess(clientIp);
 
     // =========================================================================
-    // SECURE CUSTOMER OWNERSHIP & GUEST VERIFICATION
-    // Access to non-public order details (itemized invoice, financial totals,
-    // exact street address) requires verified customer ownership or guest verification.
+    // STRENGTHENED CUSTOMER OWNERSHIP & GUEST VERIFICATION
+    // Access to private order details (itemized invoice, financial amounts,
+    // individual piece images) strictly requires verified ownership.
+    //
+    // Genuine customer orders from database are NEVER bypassed by demo flags.
+    // Matching a bare email address alone is insufficient proof of ownership;
+    // guest verification requires matching Order Access Token OR Email + Delivery Pincode / Phone.
     // =========================================================================
 
     let isVerifiedOwner = false;
 
-    // A. Check Authenticated Customer Session (Authorization: Bearer <idToken>)
+    // A. Authenticated Customer Ownership via Firebase ID Token
     const authHeader = request.headers.get('authorization') || '';
     if (authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7).trim();
@@ -312,25 +339,49 @@ export async function GET(request: Request) {
       }
     }
 
-    // B. Check Guest Verification Identifiers (Email or Phone)
+    // B. Cryptographic Order Access Token / Key Verification (e.g. from checkout receipt link)
+    const suppliedToken = (
+      searchParams.get('token') ||
+      searchParams.get('key') ||
+      request.headers.get('x-order-token') ||
+      ''
+    ).trim();
+
+    if (!isVerifiedOwner && suppliedToken && foundOrder.customerEmail) {
+      const expectedToken = generateGuestAccessToken(orderId, foundOrder.customerEmail);
+      if (
+        suppliedToken === expectedToken ||
+        (foundOrder.guestAccessToken && suppliedToken === foundOrder.guestAccessToken)
+      ) {
+        isVerifiedOwner = true;
+      }
+    }
+
+    // C. Multi-Factor Guest Verification (Email + Delivery Pincode OR Email + Full Phone)
+    // Prevents an attacker from unlocking private items with just a guessed email address
     const queryEmail = (searchParams.get('email') || request.headers.get('x-verify-email') || '').trim().toLowerCase();
+    const queryPincode = (searchParams.get('pincode') || request.headers.get('x-verify-pincode') || '').trim();
     const queryPhone = cleanDigits(searchParams.get('phone') || request.headers.get('x-verify-phone') || '');
 
     if (!isVerifiedOwner && queryEmail && foundOrder.customerEmail) {
-      if (queryEmail === foundOrder.customerEmail.toLowerCase().trim()) {
-        isVerifiedOwner = true;
+      const emailMatches = queryEmail === foundOrder.customerEmail.toLowerCase().trim();
+      if (emailMatches) {
+        // Multi-factor knowledge check: must match shipping pincode OR full phone number
+        const orderPincode = (foundOrder.shippingAddress?.pincode || '').trim();
+        const orderPhone = cleanDigits(foundOrder.customerPhone || foundOrder.shippingAddress?.phone || '');
+
+        const pincodeMatches = queryPincode && orderPincode && queryPincode === orderPincode;
+        const phoneMatches = queryPhone && queryPhone.length >= 10 && orderPhone.endsWith(queryPhone.slice(-10));
+
+        if (pincodeMatches || phoneMatches) {
+          isVerifiedOwner = true;
+        }
       }
     }
 
-    if (!isVerifiedOwner && queryPhone && queryPhone.length >= 10) {
-      const orderPhone = cleanDigits(foundOrder.customerPhone || foundOrder.shippingAddress?.phone || '');
-      if (orderPhone.endsWith(queryPhone.slice(-10)) || queryPhone.endsWith(orderPhone.slice(-10))) {
-        isVerifiedOwner = true;
-      }
-    }
-
-    // C. Pre-verified Showroom Demo Orders
-    if (foundOrder.isDemo || KNOWN_ORDERS[orderId]) {
+    // D. Static Showroom Showcase Records (KJ-8924, KJ-7710, KJ-6502) ONLY
+    // Genuine database records are NEVER exempted through demo logic
+    if (!isFromDatabase && foundOrder.isStaticShowroomDemo && STATIC_SHOWROOM_IDS.has(orderId)) {
       isVerifiedOwner = true;
     }
 
@@ -370,7 +421,7 @@ export async function GET(request: Request) {
           quantity: Number(it.quantity) || 1,
           image: it.image || 'https://www.kalajay.in/v2/p3-2.jpg',
         }))
-      : []; // Redacted for unverified lookups to prevent cross-customer data leakage
+      : []; // Strictly redacted for unverified lookups to prevent cross-customer data leakage
 
     const publicOrder = {
       id: foundOrder.id || orderId,
@@ -381,6 +432,9 @@ export async function GET(request: Request) {
       itemCount: rawItems.length,
       isVerifiedOwner,
       requiresVerification: !isVerifiedOwner,
+      verificationPrompt: !isVerifiedOwner
+        ? 'For patron privacy, itemized parcel contents and financial invoices require customer verification. Sign in or enter your order email and delivery pincode or phone to view complete contents.'
+        : undefined,
       subtotal: isVerifiedOwner ? foundOrder.subtotal : undefined,
       discount: isVerifiedOwner ? (foundOrder.discount || 0) : undefined,
       shipping: isVerifiedOwner ? (foundOrder.shipping || 0) : undefined,
