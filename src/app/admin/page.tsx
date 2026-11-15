@@ -195,7 +195,7 @@ function AdminSecurityGate({
       const resolveRes = await fetch('/api/admin/auth/resolve/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ staffId: cleanInput }),
+        body: JSON.stringify({ staffId: cleanInput, password }),
       });
       const resolveData = await resolveRes.json();
 
@@ -205,6 +205,8 @@ function AdminSecurityGate({
           setError('This staff account has been deactivated. Please contact your Super Administrator.');
         } else if (resolveData.code === 'RATE_LIMITED') {
           setError('Too many login attempts. Access temporarily restricted. Please try again in 1 minute.');
+        } else if (resolveData.code === 'INVALID_CREDENTIALS') {
+          setError('Authentication rejected. Invalid Staff User ID or passcode.');
         } else {
           setError(
             `Access Denied: Staff User ID "${cleanInput}" was not recognized. Administrative accounts must be provisioned internally by the Super Administrator.`
@@ -297,7 +299,7 @@ function AdminSecurityGate({
       const res = await fetch('/api/admin/auth/resolve/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ staffId: cleanInput }),
+        body: JSON.stringify({ staffId: cleanInput, password }),
       });
       const data = await res.json();
       if (data.success && data.email) {

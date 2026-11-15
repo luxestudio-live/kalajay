@@ -2,13 +2,14 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 interface ResolveRequestBody {
   staffId?: string;
+  password?: string;
 }
 
-// In-memory rate limiting map: ipOrId -> { count, timestamp }
+// In-memory rate limiting map: ipOrId -> { count, firstAttempt }
 const rateLimitMap = new Map<string, { count: number; firstAttempt: number }>();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const MAX_ATTEMPTS_PER_WINDOW = 10;
@@ -31,7 +32,6 @@ function checkRateLimit(key: string): boolean {
   return entry.count <= MAX_ATTEMPTS_PER_WINDOW;
 }
 
-// Server-side durable store path
 function getRbacStorePath(): string {
   const cacheDir = path.join(process.cwd(), '.next', 'cache');
   if (!fs.existsSync(cacheDir)) {
@@ -50,7 +50,6 @@ function readRbacStore(): Record<string, any> {
   return {};
 }
 
-// Baseline staff accounts fallback
 const BASELINE_STAFF_MAP: Record<string, any> = {
   'KJ-ADM-001': {
     staffId: 'KJ-ADM-001',
@@ -103,6 +102,7 @@ export async function POST(request: Request) {
     const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
     const body: ResolveRequestBody = await request.json();
     const rawStaffId = (body.staffId || '').trim();
+    const password = body.password;
 
     if (!rawStaffId) {
       return NextResponse.json(
@@ -113,12 +113,12 @@ export async function POST(request: Request) {
 
     const cleanStaffId = rawStaffId.toUpperCase();
 
-    // 1. Check Rate Limiting
+    // 1. Rate Limiting Defense
     if (!checkRateLimit(`${ip}_${cleanStaffId}`)) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Too many authentication resolution attempts. Please wait 60 seconds before trying again.',
+          error: 'Too many authentication attempts. Please wait 60 seconds before trying again.',
           code: 'RATE_LIMITED',
         },
         { status: 429 }
@@ -130,14 +130,15 @@ export async function POST(request: Request) {
     const index = store.staffIdIndex || {};
     let resolved = index[cleanStaffId] || BASELINE_STAFF_MAP[cleanStaffId];
 
-    // If not found in index, check by email match if input looks like email
+    // Check by email if input is an email address
     if (!resolved && rawStaffId.includes('@')) {
       const emailLower = rawStaffId.toLowerCase();
-      resolved = Object.values(index).find((s: any) => s.email?.toLowerCase() === emailLower) ||
+      resolved =
+        Object.values(index).find((s: any) => s.email?.toLowerCase() === emailLower) ||
         Object.values(BASELINE_STAFF_MAP).find((s: any) => s.email?.toLowerCase() === emailLower);
     }
 
-    // 3. Fallback to Cloud Firestore /admin_users if not found in local cache
+    // Fallback to Cloud Firestore /admin_users
     if (!resolved) {
       try {
         const adminUsersRef = collection(db, 'admin_users');
@@ -162,19 +163,21 @@ export async function POST(request: Request) {
       }
     }
 
-    // 4. Handle Not Found (Generic error to prevent user enumeration)
+    // 3. User Enumeration Defense:
+    // If not found, return generic error message without revealing database state
     if (!resolved) {
       return NextResponse.json(
         {
           success: false,
-          error: `Staff User ID "${cleanStaffId}" not recognized in atelier staff registry.`,
-          code: 'STAFF_NOT_FOUND',
+          error: 'Authentication rejected: Invalid Staff User ID or security credentials.',
+          code: 'AUTH_FAILED',
         },
         { status: 404 }
       );
     }
 
-    // 5. Account Deactivation Guard
+    // 4. Account Deactivation Guard:
+    // Deactivated staff accounts are blocked from authentication
     if (resolved.status === 'deactivated') {
       return NextResponse.json(
         {
@@ -186,7 +189,55 @@ export async function POST(request: Request) {
       );
     }
 
-    // 6. Successful Resolution
+    // 5. If Password Provided: Verify Server-Side with Identity Platform
+    if (password) {
+      const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyDzdJB2o_mS3JgSJ-MaBNbvpBi35AdcSCc';
+      try {
+        const authRes = await fetch(
+          `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: resolved.email,
+              password,
+              returnSecureToken: true,
+            }),
+          }
+        );
+
+        const authData = await authRes.json();
+        if (!authRes.ok || !authData.idToken) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Authentication rejected: Invalid Staff User ID or passcode.',
+              code: 'INVALID_CREDENTIALS',
+            },
+            { status: 401 }
+          );
+        }
+
+        // Successfully verified password!
+        return NextResponse.json({
+          success: true,
+          staffId: resolved.staffId,
+          email: resolved.email,
+          name: resolved.name,
+          department: resolved.department,
+          roleId: resolved.roleId,
+          roleName: resolved.roleName,
+          requiresPasswordReset: resolved.requiresPasswordReset ?? true,
+          idToken: authData.idToken,
+          refreshToken: authData.refreshToken,
+          localId: authData.localId,
+        });
+      } catch (apiErr: any) {
+        console.warn('Identity Platform verification fallback:', apiErr?.message);
+      }
+    }
+
+    // 6. Pre-auth resolution (used by client-side Firebase Auth gate):
     return NextResponse.json({
       success: true,
       staffId: resolved.staffId,

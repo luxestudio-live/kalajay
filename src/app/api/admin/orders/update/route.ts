@@ -3,6 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { verifyStaffPermission } from '@/lib/serverRbac';
+import { PermissionAction } from '@/data/adminTypes';
 
 interface UpdateOrderPayload {
   orderId: string;
@@ -13,6 +15,7 @@ interface UpdateOrderPayload {
   trackingAwb?: string;
   courier?: string;
   staffId?: string;
+  requestingStaffId?: string;
   staffRole?: string;
   staffName?: string;
   currentPaymentStatus?: 'pending' | 'paid' | 'failed' | 'refunded';
@@ -63,8 +66,6 @@ export async function POST(request: Request) {
       note,
       trackingAwb,
       courier,
-      staffId,
-      staffRole,
       currentPaymentStatus,
       reconciliation,
     } = body;
@@ -73,27 +74,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Missing mandatory orderId.' }, { status: 400 });
     }
 
+    // 1. Authorize based on operation-specific RBAC permission:
+    // - Payment confirmation requires 'orders.all' -> 'approve'
+    // - Refund authorization requires 'orders.all' -> 'refund'
+    // - Fulfillment & dispatch updates require 'orders.all' -> 'edit'
+    let requiredAction: PermissionAction = 'edit';
+    if (paymentStatus === 'paid') {
+      requiredAction = 'approve';
+    } else if (paymentStatus === 'refunded') {
+      requiredAction = 'refund';
+    }
+
+    const authCheck = await verifyStaffPermission(request, body, 'orders.all', requiredAction);
+    if (!authCheck.authorized) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: authCheck.error,
+          code: authCheck.code,
+        },
+        { status: authCheck.status }
+      );
+    }
+
     const orderStore = readOrderStore();
     const cachedOrder = orderStore[orderId] || {};
 
-    // 1. Payment Verification Access Control (Requirement 5)
+    // 2. Payment Verification Access Control & Audit
     if (paymentStatus === 'paid') {
-      const isAuthorizedRole =
-        staffRole === 'super_admin' ||
-        staffRole === 'store_manager' ||
-        staffId === 'KJ-ADM-001' ||
-        staffId === 'KJ-ADM-002';
-
-      if (!isAuthorizedRole) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Access Denied: Only Super Administrators and Store Managers are authorized to verify and reconcile payments.',
-          },
-          { status: 403 }
-        );
-      }
-
       if (!reconciliation?.bankReference?.trim() || !reconciliation?.justification?.trim()) {
         return NextResponse.json(
           {
@@ -105,7 +113,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2. Fulfillment Safeguard: Never fulfill unpaid orders (Requirement 5 & 7)
+    // 3. Fulfillment Safeguard: Never fulfill unpaid orders
     const effectivePayment = paymentStatus || currentPaymentStatus || cachedOrder.paymentStatus || 'pending';
     if (effectivePayment !== 'paid' && fulfillmentStatus && fulfillmentStatus !== 'unfulfilled') {
       return NextResponse.json(
@@ -117,7 +125,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Persist Order Updates into Durable Store & Firestore
+    // 4. Persist Order Updates into Durable Store & Firestore
     const updatedOrderRecord = {
       ...cachedOrder,
       id: orderId,
@@ -127,58 +135,46 @@ export async function POST(request: Request) {
       courier: courier || cachedOrder.courier,
       reconciliation: reconciliation || cachedOrder.reconciliation,
       updatedAt: new Date().toISOString(),
+      updatedBy: authCheck.staffUser?.staffId || authCheck.staffUser?.id,
     };
+
+    if (note) {
+      updatedOrderRecord.timeline = [
+        ...(cachedOrder.timeline || []),
+        {
+          title: note,
+          timestamp: new Date().toISOString(),
+          by: authCheck.staffUser?.name || 'Staff User',
+          staffId: authCheck.staffUser?.staffId || authCheck.staffUser?.id,
+        },
+      ];
+    }
+
     orderStore[orderId] = updatedOrderRecord;
     writeOrderStore(orderStore);
 
-    if (db && db.type) {
-      try {
-        const orderRef = doc(db, 'orders', orderId);
-        await setDoc(
-          orderRef,
-          {
-            ...(fulfillmentStatus ? { fulfillmentStatus } : {}),
-            ...(paymentStatus ? { paymentStatus } : {}),
-            ...(trackingAwb ? { trackingAwb } : {}),
-            ...(courier ? { courier } : {}),
-            ...(reconciliation ? { paymentReconciliation: reconciliation } : {}),
-            updatedAt: new Date().toISOString(),
-            updatedAtServer: serverTimestamp(),
-          },
-          { merge: true }
-        );
-
-        if (paymentStatus === 'paid' && reconciliation) {
-          const logId = `AUDIT-PAY-${Date.now()}`;
-          await setDoc(doc(db, 'audit_logs', logId), {
-            id: logId,
-            action: 'ORDER_PAYMENT_MANUAL_RECONCILIATION',
-            category: 'orders',
-            orderId,
-            confirmedBy: reconciliation.confirmedBy,
-            confirmedByName: reconciliation.confirmedByName,
-            confirmedByRole: reconciliation.confirmedByRole,
-            bankReference: reconciliation.bankReference,
-            justification: reconciliation.justification,
-            source: reconciliation.source,
-            timestamp: new Date().toISOString(),
-          }).catch(() => {});
-        }
-      } catch (firestoreErr) {
-        console.warn('Firestore live write deferred pending rules console deployment:', firestoreErr);
+    // Sync to Cloud Firestore (/orders/{orderId})
+    try {
+      const orderRef = doc(db, 'orders', orderId);
+      const fsSnap = await getDoc(orderRef);
+      if (fsSnap.exists()) {
+        await setDoc(orderRef, updatedOrderRecord, { merge: true });
+      } else {
+        await setDoc(orderRef, updatedOrderRecord, { merge: true });
       }
+    } catch (fsErr) {
+      console.warn('Firestore order sync warning:', fsErr);
     }
 
     return NextResponse.json({
       success: true,
-      orderId,
-      fulfillmentStatus: updatedOrderRecord.fulfillmentStatus,
-      paymentStatus: updatedOrderRecord.paymentStatus,
-      trackingAwb: updatedOrderRecord.trackingAwb,
-      courier: updatedOrderRecord.courier,
+      order: updatedOrderRecord,
+      message: `Order ${orderId} successfully updated.`,
     });
   } catch (err: any) {
-    console.error('Admin order update error:', err);
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: err?.message || 'Server error updating order.' },
+      { status: 500 }
+    );
   }
 }

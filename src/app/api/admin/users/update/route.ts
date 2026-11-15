@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { db } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
+import { readRbacStore, writeRbacStore, verifyStaffPermission } from '@/lib/serverRbac';
 
 interface UpdateStaffBody {
   requestingStaffId?: string;
@@ -18,45 +19,21 @@ interface UpdateStaffBody {
   };
 }
 
-function getRbacStorePath(): string {
-  const cacheDir = path.join(process.cwd(), '.next', 'cache');
-  if (!fs.existsSync(cacheDir)) {
-    fs.mkdirSync(cacheDir, { recursive: true });
-  }
-  return path.join(cacheDir, 'kalajay_staff_rbac_store.json');
-}
-
-function readRbacStore(): Record<string, any> {
-  try {
-    const fPath = getRbacStorePath();
-    if (fs.existsSync(fPath)) {
-      return JSON.parse(fs.readFileSync(fPath, 'utf-8'));
-    }
-  } catch {}
-  return {};
-}
-
-function writeRbacStore(data: Record<string, any>) {
-  try {
-    const fPath = getRbacStorePath();
-    fs.writeFileSync(fPath, JSON.stringify(data, null, 2), 'utf-8');
-  } catch {}
-}
-
 export async function POST(request: Request) {
   try {
     const body: UpdateStaffBody = await request.json();
-    const { requestingStaffId, targetStaffId, updates } = body;
+    const { targetStaffId, updates } = body;
 
-    // 1. Authorize Super Admin
-    const isSuperAdmin = requestingStaffId === 'KJ-ADM-001';
-    if (!isSuperAdmin) {
+    // 1. Authorize: Check effective permissions on 'settings.users' -> 'manage_users'
+    const authCheck = await verifyStaffPermission(request, body, 'settings.users', 'manage_users');
+    if (!authCheck.authorized) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Access Denied: Only Super Administrators can update staff records.',
+          error: authCheck.error,
+          code: authCheck.code,
         },
-        { status: 403 }
+        { status: authCheck.status }
       );
     }
 

@@ -5,31 +5,7 @@ import { db } from '@/lib/firebase';
 import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { SEED_ROLES } from '@/data/adminPermissions';
 import { AdminRole } from '@/data/adminTypes';
-
-function getRbacStorePath(): string {
-  const cacheDir = path.join(process.cwd(), '.next', 'cache');
-  if (!fs.existsSync(cacheDir)) {
-    fs.mkdirSync(cacheDir, { recursive: true });
-  }
-  return path.join(cacheDir, 'kalajay_staff_rbac_store.json');
-}
-
-function readRbacStore(): Record<string, any> {
-  try {
-    const fPath = getRbacStorePath();
-    if (fs.existsSync(fPath)) {
-      return JSON.parse(fs.readFileSync(fPath, 'utf-8'));
-    }
-  } catch {}
-  return {};
-}
-
-function writeRbacStore(data: Record<string, any>) {
-  try {
-    const fPath = getRbacStorePath();
-    fs.writeFileSync(fPath, JSON.stringify(data, null, 2), 'utf-8');
-  } catch {}
-}
+import { readRbacStore, writeRbacStore, verifyStaffPermission } from '@/lib/serverRbac';
 
 export async function GET() {
   try {
@@ -75,17 +51,18 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { requestingStaffId, role } = body;
+    const { role } = body;
 
-    // 1. Authorize (Super Admin or authorized staff)
-    const isAuthorized = requestingStaffId === 'KJ-ADM-001';
-    if (!isAuthorized) {
+    // 1. Authorize: Check effective permissions on 'settings.roles' -> 'manage_roles'
+    const authCheck = await verifyStaffPermission(request, body, 'settings.roles', 'manage_roles');
+    if (!authCheck.authorized) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Access Denied: Only Super Administrators can manage operational roles.',
+          error: authCheck.error,
+          code: authCheck.code,
         },
-        { status: 403 }
+        { status: authCheck.status }
       );
     }
 
@@ -154,16 +131,17 @@ export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const roleId = searchParams.get('roleId');
-    const requestingStaffId = searchParams.get('requestingStaffId');
 
-    // 1. Authorize
-    if (requestingStaffId !== 'KJ-ADM-001') {
+    // 1. Authorize: Check effective permissions on 'settings.roles' -> 'manage_roles'
+    const authCheck = await verifyStaffPermission(request, null, 'settings.roles', 'manage_roles');
+    if (!authCheck.authorized) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Access Denied: Only Super Administrators can delete roles.',
+          error: authCheck.error,
+          code: authCheck.code,
         },
-        { status: 403 }
+        { status: authCheck.status }
       );
     }
 
