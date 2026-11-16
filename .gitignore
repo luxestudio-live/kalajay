@@ -86,3 +86,5 @@ catalogue-raw.json
 public/*.pdf
 public/*.docx
 public/*.xlsx
+
+.vercel
