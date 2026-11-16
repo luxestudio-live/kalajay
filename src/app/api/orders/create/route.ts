@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
 import crypto from 'crypto';
 import { PRODUCTS, BRAND_CONFIG } from '@/data/catalogue';
 import { AdminOrder } from '@/data/adminTypes';
