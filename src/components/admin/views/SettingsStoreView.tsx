@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Settings,
   Building,
@@ -21,6 +21,7 @@ import {
   Send,
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
+import { getFirestoreStoreSettings, saveFirestoreStoreSettings } from '@/lib/firestore';
 
 export default function SettingsStoreView() {
   const { logAction } = useAdminStore();
@@ -35,6 +36,23 @@ export default function SettingsStoreView() {
   const [supportPhone, setSupportPhone] = useState('+91 97405 40847');
   const [mumbaiAddress, setMumbaiAddress] = useState('Sea Face Studios, Worli, Mumbai, Maharashtra 400018');
   const [biharHubAddress, setBiharHubAddress] = useState('Craft House Atelier, Loom Cluster 4, Madhubani, Bihar 847211');
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    getFirestoreStoreSettings().then((settings) => {
+      if (settings && isMounted) {
+        if (settings.storeName) setStoreName(settings.storeName);
+        if (settings.legalEntity) setLegalEntity(settings.legalEntity);
+        if (settings.gstin) setGstin(settings.gstin);
+        if (settings.supportEmail) setSupportEmail(settings.supportEmail);
+        if (settings.supportPhone) setSupportPhone(settings.supportPhone);
+        if (settings.mumbaiAddress) setMumbaiAddress(settings.mumbaiAddress);
+        if (settings.biharHubAddress) setBiharHubAddress(settings.biharHubAddress);
+      }
+    });
+    return () => { isMounted = false; };
+  }, []);
 
   // Integration simulator state
   const [testingSeam, setTestingSeam] = useState<string | null>(null);
@@ -45,10 +63,30 @@ export default function SettingsStoreView() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const handleSaveIdentity = (e: React.FormEvent) => {
+  const handleSaveIdentity = async (e: React.FormEvent) => {
     e.preventDefault();
-    logAction('UPDATE_STORE_IDENTITY', 'settings', 'Updated registered store identity and studio addresses');
-    showToast('Store identity and registered addresses saved successfully');
+    setIsSaving(true);
+    try {
+      await saveFirestoreStoreSettings({
+        storeName,
+        legalEntity,
+        gstin,
+        supportEmail,
+        supportPhone,
+        mumbaiAddress,
+        biharHubAddress,
+        shippingThreshold: 599,
+        standardFreight: 79,
+        dispatchHours: 48,
+        returnDays: 7,
+      });
+      logAction('UPDATE_STORE_IDENTITY', 'settings', 'Updated registered store identity and studio addresses in Firestore');
+      showToast('Store identity and registered addresses saved successfully to Firestore');
+    } catch (err) {
+      showToast('Failed to persist store identity to Firestore');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSimulateHandshake = (seamName: string) => {

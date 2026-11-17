@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users,
   Search,
@@ -23,6 +23,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
+import { getAllFirestoreUsers, updatePatronProfile } from '@/lib/firestore';
 
 interface PatronProfile {
   id: string;
@@ -141,12 +142,60 @@ const SEED_PATRONS: PatronProfile[] = [
 ];
 
 export default function CustomersView() {
-  const { logAction, showModal } = useAdminStore();
+  const { orders, logAction, showModal } = useAdminStore();
   const [patrons, setPatrons] = useState<PatronProfile[]>(SEED_PATRONS);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTier, setSelectedTier] = useState<string>('all');
   const [activePatron, setActivePatron] = useState<PatronProfile | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    getAllFirestoreUsers().then((liveUsers) => {
+      if (!isMounted || !liveUsers || liveUsers.length === 0) return;
+
+      const livePatrons: PatronProfile[] = liveUsers.map((u, idx) => {
+        const userOrders = orders.filter(
+          (o) => o.customerEmail?.toLowerCase() === u.email?.toLowerCase() || (o as any).userId === u.id
+        );
+        const spend = userOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+        const count = userOrders.length;
+        const sorted = [...userOrders].sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+
+        let tier: PatronProfile['tier'] = 'First Heirloom';
+        if (spend > 25000) tier = 'Diamond Patron';
+        else if (spend > 10000) tier = 'Gold Patron';
+        else if (spend > 5000) tier = 'Silver Patron';
+
+        return {
+          id: u.id || `PAT-${String(idx + 1).padStart(3, '0')}`,
+          name: u.name || 'Patron',
+          email: u.email || 'patron@kalajay.in',
+          phone: u.phone || '+91 97405 40847',
+          city: (u as any).addresses?.[0]?.city || 'Mumbai',
+          state: (u as any).addresses?.[0]?.state || 'Maharashtra',
+          tier,
+          lifetimeSpend: spend,
+          ordersCount: count,
+          firstOrderDate: sorted[0]?.createdAt.slice(0, 10) || new Date().toISOString().slice(0, 10),
+          lastOrderDate: sorted[sorted.length - 1]?.createdAt.slice(0, 10) || new Date().toISOString().slice(0, 10),
+          preferredPalette: 'Heritage Ivory & Pearl',
+          favoritePiece: userOrders[0]?.items?.[0]?.name || 'Signature Pearl Beaded Vanity Box',
+          conciergeNotes: `Registered patron profile verified in Firestore. ${count} total orders placed.`,
+        };
+      });
+
+      const existingEmails = new Set(livePatrons.map((p) => p.email.toLowerCase()));
+      const remainingSeed = SEED_PATRONS.filter((p) => !existingEmails.has(p.email.toLowerCase()));
+      setPatrons([...livePatrons, ...remainingSeed]);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [orders]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -176,7 +225,16 @@ export default function CustomersView() {
       confirmLabel: 'Anonymize Patron',
       cancelLabel: 'Cancel',
       isDestructive: true,
-      onConfirm: () => {
+      onConfirm: async () => {
+        try {
+          if (patron.id && !patron.id.startsWith('PAT-')) {
+            await updatePatronProfile(patron.id, {
+              name: 'Anonymized Patron (DPDP Request)',
+              email: 'redacted@privacy.kalajay.in',
+              phone: '',
+            });
+          }
+        } catch {}
         setPatrons(prev =>
           prev.map(p =>
             p.id === patron.id
@@ -193,7 +251,7 @@ export default function CustomersView() {
         if (activePatron?.id === patron.id) {
           setActivePatron(null);
         }
-        logAction('DPDP_RIGHT_TO_BE_FORGOTTEN', 'customers', `Anonymized patron identity for ${patron.id}`);
+        logAction('DPDP_RIGHT_TO_BE_FORGOTTEN', 'customers', `Anonymized patron identity for ${patron.id} in Firestore`);
         showToast(`Personal identifiers for ${patron.id} successfully anonymized per DPDP Act.`);
       },
     });

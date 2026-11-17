@@ -128,11 +128,50 @@ export default function DashboardView() {
   const [alertFilter, setAlertFilter] = useState<'all' | 'critical' | 'loom' | 'orders'>('all');
   const [resolvedAlerts, setResolvedAlerts] = useState<string[]>([]);
 
-  const totalRevenue = orders.reduce((acc, o) => acc + o.total, 0);
+  const totalRevenue = orders
+    .filter(o => o.paymentStatus === 'paid')
+    .reduce((acc, o) => acc + o.total, 0);
   const lowStockCount = inventory.filter(i => i.status === 'low_stock' || i.status === 'out_of_stock').length;
   const inLoomCount = orders.filter(o => o.fulfillmentStatus === 'in_loom').length;
 
-  const filteredAlerts = SEED_ACTIVITY_ALERTS.filter(alt => {
+  // Dynamically derive live operational alerts from Firestore state
+  const liveAlerts = React.useMemo(() => {
+    const list: typeof SEED_ACTIVITY_ALERTS = [];
+
+    // Real low stock alerts
+    inventory.filter(i => i.status === 'low_stock' || i.status === 'out_of_stock').slice(0, 3).forEach(item => {
+      list.push({
+        id: `live-inv-${item.sku}`,
+        type: item.status === 'out_of_stock' ? 'critical' : 'warning',
+        category: 'inventory',
+        title: `${item.status === 'out_of_stock' ? 'Out of Stock' : 'Low Inventory Alert'}: ${item.name}`,
+        description: `SKU ${item.sku} has ${item.available} units remaining (reorder point: ${item.reorderPoint}).`,
+        timestamp: 'Live ERP Monitor',
+        actionLabel: 'Adjust Stock',
+        actionModule: 'inventory',
+        actionPage: 'inventory.all',
+      });
+    });
+
+    // Real pending fulfillment orders
+    orders.filter(o => o.fulfillmentStatus === 'unfulfilled').slice(0, 3).forEach(ord => {
+      list.push({
+        id: `live-ord-${ord.id}`,
+        type: 'info',
+        category: 'orders',
+        title: `Order #${ord.id} Pending Packaging (₹${ord.total.toLocaleString('en-IN')})`,
+        description: `${ord.customerName} placed order for ${ord.items?.[0]?.name || 'Heirloom piece'}.`,
+        timestamp: ord.createdAt?.slice(0, 10) || 'Recently',
+        actionLabel: 'Process Order',
+        actionModule: 'orders',
+        actionPage: 'orders.all',
+      });
+    });
+
+    return [...list, ...SEED_ACTIVITY_ALERTS];
+  }, [inventory, orders]);
+
+  const filteredAlerts = liveAlerts.filter(alt => {
     if (resolvedAlerts.includes(alt.id)) return false;
     if (alertFilter === 'all') return true;
     if (alertFilter === 'critical') return alt.type === 'critical' || alt.type === 'warning';

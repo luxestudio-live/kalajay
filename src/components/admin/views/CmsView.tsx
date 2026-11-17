@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LayoutTemplate,
   FileText,
@@ -29,6 +29,7 @@ import {
   Check,
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
+import { getFirestoreCmsDoc, saveFirestoreCmsDoc } from '@/lib/firestore';
 import { BannerItem } from '@/data/adminTypes';
 import { ARTISAN_STORIES } from '@/data/extras';
 
@@ -343,6 +344,38 @@ export default function CmsView() {
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [saveToast, setSaveToast] = useState<string | null>(null);
 
+  useEffect(() => {
+    let isMounted = true;
+    Promise.allSettled([
+      getFirestoreCmsDoc<{ items: FaqItem[] }>('faqs'),
+      getFirestoreCmsDoc<{ shippingThreshold?: number; dispatchHours?: number; returnDays?: number; helplineNumber?: string }>('policies'),
+      getFirestoreCmsDoc<{ items: SeoPageConfig[] }>('seo'),
+      getFirestoreCmsDoc<{ items: MediaAsset[] }>('media'),
+      getFirestoreCmsDoc<{ items: ArtisanMaker[] }>('artisans'),
+    ]).then(([faqsRes, policiesRes, seoRes, mediaRes, artisansRes]) => {
+      if (!isMounted) return;
+      if (faqsRes.status === 'fulfilled' && faqsRes.value?.items) {
+        setFaqs(faqsRes.value.items);
+      }
+      if (policiesRes.status === 'fulfilled' && policiesRes.value) {
+        if (policiesRes.value.shippingThreshold) setShippingThreshold(policiesRes.value.shippingThreshold);
+        if (policiesRes.value.dispatchHours) setDispatchHours(policiesRes.value.dispatchHours);
+        if (policiesRes.value.returnDays) setReturnDays(policiesRes.value.returnDays);
+        if (policiesRes.value.helplineNumber) setHelplineNumber(policiesRes.value.helplineNumber);
+      }
+      if (seoRes.status === 'fulfilled' && seoRes.value?.items) {
+        setSeoConfigs(seoRes.value.items);
+      }
+      if (mediaRes.status === 'fulfilled' && mediaRes.value?.items) {
+        setMediaAssets(mediaRes.value.items);
+      }
+      if (artisansRes.status === 'fulfilled' && artisansRes.value?.items) {
+        setArtisans(artisansRes.value.items);
+      }
+    });
+    return () => { isMounted = false; };
+  }, []);
+
   // Modals state
   // 1. FAQ Modal
   const [faqModalOpen, setFaqModalOpen] = useState(false);
@@ -426,16 +459,17 @@ export default function CmsView() {
     e.preventDefault();
     if (!faqQuestion.trim() || !faqAnswer.trim()) return;
 
+    let nextFaqs: FaqItem[];
     if (editingFaq) {
-      setFaqs(prev =>
-        prev.map(f =>
-          f.id === editingFaq.id
-            ? { ...f, question: faqQuestion.trim(), answer: faqAnswer.trim(), category: faqCategory }
-            : f
-        )
+      nextFaqs = faqs.map(f =>
+        f.id === editingFaq.id
+          ? { ...f, question: faqQuestion.trim(), answer: faqAnswer.trim(), category: faqCategory }
+          : f
       );
-      logAction('UPDATE_FAQ', 'cms', `Updated FAQ question: "${faqQuestion.slice(0, 30)}..."`);
-      showToast('FAQ updated successfully');
+      setFaqs(nextFaqs);
+      saveFirestoreCmsDoc('faqs', { items: nextFaqs }).catch(() => {});
+      logAction('UPDATE_FAQ', 'cms', `Updated FAQ question in Firestore: "${faqQuestion.slice(0, 30)}..."`);
+      showToast('FAQ updated and saved to Firestore successfully');
     } else {
       const newFaq: FaqItem = {
         id: `faq-${Date.now()}`,
@@ -444,9 +478,11 @@ export default function CmsView() {
         category: faqCategory,
         order: faqs.length + 1,
       };
-      setFaqs(prev => [...prev, newFaq]);
-      logAction('CREATE_FAQ', 'cms', `Added new FAQ question: "${faqQuestion.slice(0, 30)}..."`);
-      showToast('New FAQ added successfully');
+      nextFaqs = [...faqs, newFaq];
+      setFaqs(nextFaqs);
+      saveFirestoreCmsDoc('faqs', { items: nextFaqs }).catch(() => {});
+      logAction('CREATE_FAQ', 'cms', `Added new FAQ question in Firestore: "${faqQuestion.slice(0, 30)}..."`);
+      showToast('New FAQ added and saved to Firestore successfully');
     }
     setFaqModalOpen(false);
   };
@@ -460,17 +496,26 @@ export default function CmsView() {
       cancelLabel: 'Keep Question',
       isDestructive: true,
       onConfirm: () => {
-        setFaqs(prev => prev.filter(f => f.id !== id));
-        logAction('DELETE_FAQ', 'cms', `Deleted FAQ #${id}`);
-        showToast('FAQ removed');
+        const nextFaqs = faqs.filter(f => f.id !== id);
+        setFaqs(nextFaqs);
+        saveFirestoreCmsDoc('faqs', { items: nextFaqs }).catch(() => {});
+        logAction('DELETE_FAQ', 'cms', `Deleted FAQ #${id} from Firestore`);
+        showToast('FAQ removed and updated in Firestore');
       },
     });
   };
 
   const handleSavePolicies = (e: React.FormEvent) => {
     e.preventDefault();
-    logAction('UPDATE_STORE_POLICIES', 'cms', `Updated store thresholds: Free shipping ₹${shippingThreshold}, Dispatch ${dispatchHours}h, Returns ${returnDays}d`);
-    showToast('Store policies and delivery thresholds saved to live storefront!');
+    const policyPayload = {
+      shippingThreshold,
+      dispatchHours,
+      returnDays,
+      helplineNumber,
+    };
+    saveFirestoreCmsDoc('policies', policyPayload).catch(() => {});
+    logAction('UPDATE_STORE_POLICIES', 'cms', `Updated store thresholds in Firestore: Free shipping ₹${shippingThreshold}, Dispatch ${dispatchHours}h, Returns ${returnDays}d`);
+    showToast('Store policies and delivery thresholds saved to live Firestore!');
   };
 
   // --- SEO Handlers ---
@@ -488,22 +533,22 @@ export default function CmsView() {
     e.preventDefault();
     if (!editingSeo) return;
 
-    setSeoConfigs(prev =>
-      prev.map(s =>
-        s.route === editingSeo.route
-          ? {
-              ...s,
-              title: seoTitle.trim(),
-              description: seoDesc.trim(),
-              canonicalUrl: seoCanonical.trim(),
-              keywords: seoKeywords.trim(),
-              allowIndexing: seoIndexing,
-            }
-          : s
-      )
+    const nextSeo = seoConfigs.map(s =>
+      s.route === editingSeo.route
+        ? {
+            ...s,
+            title: seoTitle.trim(),
+            description: seoDesc.trim(),
+            canonicalUrl: seoCanonical.trim(),
+            keywords: seoKeywords.trim(),
+            allowIndexing: seoIndexing,
+          }
+        : s
     );
-    logAction('UPDATE_PAGE_SEO', 'cms', `Updated SEO metadata for route: ${editingSeo.route}`);
-    showToast(`Updated SEO & Meta tags for ${editingSeo.pageName}`);
+    setSeoConfigs(nextSeo);
+    saveFirestoreCmsDoc('seo', { items: nextSeo }).catch(() => {});
+    logAction('UPDATE_PAGE_SEO', 'cms', `Updated SEO metadata in Firestore for route: ${editingSeo.route}`);
+    showToast(`Updated SEO & Meta tags in Firestore for ${editingSeo.pageName}`);
     setSeoModalOpen(false);
   };
 
@@ -520,9 +565,11 @@ export default function CmsView() {
       size: '180 KB',
       category: newMediaCategory,
     };
-    setMediaAssets(prev => [newAsset, ...prev]);
-    logAction('UPLOAD_MEDIA_ASSET', 'cms', `Uploaded media asset: ${newMediaName}`);
-    showToast(`Uploaded "${newMediaName}" to digital asset library`);
+    const nextMedia = [newAsset, ...mediaAssets];
+    setMediaAssets(nextMedia);
+    saveFirestoreCmsDoc('media', { items: nextMedia }).catch(() => {});
+    logAction('UPLOAD_MEDIA_ASSET', 'cms', `Uploaded media asset to Firestore: ${newMediaName}`);
+    showToast(`Uploaded "${newMediaName}" to digital asset library in Firestore`);
     setMediaModalOpen(false);
     setNewMediaName('');
     setNewMediaUrl('');
@@ -537,9 +584,11 @@ export default function CmsView() {
       cancelLabel: 'Keep Asset',
       isDestructive: true,
       onConfirm: () => {
-        setMediaAssets(prev => prev.filter(m => m.id !== id));
-        logAction('DELETE_MEDIA_ASSET', 'cms', `Deleted media asset #${id}`);
-        showToast('Media asset removed from gallery');
+        const nextMedia = mediaAssets.filter(m => m.id !== id);
+        setMediaAssets(nextMedia);
+        saveFirestoreCmsDoc('media', { items: nextMedia }).catch(() => {});
+        logAction('DELETE_MEDIA_ASSET', 'cms', `Deleted media asset #${id} from Firestore`);
+        showToast('Media asset removed from Firestore gallery');
       },
     });
   };
@@ -569,23 +618,24 @@ export default function CmsView() {
     e.preventDefault();
     if (!artisanName.trim()) return;
 
+    let nextArtisans: ArtisanMaker[];
     if (editingArtisan) {
-      setArtisans(prev =>
-        prev.map(a =>
-          a.id === editingArtisan.id
-            ? {
-                ...a,
-                name: artisanName.trim(),
-                location: artisanLocation.trim(),
-                experience: artisanExperience.trim(),
-                quote: artisanQuote.trim(),
-                specialty: artisanSpecialty.trim(),
-              }
-            : a
-        )
+      nextArtisans = artisans.map(a =>
+        a.id === editingArtisan.id
+          ? {
+              ...a,
+              name: artisanName.trim(),
+              location: artisanLocation.trim(),
+              experience: artisanExperience.trim(),
+              quote: artisanQuote.trim(),
+              specialty: artisanSpecialty.trim(),
+            }
+          : a
       );
-      logAction('UPDATE_ARTISAN', 'cms', `Updated profile for artisan maker: ${artisanName}`);
-      showToast(`Updated artisan profile for ${artisanName}`);
+      setArtisans(nextArtisans);
+      saveFirestoreCmsDoc('artisans', { items: nextArtisans }).catch(() => {});
+      logAction('UPDATE_ARTISAN', 'cms', `Updated profile for artisan maker in Firestore: ${artisanName}`);
+      showToast(`Updated artisan profile for ${artisanName} in Firestore`);
     } else {
       const newMaker: ArtisanMaker = {
         id: `art-${Date.now()}`,
@@ -595,9 +645,11 @@ export default function CmsView() {
         quote: artisanQuote.trim(),
         specialty: artisanSpecialty.trim(),
       };
-      setArtisans(prev => [...prev, newMaker]);
-      logAction('CREATE_ARTISAN', 'cms', `Added new artisan maker: ${artisanName}`);
-      showToast(`Added master artisan ${artisanName} to collective`);
+      nextArtisans = [...artisans, newMaker];
+      setArtisans(nextArtisans);
+      saveFirestoreCmsDoc('artisans', { items: nextArtisans }).catch(() => {});
+      logAction('CREATE_ARTISAN', 'cms', `Added new artisan maker in Firestore: ${artisanName}`);
+      showToast(`Added master artisan ${artisanName} to collective in Firestore`);
     }
     setArtisanModalOpen(false);
   };
@@ -611,9 +663,11 @@ export default function CmsView() {
       cancelLabel: 'Keep Profile',
       isDestructive: true,
       onConfirm: () => {
-        setArtisans(prev => prev.filter(a => a.id !== id));
-        logAction('DELETE_ARTISAN', 'cms', `Deleted artisan profile #${id}`);
-        showToast('Artisan profile removed');
+        const nextArtisans = artisans.filter(a => a.id !== id);
+        setArtisans(nextArtisans);
+        saveFirestoreCmsDoc('artisans', { items: nextArtisans }).catch(() => {});
+        logAction('DELETE_ARTISAN', 'cms', `Deleted artisan profile #${id} from Firestore`);
+        showToast('Artisan profile removed from Firestore');
       },
     });
   };

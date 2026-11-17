@@ -30,6 +30,10 @@ import type {
   StockAdjustment,
   CouponItem,
   AuditLogItem,
+  WorkOrder,
+  TaxSlab,
+  OfflineOrder,
+  HomepageSectionConfig,
 } from '@/data/adminTypes';
 
 /* ===============================================================
@@ -718,6 +722,242 @@ export async function getFirestoreSubscribers(): Promise<NewsletterSubscriberDoc
     return list;
   } catch (error) {
     console.warn('Error fetching newsletter subscribers:', error);
+    return [];
+  }
+}
+
+/* ===============================================================
+   12. INVENTORY ITEM DELETION (/inventory)
+   =============================================================== */
+
+export async function deleteFirestoreInventoryItem(sku: string): Promise<void> {
+  try {
+    if (!db || !db.type) return;
+    const ref = doc(db, 'inventory', sku);
+    await deleteDoc(ref);
+  } catch (error) {
+    console.error(`Error deleting inventory item ${sku}:`, error);
+  }
+}
+
+/* ===============================================================
+   13. WORK ORDERS / PRODUCTION LOOMS (/work_orders)
+   =============================================================== */
+
+export async function getFirestoreWorkOrders(): Promise<WorkOrder[]> {
+  try {
+    if (!db || !db.type) return [];
+    const ref = collection(db, 'work_orders');
+    const snapshot = await getDocs(ref);
+    if (snapshot.empty) return [];
+    const list: WorkOrder[] = [];
+    snapshot.forEach((snap) => {
+      list.push(snap.data() as WorkOrder);
+    });
+    return list;
+  } catch (error) {
+    console.warn('Error fetching work orders from Firestore:', error);
+    return [];
+  }
+}
+
+export async function saveFirestoreWorkOrder(order: WorkOrder): Promise<void> {
+  try {
+    if (!db || !db.type) return;
+    const ref = doc(db, 'work_orders', order.id);
+    await setDoc(ref, {
+      ...order,
+      updatedAtServer: serverTimestamp(),
+    }, { merge: true });
+  } catch (error) {
+    console.error('Error saving work order to Firestore:', error);
+  }
+}
+
+export async function deleteFirestoreWorkOrder(id: string): Promise<void> {
+  try {
+    if (!db || !db.type) return;
+    const ref = doc(db, 'work_orders', id);
+    await deleteDoc(ref);
+  } catch (error) {
+    console.error(`Error deleting work order ${id}:`, error);
+  }
+}
+
+/* ===============================================================
+   14. TAX SLABS & HSN CODES (/tax_slabs)
+   =============================================================== */
+
+export async function getFirestoreTaxSlabs(): Promise<TaxSlab[]> {
+  try {
+    if (!db || !db.type) return [];
+    const ref = collection(db, 'tax_slabs');
+    const snapshot = await getDocs(ref);
+    if (snapshot.empty) return [];
+    const list: TaxSlab[] = [];
+    snapshot.forEach((snap) => {
+      list.push(snap.data() as TaxSlab);
+    });
+    return list;
+  } catch (error) {
+    console.warn('Error fetching tax slabs from Firestore:', error);
+    return [];
+  }
+}
+
+export async function saveFirestoreTaxSlab(slab: TaxSlab): Promise<void> {
+  try {
+    if (!db || !db.type) return;
+    const ref = doc(db, 'tax_slabs', slab.id);
+    await setDoc(ref, {
+      ...slab,
+      updatedAtServer: serverTimestamp(),
+    }, { merge: true });
+  } catch (error) {
+    console.error('Error saving tax slab to Firestore:', error);
+  }
+}
+
+export async function deleteFirestoreTaxSlab(id: string): Promise<void> {
+  try {
+    if (!db || !db.type) return;
+    const ref = doc(db, 'tax_slabs', id);
+    await deleteDoc(ref);
+  } catch (error) {
+    console.error(`Error deleting tax slab ${id}:`, error);
+  }
+}
+
+/* ===============================================================
+   15. OFFLINE ORDERS / STUDIO SALES (/offline_orders)
+   =============================================================== */
+
+export async function getFirestoreOfflineOrders(): Promise<OfflineOrder[]> {
+  try {
+    if (!db || !db.type) return [];
+    const ref = collection(db, 'offline_orders');
+    const snapshot = await getDocs(ref);
+    if (snapshot.empty) return [];
+    const list: OfflineOrder[] = [];
+    snapshot.forEach((snap) => {
+      list.push(snap.data() as OfflineOrder);
+    });
+    return list;
+  } catch (error) {
+    console.warn('Error fetching offline orders from Firestore:', error);
+    return [];
+  }
+}
+
+export async function saveFirestoreOfflineOrder(order: OfflineOrder): Promise<void> {
+  try {
+    if (!db || !db.type) return;
+    const ref = doc(db, 'offline_orders', order.id);
+    await setDoc(ref, {
+      ...order,
+      createdAtServer: serverTimestamp(),
+    }, { merge: true });
+  } catch (error) {
+    console.error('Error saving offline order to Firestore:', error);
+  }
+}
+
+/* ===============================================================
+   16. STORE SETTINGS & LOGISTICS (/settings/store)
+   =============================================================== */
+
+export interface StoreSettingsDoc {
+  storeName: string;
+  legalEntity: string;
+  gstin: string;
+  supportEmail: string;
+  supportPhone: string;
+  mumbaiAddress: string;
+  biharHubAddress: string;
+  shippingThreshold: number;
+  standardFreight: number;
+  dispatchHours: number;
+  returnDays: number;
+  updatedAt?: any;
+}
+
+export async function getFirestoreStoreSettings(): Promise<StoreSettingsDoc | null> {
+  try {
+    if (!db || !db.type) return null;
+    const ref = doc(db, 'settings', 'store');
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      return snap.data() as StoreSettingsDoc;
+    }
+    return null;
+  } catch (error) {
+    console.warn('Error fetching store settings from Firestore:', error);
+    return null;
+  }
+}
+
+export async function saveFirestoreStoreSettings(settings: Partial<StoreSettingsDoc>): Promise<void> {
+  try {
+    if (!db || !db.type) return;
+    const ref = doc(db, 'settings', 'store');
+    await setDoc(ref, {
+      ...settings,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (error) {
+    console.error('Error saving store settings to Firestore:', error);
+  }
+}
+
+/* ===============================================================
+   17. CMS DOCUMENTS & PAGES (/cms/{docId})
+   =============================================================== */
+
+export async function getFirestoreCmsDoc<T = any>(docId: string): Promise<T | null> {
+  try {
+    if (!db || !db.type) return null;
+    const ref = doc(db, 'cms', docId);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      return snap.data() as T;
+    }
+    return null;
+  } catch (error) {
+    console.warn(`Error fetching CMS doc ${docId} from Firestore:`, error);
+    return null;
+  }
+}
+
+export async function saveFirestoreCmsDoc(docId: string, data: Record<string, any>): Promise<void> {
+  try {
+    if (!db || !db.type) return;
+    const ref = doc(db, 'cms', docId);
+    await setDoc(ref, {
+      ...data,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (error) {
+    console.error(`Error saving CMS doc ${docId} to Firestore:`, error);
+  }
+}
+
+/* ===============================================================
+   18. ALL REGISTERED PATRONS (/users)
+   =============================================================== */
+
+export async function getAllFirestoreUsers(): Promise<User[]> {
+  try {
+    if (!db || !db.type) return [];
+    const ref = collection(db, 'users');
+    const snapshot = await getDocs(ref);
+    if (snapshot.empty) return [];
+    const list: User[] = [];
+    snapshot.forEach((snap) => {
+      list.push(snap.data() as User);
+    });
+    return list;
+  } catch (error) {
+    console.warn('Error fetching all users from Firestore:', error);
     return [];
   }
 }

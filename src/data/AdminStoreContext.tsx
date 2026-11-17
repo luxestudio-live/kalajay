@@ -61,9 +61,21 @@ import {
   getFirestoreInventory,
   saveFirestoreInventoryItem,
   logFirestoreStockAdjustment,
+  deleteFirestoreInventoryItem,
   getFirestoreCoupons,
   saveFirestoreCoupon,
   logFirestoreAuditAction,
+  getFirestoreAuditLogs,
+  getFirestoreWorkOrders,
+  saveFirestoreWorkOrder,
+  deleteFirestoreWorkOrder,
+  getFirestoreTaxSlabs,
+  saveFirestoreTaxSlab,
+  deleteFirestoreTaxSlab,
+  getFirestoreOfflineOrders,
+  saveFirestoreOfflineOrder,
+  getFirestoreCmsDoc,
+  saveFirestoreCmsDoc,
 } from '@/lib/firestore';
 
 interface AdminStoreContextType {
@@ -298,22 +310,44 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     // Async hydration from live Cloud Firestore & RBAC backend
     const hydrateFromFirestore = async () => {
       try {
-        const [liveOrders, liveCustom, liveTickets, liveFeatured, liveBanners, liveInv, liveCoupons] =
-          await Promise.allSettled([
-            getAllFirestoreOrders(),
-            getFirestoreCustomEnquiries(),
-            getFirestoreSupportTickets(),
-            getFirestoreFeaturedConfig(),
-            getFirestoreBanners(),
-            getFirestoreInventory(),
-            getFirestoreCoupons(),
-          ]);
+        const [
+          liveOrders,
+          liveCustom,
+          liveCorporate,
+          liveTickets,
+          liveFeatured,
+          liveBanners,
+          liveInv,
+          liveCoupons,
+          liveWorkOrders,
+          liveTaxSlabs,
+          liveOffline,
+          liveAuditLogs,
+          liveSections,
+        ] = await Promise.allSettled([
+          getAllFirestoreOrders(),
+          getFirestoreCustomEnquiries(),
+          getFirestoreCorporateEnquiries(),
+          getFirestoreSupportTickets(),
+          getFirestoreFeaturedConfig(),
+          getFirestoreBanners(),
+          getFirestoreInventory(),
+          getFirestoreCoupons(),
+          getFirestoreWorkOrders(),
+          getFirestoreTaxSlabs(),
+          getFirestoreOfflineOrders(),
+          getFirestoreAuditLogs(100),
+          getFirestoreCmsDoc('homepage_sections'),
+        ]);
 
         if (liveOrders.status === 'fulfilled' && liveOrders.value.length > 0) {
           setOrders(liveOrders.value);
         }
         if (liveCustom.status === 'fulfilled' && liveCustom.value.length > 0) {
           setCustomRequests(liveCustom.value);
+        }
+        if (liveCorporate.status === 'fulfilled' && liveCorporate.value.length > 0) {
+          setCorporateEnquiries(liveCorporate.value);
         }
         if (liveTickets.status === 'fulfilled' && liveTickets.value.length > 0) {
           setSupportTickets(liveTickets.value);
@@ -329,6 +363,21 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
         }
         if (liveCoupons.status === 'fulfilled' && liveCoupons.value.length > 0) {
           setCoupons(liveCoupons.value);
+        }
+        if (liveWorkOrders.status === 'fulfilled' && liveWorkOrders.value.length > 0) {
+          setWorkOrders(liveWorkOrders.value);
+        }
+        if (liveTaxSlabs.status === 'fulfilled' && liveTaxSlabs.value.length > 0) {
+          setTaxSlabs(liveTaxSlabs.value);
+        }
+        if (liveOffline.status === 'fulfilled' && liveOffline.value.length > 0) {
+          setOfflineOrders(liveOffline.value);
+        }
+        if (liveAuditLogs.status === 'fulfilled' && liveAuditLogs.value.length > 0) {
+          setAuditLogs(liveAuditLogs.value);
+        }
+        if (liveSections.status === 'fulfilled' && liveSections.value?.items) {
+          setHomepageSections(liveSections.value.items);
         }
       } catch (err) {
         console.warn('Initial Firestore hydration deferred:', err);
@@ -753,6 +802,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     });
     setHomepageSections(next);
     saveState({ homepageSections: next });
+    saveFirestoreCmsDoc('homepage_sections', { items: next }).catch(() => {});
     logAction('UPDATE_HOMEPAGE_SECTION', 'cms', `Modified content fields for section: ${sectionId}`);
   };
 
@@ -857,6 +907,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     const next = [newItem, ...inventory];
     setInventory(next);
     saveState({ inventory: next });
+    saveFirestoreInventoryItem(newItem).catch(() => {});
     logAction(
       'CREATE_INVENTORY_ITEM',
       'inventory',
@@ -866,8 +917,12 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
 
   const updateInventoryItem = (id: string, updates: Partial<InventoryItem>) => {
     const next = inventory.map(item => (item.id === id ? { ...item, ...updates } : item));
+    const updated = next.find(i => i.id === id);
     setInventory(next);
     saveState({ inventory: next });
+    if (updated) {
+      saveFirestoreInventoryItem(updated).catch(() => {});
+    }
     logAction('UPDATE_INVENTORY_ITEM', 'inventory', `Updated inventory SKU specifications: ${id}`);
   };
 
@@ -876,6 +931,9 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     const next = inventory.filter(item => item.id !== id);
     setInventory(next);
     saveState({ inventory: next });
+    if (target?.sku) {
+      deleteFirestoreInventoryItem(target.sku).catch(() => {});
+    }
     logAction(
       'DELETE_INVENTORY_ITEM',
       'inventory',
@@ -889,19 +947,24 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     stage: WorkOrder['stage'],
     qcPassed?: boolean
   ) => {
+    let updatedWo: WorkOrder | undefined;
     const next = workOrders.map(wo => {
       if (wo.id === orderId) {
-        return {
+        updatedWo = {
           ...wo,
           stage,
           qcPassed: qcPassed !== undefined ? qcPassed : wo.qcPassed,
           actualDate: stage === 'wax_sealed' ? new Date().toISOString().split('T')[0] : wo.actualDate,
         };
+        return updatedWo;
       }
       return wo;
     });
     setWorkOrders(next);
     saveState({ workOrders: next });
+    if (updatedWo) {
+      saveFirestoreWorkOrder(updatedWo).catch(() => {});
+    }
     logAction(
       'PRODUCTION_STAGE_TRANSITION',
       'production',
@@ -917,6 +980,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     const next = [newWo, ...workOrders];
     setWorkOrders(next);
     saveState({ workOrders: next });
+    saveFirestoreWorkOrder(newWo).catch(() => {});
     logAction('CREATE_WORK_ORDER', 'production', `Issued new work order for ${newWo.productName}`);
   };
 
@@ -1095,14 +1159,19 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     const next = [...taxSlabs, newSlab];
     setTaxSlabs(next);
     saveState({ taxSlabs: next });
+    saveFirestoreTaxSlab(newSlab).catch(() => {});
     logAction('CREATE_TAX_SLAB', 'finance', `Created tax slab ${newSlab.hsnCode} (${newSlab.gstRate}% GST)`);
     return newSlab;
   };
 
   const updateTaxSlab = (id: string, updates: Partial<TaxSlab>) => {
     const next = taxSlabs.map(s => (s.id === id ? { ...s, ...updates } : s));
+    const updatedSlab = next.find(s => s.id === id);
     setTaxSlabs(next);
     saveState({ taxSlabs: next });
+    if (updatedSlab) {
+      saveFirestoreTaxSlab(updatedSlab).catch(() => {});
+    }
     logAction('UPDATE_TAX_SLAB', 'finance', `Updated tax slab ID: ${id}`);
   };
 
@@ -1111,6 +1180,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     const next = taxSlabs.filter(s => s.id !== id);
     setTaxSlabs(next);
     saveState({ taxSlabs: next });
+    deleteFirestoreTaxSlab(id).catch(() => {});
     logAction('DELETE_TAX_SLAB', 'finance', `Archived/Removed tax slab ${target?.hsnCode || id}`);
   };
 
@@ -1131,11 +1201,13 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     if (matchedSlab) {
       nextTaxSlabs = taxSlabs.map(s => {
         if (s.id === matchedSlab.id) {
-          return {
+          const updatedSlab = {
             ...s,
             taxableTurnover: s.taxableTurnover + newOrder.taxableAmount,
             taxCollected: s.taxCollected + (newOrder.cgst + newOrder.sgst + newOrder.igst),
           };
+          saveFirestoreTaxSlab(updatedSlab).catch(() => {});
+          return updatedSlab;
         }
         return s;
       });
@@ -1186,14 +1258,27 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       orders: nextOrders,
     });
 
+    saveFirestoreOfflineOrder(newOrder).catch(() => {});
+    createFirestoreOrder(companionAdminOrder).catch(() => {});
+
     logAction('RECORD_OFFLINE_ORDER', 'finance', `Recorded offline sale ${newOrder.invoiceNumber} (₹${newOrder.total}) via ${newOrder.channelLabel}`);
     return newOrder;
   };
 
   const updateOfflineOrderStatus = (orderId: string, paymentStatus: OfflineOrder['paymentStatus']) => {
-    const next = offlineOrders.map(o => (o.id === orderId ? { ...o, paymentStatus } : o));
+    let updatedOff: OfflineOrder | undefined;
+    const next = offlineOrders.map(o => {
+      if (o.id === orderId) {
+        updatedOff = { ...o, paymentStatus };
+        return updatedOff;
+      }
+      return o;
+    });
     setOfflineOrders(next);
     saveState({ offlineOrders: next });
+    if (updatedOff) {
+      saveFirestoreOfflineOrder(updatedOff).catch(() => {});
+    }
     logAction('UPDATE_OFFLINE_PAYMENT', 'finance', `Updated offline order ${orderId} payment status to ${paymentStatus}`);
   };
 
