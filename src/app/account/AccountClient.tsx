@@ -7,7 +7,6 @@ import {
   Sparkles,
   Award,
   LayoutDashboard,
-  Palette,
   Package,
   MapPin,
   User as UserIcon,
@@ -16,24 +15,18 @@ import {
   Truck,
   CheckCircle2,
   Clock,
-  Download,
   Plus,
   Trash2,
   Edit2,
   Calendar,
-  ShieldCheck,
   ShoppingBag,
   ExternalLink,
   X,
   Check,
-  Lock,
-  Scale,
-  FileText,
-  AlertCircle,
-  Send,
-  UserCheck,
-  Sliders,
   ArrowRight,
+  Lock,
+  Palette,
+  Download,
 } from 'lucide-react';
 import { useAuth, Address, Order, OrderItem } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
@@ -74,40 +67,12 @@ export default function AccountClient() {
     phone: user?.phone || '',
     birthday: user?.preferences?.birthday || '',
     anniversary: user?.preferences?.anniversary || '',
-    preferredPalette: user?.preferences?.preferredPalette || 'Champagne Gold & Pearl',
   });
   const [profileSavedNotice, setProfileSavedNotice] = useState(false);
 
-  // DPDP Act 2023 Data Principal Rights Hub States
-  const [nomineeName, setNomineeName] = useState('');
-  const [nomineeRelation, setNomineeRelation] = useState('Spouse');
-  const [nomineeContact, setNomineeContact] = useState('');
-  const [nomineeSavedNotice, setNomineeSavedNotice] = useState(false);
-
-  const [grievanceSubject, setGrievanceSubject] = useState('Personal Data Portability / Query');
-  const [grievanceDetails, setGrievanceDetails] = useState('');
-  const [grievanceSubmittedTicket, setGrievanceSubmittedTicket] = useState<string | null>(null);
-
-  const [isErasureModalOpen, setIsErasureModalOpen] = useState(false);
-  const [erasureConfirmText, setErasureConfirmText] = useState('');
-  const [erasureCompleted, setErasureCompleted] = useState(false);
-
-  // Load existing nominee if any
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('kalajay_dpdp_nominee');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setNomineeName(parsed.name || '');
-        setNomineeRelation(parsed.relation || 'Spouse');
-        setNomineeContact(parsed.contact || '');
-      }
-    } catch {}
-  }, []);
-
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab) setActiveTab(tab);
+    if (tab && tab !== 'privacy') setActiveTab(tab);
   }, [searchParams]);
 
   useEffect(() => {
@@ -118,7 +83,6 @@ export default function AccountClient() {
         phone: user.phone || '',
         birthday: user.preferences?.birthday || '',
         anniversary: user.preferences?.anniversary || '',
-        preferredPalette: user.preferences?.preferredPalette || 'Champagne Gold & Pearl',
       });
     }
   }, [user]);
@@ -185,7 +149,6 @@ export default function AccountClient() {
         ...user.preferences,
         birthday: profileForm.birthday,
         anniversary: profileForm.anniversary,
-        preferredPalette: profileForm.preferredPalette,
       },
     });
     setIsEditingProfile(false);
@@ -224,97 +187,6 @@ export default function AccountClient() {
     const product = PRODUCTS.find((p) => p.code === item.code || p.id === item.id) || PRODUCTS[0];
     addToCart(product);
     openCart();
-  };
-
-  // DPDP Section 11: Export Data Portability Packet
-  const handleDownloadDataPacket = () => {
-    if (!user) return;
-    const dataPacket = {
-      fiduciary: 'Kalajay Creations Private Limited',
-      legalFramework: 'Digital Personal Data Protection Act, 2023 (Act No. 22 of 2023) & DPDP Rules 2025',
-      exportTimestamp: new Date().toISOString(),
-      dataPrincipal: {
-        id: user?.id,
-        name: user?.name,
-        email: user?.email,
-        phone: user?.phone,
-        patronTier: user?.tier,
-        memberSince: user?.memberSince,
-        celebrationDates: {
-          birthday: user?.preferences?.birthday || null,
-          anniversary: user?.preferences?.anniversary || null,
-        },
-        signaturePalette: user?.preferences?.preferredPalette || 'Champagne Gold & Pearl',
-      },
-      savedDestinations: Array.isArray(user?.addresses) ? user.addresses : [],
-      ordersAndProvenance: (Array.isArray(user?.orders) ? user.orders : []).map((ord) => ({
-        orderId: ord.id,
-        orderDate: ord.date,
-        status: ord.status,
-        totalAmount: ord.totalAmount,
-        paymentMethod: ord.paymentMethod,
-        shippingDestination: ord.deliveryAddress,
-        items: ord.items,
-        trackingAWB: ord.awbNumber,
-        masterArtisan: `${ord.artisanName} (${ord.artisanLocation})`,
-      })),
-      statutoryRetentionCarveOut: {
-        applicableLaw: 'Section 36, Central Goods and Services Tax (CGST) Act, 2017',
-        statutoryRetentionPeriod: '72 months (7 years) for completed tax invoices and GST returns',
-      },
-      grievanceOfficer: {
-        officer: 'Soumya (Founder & Principal Trustee)',
-        email: 'contact@kalajay.in',
-        statutorySlaHours: 48,
-        resolutionSlaDays: 30,
-        appellateAuthority: 'Data Protection Board of India (DPBI)',
-      },
-    };
-
-    const blob = new Blob([JSON.stringify(dataPacket, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `kalajay-patron-dpdp-data-${user.phone || 'export'}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  // DPDP Section 14: Save Nominee Designation
-  const handleSaveNominee = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nomineeName.trim() || !nomineeContact.trim()) return;
-    localStorage.setItem(
-      'kalajay_dpdp_nominee',
-      JSON.stringify({
-        name: nomineeName,
-        relation: nomineeRelation,
-        contact: nomineeContact,
-        updatedAt: new Date().toISOString(),
-      })
-    );
-    setNomineeSavedNotice(true);
-    setTimeout(() => setNomineeSavedNotice(false), 3500);
-  };
-
-  // DPDP Section 13: File Grievance Ticket
-  const handleSubmitGrievance = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!grievanceDetails.trim()) return;
-    const ticketId = `DPDP-KJ-${Math.floor(10000 + Math.random() * 90000)}`;
-    setGrievanceSubmittedTicket(ticketId);
-    setGrievanceDetails('');
-  };
-
-  // DPDP Section 12: Right to Erasure / Forgotten
-  const handleExecuteErasure = () => {
-    setErasureCompleted(true);
-    setTimeout(() => {
-      logout();
-      router.push('/');
-    }, 2200);
   };
 
   if (isLoading) {
@@ -459,20 +331,7 @@ export default function AccountClient() {
             }`}
           >
             <UserIcon className="w-3.5 h-3.5 text-gold" />
-            <span>Profile & Preferences</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('privacy')}
-            className={`px-4 py-2 rounded-full border transition-all shrink-0 cursor-pointer flex items-center gap-2 ${
-              activeTab === 'privacy'
-                ? 'bg-ink text-canvas border-ink font-semibold shadow-xs'
-                : 'bg-canvas text-ink border-border-subtle hover:border-border-strong'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-gold" />
-            <span>Data Privacy &amp; DPDP Hub</span>
+            <span>Profile &amp; Preferences</span>
           </button>
         </div>
 
@@ -501,18 +360,47 @@ export default function AccountClient() {
                 <span className="text-[11px] text-ink-muted mt-1 block">Usable at checkout</span>
               </div>
 
-              <div className="bg-canvas-subtle p-5 rounded-2xl border border-border-gold shadow-2xs">
-                <span className="text-[11px] uppercase tracking-refined text-ink-muted font-sans font-medium block">
-                  Custom Piece
-                </span>
-                <div className="font-serif text-lg text-ink font-semibold mt-1 truncate">
-                  Pearl Vanity Heirloom
-                </div>
-                <span className="text-[11px] text-emerald-700 font-medium mt-1 block flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-                  <span>Wax-Sealed in Craft House</span>
-                </span>
-              </div>
+              {(() => {
+                const customPiece = userOrders.find(
+                  (o) =>
+                    (o as any).isCustom ||
+                    o.status === 'Hand-Stringing in Bihar' ||
+                    o.items?.some((i) => i.category?.toLowerCase().includes('custom'))
+                );
+                if (customPiece) {
+                  return (
+                    <div className="bg-canvas-subtle p-5 rounded-2xl border border-border-gold shadow-2xs">
+                      <span className="text-[11px] uppercase tracking-refined text-ink-muted font-sans font-medium block">
+                        Custom Piece
+                      </span>
+                      <div className="font-serif text-lg text-ink font-semibold mt-1 truncate">
+                        {customPiece.items?.[0]?.name || 'Bespoke Loom Piece'}
+                      </div>
+                      <span className="text-[11px] text-emerald-700 font-medium mt-1 block flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                        <span>{customPiece.status}</span>
+                      </span>
+                    </div>
+                  );
+                }
+                return (
+                  <Link
+                    href="/customise"
+                    className="bg-canvas-subtle p-5 rounded-2xl border border-border-gold shadow-2xs block hover:border-gold transition-colors group"
+                  >
+                    <span className="text-[11px] uppercase tracking-refined text-ink-muted font-sans font-medium block">
+                      Custom Piece
+                    </span>
+                    <div className="font-serif text-lg text-ink font-semibold mt-1 group-hover:text-rosewood transition-colors">
+                      None In-Loom
+                    </div>
+                    <span className="text-[11px] text-gold-dark font-medium mt-1 flex items-center gap-1">
+                      <span>Design Bespoke Piece</span>
+                      <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                    </span>
+                  </Link>
+                );
+              })()}
 
               <div className="bg-canvas-subtle p-5 rounded-2xl border border-border-gold shadow-2xl">
                 <span className="text-[11px] uppercase tracking-refined text-ink-muted font-sans font-medium block">
@@ -1062,23 +950,6 @@ export default function AccountClient() {
                   </div>
                 </div>
 
-                <div>
-                  <label htmlFor="profile-palette-pref" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1.5">
-                    Signature Bead Palette Preference
-                  </label>
-                  <select
-                    id="profile-palette-pref"
-                    value={profileForm.preferredPalette}
-                    onChange={(e) => setProfileForm({ ...profileForm, preferredPalette: e.target.value })}
-                    className="w-full px-4 py-3 bg-canvas border border-border-medium rounded-xl text-xs sm:text-sm text-ink focus:outline-none focus:border-gold"
-                  >
-                    <option value="Champagne Gold & Pearl">Champagne Gold & Pearl (Timeless Bridal)</option>
-                    <option value="Rose Pink & Iridescent Crystal">Rose Pink & Iridescent Crystal (Romantic Daily)</option>
-                    <option value="Emerald Green & Deep Noir">Emerald Green & Deep Noir (Evening Statement)</option>
-                    <option value="Lavender Mist & Frosted Glass">Lavender Mist & Frosted Glass (Subtle Modern)</option>
-                  </select>
-                </div>
-
                 <div className="flex items-center gap-3 pt-3">
                   <button
                     type="submit"
@@ -1128,488 +999,11 @@ export default function AccountClient() {
                     </span>
                   </div>
                 </div>
-
-                <div className="pt-6 border-t border-border-subtle">
-                  <span className="text-[11px] uppercase tracking-refined text-ink-muted font-sans font-medium block">
-                    Signature Bead Palette
-                  </span>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <Palette className="w-4 h-4 text-rosewood" />
-                    <span className="text-sm font-serif font-semibold text-ink">
-                      {userPreferences.preferredPalette || 'Champagne Gold & Pearl'}
-                    </span>
-                  </div>
-                </div>
               </div>
             )}
-          </div>
-        )}
-
-        {/* --- 5. DATA PRIVACY & DPDP HUB TAB --- */}
-        {activeTab === 'privacy' && (
-          <div className="pt-8 space-y-8 animate-fade-in text-xs text-ink">
-            {/* Header / Statutory Overview */}
-            <div className="p-6 sm:p-8 bg-canvas-subtle rounded-2xl border border-border-gold space-y-3 relative overflow-hidden shadow-2xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-ink text-canvas text-[10px] uppercase tracking-monumental font-semibold">
-                    <ShieldCheck className="w-3 h-3 text-gold" />
-                    <span>Statutory DPDP Act 2023 Hub</span>
-                  </div>
-                  <h2 className="font-serif text-2xl sm:text-3xl text-ink font-normal">
-                    Data Principal Rights &amp; Safeguards
-                  </h2>
-                  <p className="text-xs text-ink-muted font-light leading-relaxed max-w-2xl">
-                    Under the <strong>Digital Personal Data Protection Act, 2023</strong> and the <strong>DPDP Rules, 2025</strong>, you exercise sovereign ownership over your personal information. Kalajay provides full self-service access, rectification, portability, nomination, and grievance redressal below.
-                  </p>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (typeof window !== 'undefined') {
-                        window.dispatchEvent(new CustomEvent('open-dpdp-preferences'));
-                      }
-                    }}
-                    className="px-4 py-2.5 bg-canvas border border-border-medium hover:border-gold rounded-full text-xs font-semibold text-ink flex items-center justify-center gap-2 transition-colors cursor-pointer"
-                  >
-                    <Sliders className="w-3.5 h-3.5 text-gold" />
-                    <span>Consent Preferences</span>
-                  </button>
-
-                  <Link
-                    href="/privacy"
-                    className="px-4 py-2.5 bg-ink hover:bg-gold hover:text-ink text-canvas rounded-full text-xs font-semibold uppercase tracking-refined flex items-center justify-center gap-1.5 transition-colors"
-                  >
-                    <span>Read DPDP Policy</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* Grid: Sections 11 & 12 (Access & Rectification) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Section 11: Right to Access & Data Portability */}
-              <div className="p-6 bg-canvas-subtle rounded-2xl border border-border-subtle space-y-4 shadow-2xs flex flex-col justify-between">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-full bg-gold/20 text-gold-dark font-serif font-bold text-xs flex items-center justify-center">
-                      11
-                    </div>
-                    <div>
-                      <h3 className="font-serif text-lg text-ink font-semibold">
-                        Right to Access &amp; Portability
-                      </h3>
-                      <span className="text-[11px] text-ink-muted">Section 11, DPDP Act 2023</span>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-ink-muted font-light leading-relaxed">
-                    Obtain a machine-readable archive of all personal data held under your patronage, including contact coordinates, shipping destinations, and transactional craft orders.
-                  </p>
-
-                  <div className="p-3.5 bg-canvas rounded-xl border border-border-subtle space-y-1.5 text-[11px] font-mono text-ink">
-                    <div className="flex justify-between">
-                      <span className="text-ink-muted">Data Fiduciary:</span>
-                      <span className="font-semibold">Kalajay Creations Pvt Ltd</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-ink-muted">Domestic Hosting:</span>
-                      <span>AWS ap-south-1 (Mumbai)</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-ink-muted">Encrypted Record ID:</span>
-                      <span>{user.id}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleDownloadDataPacket}
-                  className="w-full py-3 bg-ink hover:bg-gold hover:text-ink text-canvas rounded-full text-xs uppercase tracking-refined font-semibold flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Download Personal Data Archive (JSON)</span>
-                </button>
-              </div>
-
-              {/* Section 12: Right to Correction & Update */}
-              <div className="p-6 bg-canvas-subtle rounded-2xl border border-border-subtle space-y-4 shadow-2xs flex flex-col justify-between">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-full bg-gold/20 text-gold-dark font-serif font-bold text-xs flex items-center justify-center">
-                      12
-                    </div>
-                    <div>
-                      <h3 className="font-serif text-lg text-ink font-semibold">
-                        Right to Correction &amp; Rectification
-                      </h3>
-                      <span className="text-[11px] text-ink-muted">Section 12, DPDP Act 2023</span>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-ink-muted font-light leading-relaxed">
-                    You have the statutory right to rectify incomplete, inaccurate, or outdated contact coordinates, celebration dates, or shipping destinations.
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-3 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('profile')}
-                      className="p-3 bg-canvas border border-border-medium hover:border-gold rounded-xl text-left transition-colors cursor-pointer group"
-                    >
-                      <UserIcon className="w-4 h-4 text-rosewood mb-1 group-hover:scale-110 transition-transform" />
-                      <span className="font-semibold block text-xs">Edit Patron Profile</span>
-                      <span className="text-[10px] text-ink-muted">Name, email, birthday</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('addresses')}
-                      className="p-3 bg-canvas border border-border-medium hover:border-gold rounded-xl text-left transition-colors cursor-pointer group"
-                    >
-                      <MapPin className="w-4 h-4 text-gold mb-1 group-hover:scale-110 transition-transform" />
-                      <span className="font-semibold block text-xs">Manage Destinations</span>
-                      <span className="text-[10px] text-ink-muted">{userAddresses.length} saved addresses</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-canvas rounded-xl border border-border-subtle text-[11px] text-ink-muted">
-                  <p>Changes saved to your profile take immediate effect across all future artisan dispatch batches.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Section 14: Right to Nominate */}
-            <div className="p-6 sm:p-8 bg-canvas-subtle rounded-2xl border border-border-subtle space-y-5 shadow-2xs">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-full bg-gold/20 text-gold-dark font-serif font-bold text-xs flex items-center justify-center">
-                    14
-                  </div>
-                  <div>
-                    <h3 className="font-serif text-xl text-ink font-semibold">
-                      Right to Nominate a Representative (Section 14)
-                    </h3>
-                    <span className="text-[11px] text-ink-muted">
-                      Statutory nomination in the event of death or incapacity of the Data Principal
-                    </span>
-                  </div>
-                </div>
-
-                {nomineeSavedNotice && (
-                  <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-semibold animate-fade-in">
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Nominee Saved</span>
-                  </div>
-                )}
-              </div>
-
-              <p className="text-xs text-ink-muted font-light leading-relaxed">
-                In compliance with Section 14 of the DPDP Act 2023, you may designate a trusted individual who shall have the legal authority to exercise your Data Principal rights (including accessing records or requesting account closure) in the event of unforeseen death or medical incapacity.
-              </p>
-
-              <form onSubmit={handleSaveNominee} className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
-                <div>
-                  <label htmlFor="nominee-name" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
-                    Nominee Full Legal Name *
-                  </label>
-                  <input
-                    id="nominee-name"
-                    type="text"
-                    required
-                    placeholder="e.g. Ramesh Deshmukh"
-                    value={nomineeName}
-                    onChange={(e) => setNomineeName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-canvas border border-border-medium rounded-xl text-xs text-ink focus:outline-none focus:border-gold"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="nominee-relation" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
-                    Relationship to Patron *
-                  </label>
-                  <select
-                    id="nominee-relation"
-                    value={nomineeRelation}
-                    onChange={(e) => setNomineeRelation(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-canvas border border-border-medium rounded-xl text-xs text-ink focus:outline-none focus:border-gold cursor-pointer"
-                  >
-                    <option value="Spouse">Spouse</option>
-                    <option value="Child">Child (Adult)</option>
-                    <option value="Parent">Parent</option>
-                    <option value="Sibling">Sibling</option>
-                    <option value="Legal Heir">Legal Heir</option>
-                    <option value="Authorized Trustee">Authorized Trustee / Executor</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="nominee-contact" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
-                    Nominee Contact (Email / Phone) *
-                  </label>
-                  <input
-                    id="nominee-contact"
-                    type="text"
-                    required
-                    placeholder="e.g. nominee@domain.com / +91..."
-                    value={nomineeContact}
-                    onChange={(e) => setNomineeContact(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-canvas border border-border-medium rounded-xl text-xs text-ink focus:outline-none focus:border-gold"
-                  />
-                </div>
-
-                <div className="sm:col-span-3 flex justify-end pt-2">
-                  <button
-                    type="submit"
-                    className="px-6 py-2.5 bg-ink hover:bg-gold hover:text-ink text-canvas rounded-full text-xs uppercase tracking-refined font-semibold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
-                  >
-                    <UserCheck className="w-3.5 h-3.5" />
-                    <span>Record Nominee Designation</span>
-                  </button>
-                </div>
-              </form>
-            </div>
-
-            {/* Section 13: Right of Grievance Redressal */}
-            <div className="p-6 sm:p-8 bg-canvas-subtle rounded-2xl border border-border-subtle space-y-5 shadow-2xs">
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-full bg-gold/20 text-gold-dark font-serif font-bold text-xs flex items-center justify-center">
-                  13
-                </div>
-                <div>
-                  <h3 className="font-serif text-xl text-ink font-semibold">
-                    Right of Grievance Redressal (Section 13)
-                  </h3>
-                  <span className="text-[11px] text-ink-muted">
-                    Formal escalation to Data Protection Officer &middot; Guaranteed SLA
-                  </span>
-                </div>
-              </div>
-
-              <p className="text-xs text-ink-muted font-light leading-relaxed">
-                If you have inquiries, objections, or concerns regarding your personal data handling, file a grievance ticket below. We guarantee a formal written acknowledgment within <strong>48 hours</strong> and substantive resolution within <strong>30 calendar days</strong>.
-              </p>
-
-              {grievanceSubmittedTicket ? (
-                <div className="p-5 bg-canvas rounded-xl border border-emerald-600/30 space-y-3 animate-fade-in">
-                  <div className="flex items-center gap-2 text-emerald-800 font-semibold text-sm">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                    <span>Statutory Grievance Ticket Logged Successfully</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                    <div>
-                      <span className="text-ink-muted block text-[10px] uppercase font-semibold">Ticket Reference</span>
-                      <strong className="font-mono text-sm text-ink">{grievanceSubmittedTicket}</strong>
-                    </div>
-                    <div>
-                      <span className="text-ink-muted block text-[10px] uppercase font-semibold">Acknowledgment SLA</span>
-                      <span className="text-ink font-medium">Within 48 hours</span>
-                    </div>
-                    <div>
-                      <span className="text-ink-muted block text-[10px] uppercase font-semibold">Resolution Officer</span>
-                      <span className="text-ink font-medium">Soumya (Grievance Officer)</span>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-ink-muted pt-2 border-t border-border-subtle">
-                    An acknowledgment has been dispatched to <strong>{user.email}</strong>. If unsatisfied after 30 days, you may file an appeal before the <strong>Data Protection Board of India (DPBI)</strong> under Section 13(4).
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setGrievanceSubmittedTicket(null)}
-                    className="text-xs text-rosewood underline font-semibold cursor-pointer pt-1"
-                  >
-                    File Another Query
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleSubmitGrievance} className="space-y-4 pt-1">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="dpdp-grievance-subject" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
-                        Grievance Category *
-                      </label>
-                      <select
-                        id="dpdp-grievance-subject"
-                        value={grievanceSubject}
-                        onChange={(e) => setGrievanceSubject(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-canvas border border-border-medium rounded-xl text-xs text-ink focus:outline-none focus:border-gold cursor-pointer"
-                      >
-                        <option value="Personal Data Portability / Query">Personal Data Portability / Query</option>
-                        <option value="Correction or Update Request">Correction or Update Request</option>
-                        <option value="Withdrawal of Consent">Withdrawal of Consent</option>
-                        <option value="Right to Erasure Inquiry">Right to Erasure Inquiry</option>
-                        <option value="Unsolicited Communication Report">Unsolicited Communication Report</option>
-                        <option value="General DPDP Inquiry">General DPDP Compliance Inquiry</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label htmlFor="dpdp-dpo-email" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
-                        Designated Data Protection Officer
-                      </label>
-                      <input
-                        id="dpdp-dpo-email"
-                        type="text"
-                        readOnly
-                        value="Soumya · privacy@kalajay.in (48h SLA)"
-                        className="w-full px-3.5 py-2.5 bg-canvas/60 border border-border-subtle rounded-xl text-xs text-ink-muted font-mono"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="dpdp-grievance-details" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
-                      Detailed Nature of Your Grievance or Request *
-                    </label>
-                    <textarea
-                      id="dpdp-grievance-details"
-                      required
-                      rows={3}
-                      placeholder="Please specify the details of your request or concern regarding your personal data..."
-                      value={grievanceDetails}
-                      onChange={(e) => setGrievanceDetails(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-canvas border border-border-medium rounded-xl text-xs text-ink focus:outline-none focus:border-gold"
-                    />
-                  </div>
-
-                  <div className="flex justify-end pt-1">
-                    <button
-                      type="submit"
-                      className="px-6 py-2.5 bg-ink hover:bg-gold hover:text-ink text-canvas rounded-full text-xs uppercase tracking-refined font-semibold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                      <span>Transmit Grievance Ticket</span>
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-
-            {/* Section 12: Right to Erasure / Forgotten */}
-            <div className="p-6 bg-rose-50/50 rounded-2xl border border-rose-200 space-y-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-full bg-rose-200 text-rose-800 font-serif font-bold text-xs flex items-center justify-center">
-                  12
-                </div>
-                <div>
-                  <h3 className="font-serif text-lg text-rose-950 font-semibold">
-                    Right to Erasure (&quot;Right to be Forgotten&quot;)
-                  </h3>
-                  <span className="text-[11px] text-rose-800">
-                    Section 12, DPDP Act 2023 · With Statutory CGST Retention Carve-out
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-4 bg-white/80 rounded-xl border border-rose-200 text-xs text-rose-950 leading-relaxed space-y-2">
-                <div className="font-medium flex items-center gap-1.5 text-rose-900">
-                  <Scale className="w-4 h-4 text-rose-700 shrink-0" />
-                  <span>Important Statutory Retention Notice: Section 36, CGST Act 2017</span>
-                </div>
-                <p>
-                  Upon exercising your Right to Erasure, all active patron login credentials, mobile OTP bindings, saved delivery addresses, and marketing preferences will be permanently wiped from active databases.
-                </p>
-                <p className="text-[11px] text-rose-900/80">
-                  <em>Statutory Exception:</em> Under <strong>Section 36 of the Central Goods and Services Tax (CGST) Act, 2017</strong>, completed tax invoices and sales ledgers must be retained for <strong>72 months (7 years)</strong> for audit purposes. These invoices will be severed from active profile links and sealed in isolated cold storage.
-                </p>
-              </div>
-
-              <div className="flex justify-end pt-1">
-                <button
-                  type="button"
-                  onClick={() => setIsErasureModalOpen(true)}
-                  className="px-5 py-2.5 bg-rose-700 hover:bg-rose-800 text-white rounded-full text-xs uppercase tracking-refined font-semibold transition-colors cursor-pointer flex items-center gap-2"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Request Account &amp; Data Erasure</span>
-                </button>
-              </div>
-            </div>
           </div>
         )}
       </div>
-
-      {/* --- RIGHT TO ERASURE CONFIRMATION MODAL --- */}
-      {isErasureModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/75 backdrop-blur-xs animate-fade-in">
-          <div className="bg-canvas w-full max-w-lg rounded-2xl border border-rose-300 p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto space-y-4">
-            <button
-              type="button"
-              onClick={() => setIsErasureModalOpen(false)}
-              className="absolute top-5 right-5 p-1.5 text-ink-muted hover:text-ink cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center">
-              <Trash2 className="w-6 h-6" />
-            </div>
-
-            <div>
-              <h3 className="font-serif text-2xl text-ink font-semibold">Confirm Personal Data Erasure</h3>
-              <span className="text-xs text-rose-700 font-medium">DPDP Act 2023 · Section 12</span>
-            </div>
-
-            {erasureCompleted ? (
-              <div className="p-4 bg-emerald-50 text-emerald-800 rounded-xl text-xs space-y-2 animate-fade-in">
-                <div className="flex items-center gap-2 font-semibold">
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  <span>Erasure Executed Successfully</span>
-                </div>
-                <p>Your patron profile credentials and saved addresses have been expunged. Logging out now...</p>
-              </div>
-            ) : (
-              <>
-                <p className="text-xs text-ink-muted leading-relaxed">
-                  You are about to irreversibly erase your Kalajay patron account (<strong>{user.email}</strong>). You will lose access to member-exclusive benefits and order histories.
-                </p>
-
-                <div className="p-3 bg-canvas-subtle rounded-xl border border-border-subtle text-[11px] text-ink-muted space-y-1">
-                  <strong>Statutory Tax Ledger Retention:</strong>
-                  <p>Invoices associated with completed purchases will remain archived in tax cold storage for 7 years as mandated by Section 36 of the Indian CGST Act 2017.</p>
-                </div>
-
-                <div>
-                  <label htmlFor="confirm-erasure-name" className="text-xs text-ink block font-semibold mb-1">
-                    To confirm, please type &quot;<strong>ERASE</strong>&quot; below:
-                  </label>
-                  <input
-                    id="confirm-erasure-name"
-                    type="text"
-                    placeholder="Type ERASE to confirm"
-                    value={erasureConfirmText}
-                    onChange={(e) => setErasureConfirmText(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-canvas border border-border-medium rounded-xl text-xs text-ink focus:outline-none focus:border-rose-600"
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-3 pt-3 border-t border-border-subtle">
-                  <button
-                    type="button"
-                    onClick={() => setIsErasureModalOpen(false)}
-                    className="px-4 py-2 text-xs text-ink-muted hover:text-ink cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    disabled={erasureConfirmText.trim().toUpperCase() !== 'ERASE'}
-                    onClick={handleExecuteErasure}
-                    className="px-6 py-2.5 bg-rose-700 hover:bg-rose-800 disabled:opacity-40 text-white rounded-full text-xs uppercase tracking-refined font-semibold transition-all cursor-pointer shadow-xs"
-                  >
-                    Confirm Permanent Erasure
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* --- ADD ADDRESS MODAL --- */}
       {isAddressModalOpen && (

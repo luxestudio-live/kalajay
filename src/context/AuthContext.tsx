@@ -83,7 +83,7 @@ export interface User {
   addresses: Address[];
   orders: Order[];
   preferences: {
-    preferredPalette: string;
+    preferredPalette?: string;
     birthday?: string;
     anniversary?: string;
   };
@@ -216,7 +216,7 @@ interface AuthContextType {
   isLoading: boolean;
   loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   loginWithEmail: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signup: (data: { name: string; phone: string; email: string; password?: string }) => Promise<{ success: boolean; error?: string }>;
+  signup: (data: { name: string; phone: string; email: string; password?: string; birthday?: string; anniversary?: string }) => Promise<{ success: boolean; error?: string }>;
   sendOtp: (phone: string, containerId?: string) => Promise<{ success: boolean; demoOtp: string; error?: string }>;
   loginWithOtp: (phone: string, otp: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
@@ -234,11 +234,31 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function normalizeUser(u: any): User | null {
   if (!u || typeof u !== 'object') return null;
+
+  // If user has demo addresses from a non-demo user account, filter them out
+  let addresses = Array.isArray(u.addresses) ? u.addresses : [];
+  if (u.id !== 'usr-kalajay-01' && u.email !== 'sonali.sharma@example.com') {
+    addresses = addresses.filter(
+      (a: Address) =>
+        a &&
+        a.id !== 'addr-1' &&
+        a.id !== 'addr-2' &&
+        a.fullName !== 'Sonali Sharma' &&
+        !(a.street && a.street.includes('Signature Palms'))
+    );
+  }
+
+  // If user has demo orders from a non-demo user account, filter them out
+  let orders = Array.isArray(u.orders) ? u.orders : [];
+  if (u.id !== 'usr-kalajay-01' && u.email !== 'sonali.sharma@example.com') {
+    orders = orders.filter((o: Order) => o && o.id !== 'KJ-8924');
+  }
+
   return {
     ...u,
-    addresses: Array.isArray(u.addresses) ? u.addresses : [],
-    orders: Array.isArray(u.orders) ? u.orders : [],
-    preferences: u.preferences || { preferredPalette: 'Champagne Gold & Pearl' },
+    addresses,
+    orders,
+    preferences: u.preferences || {},
   };
 }
 
@@ -364,11 +384,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             memberSince: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
             tier: 'Kalajay Circle',
             rewardPoints: 300,
-            addresses: DEFAULT_ADDRESSES,
-            orders: DEFAULT_ORDERS,
-            preferences: {
-              preferredPalette: 'Champagne Gold & Pearl',
-            },
+            addresses: [],
+            orders: [],
+            preferences: {},
           };
           await savePatronProfile(fbUser.uid, newPatron);
           saveUserSession(newPatron);
@@ -415,9 +433,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             memberSince: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
             tier: 'Kalajay Circle',
             rewardPoints: 300,
-            addresses: DEFAULT_ADDRESSES,
-            orders: DEFAULT_ORDERS,
-            preferences: { preferredPalette: 'Champagne Gold & Pearl' },
+            addresses: [],
+            orders: [],
+            preferences: {},
           };
           await savePatronProfile(fbUser.uid, newPatron);
           saveUserSession(newPatron);
@@ -451,6 +469,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     phone: string;
     email: string;
     password?: string;
+    birthday?: string;
+    anniversary?: string;
   }): Promise<{ success: boolean; error?: string }> => {
     const password = data.password || 'Kalajay@2026';
     try {
@@ -464,9 +484,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         memberSince: 'Today',
         tier: 'Kalajay Circle',
         rewardPoints: 300,
-        addresses: DEFAULT_ADDRESSES,
+        addresses: [],
         orders: [],
-        preferences: { preferredPalette: 'Champagne Gold & Pearl' },
+        preferences: {
+          birthday: data.birthday || '',
+          anniversary: data.anniversary || '',
+        },
       };
       await savePatronProfile(fbUser.uid, newPatron);
       saveUserSession(newPatron);
@@ -478,14 +501,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       if (err?.message?.includes('not initialized') || err?.message?.includes('API_KEY')) {
         const newUser: User = {
-          ...INITIAL_USER,
           id: `usr-${Date.now()}`,
           name: data.name,
           phone: data.phone.startsWith('+') ? data.phone : `+91 ${data.phone}`,
           email: data.email,
           memberSince: 'Today',
+          tier: 'Kalajay Circle',
           rewardPoints: 300,
+          addresses: [],
           orders: [],
+          preferences: {
+            birthday: data.birthday || '',
+            anniversary: data.anniversary || '',
+          },
         };
         saveUserSession(newUser);
         return { success: true };
@@ -559,9 +587,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             memberSince: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
             tier: 'Kalajay Circle',
             rewardPoints: 300,
-            addresses: DEFAULT_ADDRESSES,
-            orders: DEFAULT_ORDERS,
-            preferences: { preferredPalette: 'Champagne Gold & Pearl' },
+            addresses: [],
+            orders: [],
+            preferences: {},
           };
           await savePatronProfile(fbUser.uid, newPatron);
           saveUserSession(newPatron);

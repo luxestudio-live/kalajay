@@ -158,6 +158,7 @@ export default function SignupClient() {
         phone: formData.phone,
         email: formData.email,
         password: formData.password || undefined,
+        birthday: formData.birthday || undefined,
       });
       router.push(redirectTo);
     } finally {
