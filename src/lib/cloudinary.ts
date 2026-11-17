@@ -1,12 +1,11 @@
 /**
  * Cloudinary Media & Optimization Utilities for Kalajay Flagship
- * Cloud Name: da6uncyb
  */
 
 export const CLOUDINARY_CLOUD_NAME =
-  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'da6uncyb';
+  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || '';
 export const CLOUDINARY_UPLOAD_PRESET =
-  process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'kalajay_products';
+  process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || '';
 
 export interface CloudinaryTransformOptions {
   width?: number;

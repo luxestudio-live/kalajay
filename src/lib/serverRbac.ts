@@ -6,7 +6,7 @@ import { SEED_ROLES } from '@/data/adminPermissions';
 import { AdminRole, AdminUser, PermissionAction } from '@/data/adminTypes';
 
 export const INTERNAL_SERVICE_SECRET =
-  process.env.INTERNAL_SERVICE_SECRET || 'kalajay_internal_secure_service_token_2026';
+  process.env.INTERNAL_SERVICE_SECRET || '';
 
 export const RESERVED_USERNAMES = new Set([
   'admin',
@@ -662,7 +662,7 @@ export async function verifyFirebaseIdToken(
     return { valid: true, uid: cached.uid, email: cached.email };
   }
 
-  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyDzdJB2o_mS3JgSJ-MaBNbvpBi35AdcSCc';
+  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '';
   try {
     const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
       method: 'POST',
