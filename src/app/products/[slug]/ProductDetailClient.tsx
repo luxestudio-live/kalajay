@@ -233,7 +233,7 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
   ).slice(0, 3);
 
   const currentPrice = selectedVariant ? selectedVariant.price : product.price;
-  const currentImages = product.images.length > 0 ? product.images : [product.coverImage];
+  const currentImages = Array.isArray(product.images) && product.images.length > 0 ? product.images : [product.coverImage];
   const activeImage = currentImages[activeImageIndex] || product.coverImage;
 
   const handleAddToCart = () => {
@@ -361,7 +361,7 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
             </p>
 
             {/* Variants Selector */}
-            {product.variants.length > 0 && (
+            {Array.isArray(product.variants) && product.variants.length > 0 && (
               <div className="pt-4 border-t border-border-subtle space-y-3">
                 <label className="text-[11px] uppercase tracking-refined text-plum font-bold block">
                   Select Colorway & Finish ({product.variants.length} available):

@@ -78,7 +78,7 @@ export default function CheckoutPage() {
       if (!name && user.name) setName(user.name);
       if (!email && user.email) setEmail(user.email);
       if (!phone && user.phone) setPhone(user.phone.replace('+91', '').trim());
-      if (!address && user.addresses && user.addresses.length > 0) {
+      if (!address && Array.isArray(user?.addresses) && user.addresses.length > 0) {
         const def = user.addresses.find((a) => a.isDefault) || user.addresses[0];
         const fullStreet = [def.street, def.apartment].filter(Boolean).join(', ');
         setAddress(fullStreet);

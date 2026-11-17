@@ -46,7 +46,13 @@ export async function getPatronProfile(uid: string): Promise<User | null> {
     const userDocRef = doc(db, 'users', uid);
     const snap = await getDoc(userDocRef);
     if (snap.exists()) {
-      return snap.data() as User;
+      const d = snap.data();
+      return {
+        ...d,
+        addresses: Array.isArray(d.addresses) ? d.addresses : [],
+        orders: Array.isArray(d.orders) ? d.orders : [],
+        preferences: d.preferences || { preferredPalette: 'Champagne Gold & Pearl' },
+      } as User;
     }
     return null;
   } catch (error) {
@@ -98,7 +104,12 @@ export async function getFirestoreProducts(): Promise<Product[]> {
     if (snapshot.empty) return [];
     const list: Product[] = [];
     snapshot.forEach((snap) => {
-      list.push(snap.data() as Product);
+      const d = snap.data();
+      list.push({
+        ...d,
+        variants: Array.isArray(d.variants) ? d.variants : [],
+        images: Array.isArray(d.images) && d.images.length > 0 ? d.images : (d.coverImage ? [d.coverImage] : []),
+      } as Product);
     });
     return list;
   } catch (error) {

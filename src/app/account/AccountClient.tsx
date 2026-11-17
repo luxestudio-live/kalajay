@@ -161,7 +161,7 @@ export default function AccountClient() {
     }
   }, [user?.id]);
 
-  if (isLoading || !user) {
+  if (isLoading) {
     return (
       <div className="bg-canvas min-h-screen py-24 flex items-center justify-center">
         <div className="text-center space-y-3">
@@ -176,6 +176,7 @@ export default function AccountClient() {
 
   const handleProfileSave = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
     updateProfile({
       name: profileForm.name,
       email: profileForm.email,
@@ -194,6 +195,7 @@ export default function AccountClient() {
 
   const handleCreateAddress = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
     if (!newAddress.street || !newAddress.city || !newAddress.pincode) {
       alert('Please fill all required address fields.');
       return;
@@ -226,25 +228,26 @@ export default function AccountClient() {
 
   // DPDP Section 11: Export Data Portability Packet
   const handleDownloadDataPacket = () => {
+    if (!user) return;
     const dataPacket = {
       fiduciary: 'Kalajay Creations Private Limited',
       legalFramework: 'Digital Personal Data Protection Act, 2023 (Act No. 22 of 2023) & DPDP Rules 2025',
       exportTimestamp: new Date().toISOString(),
       dataPrincipal: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        patronTier: user.tier,
-        memberSince: user.memberSince,
+        id: user?.id,
+        name: user?.name,
+        email: user?.email,
+        phone: user?.phone,
+        patronTier: user?.tier,
+        memberSince: user?.memberSince,
         celebrationDates: {
-          birthday: user.preferences.birthday || null,
-          anniversary: user.preferences.anniversary || null,
+          birthday: user?.preferences?.birthday || null,
+          anniversary: user?.preferences?.anniversary || null,
         },
-        signaturePalette: user.preferences.preferredPalette,
+        signaturePalette: user?.preferences?.preferredPalette || 'Champagne Gold & Pearl',
       },
-      savedDestinations: user.addresses,
-      ordersAndProvenance: user.orders.map((ord) => ({
+      savedDestinations: Array.isArray(user?.addresses) ? user.addresses : [],
+      ordersAndProvenance: (Array.isArray(user?.orders) ? user.orders : []).map((ord) => ({
         orderId: ord.id,
         orderDate: ord.date,
         status: ord.status,
@@ -628,7 +631,7 @@ export default function AccountClient() {
                   Manage your home, studio, and gift delivery destinations for swift checkout.
                 </p>
                 <span className="text-xs font-semibold text-gold-dark mt-4 inline-flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                  <span>Manage {user.addresses.length} Addresses</span>
+                  <span>Manage {userAddresses.length} Addresses</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </span>
               </div>

@@ -187,7 +187,7 @@ export function ShopContent() {
     e.preventDefault();
     e.stopPropagation();
     setQuickViewProduct(product);
-    setQuickViewVariant(product.variants.length > 0 ? product.variants[0] : undefined);
+    setQuickViewVariant(Array.isArray(product.variants) && product.variants.length > 0 ? product.variants[0] : undefined);
     setQuickViewQty(1);
   };
 
@@ -674,7 +674,7 @@ export function ShopContent() {
                 </p>
 
                 {/* Variants if present */}
-                {quickViewProduct.variants.length > 0 && (
+                {Array.isArray(quickViewProduct.variants) && quickViewProduct.variants.length > 0 && (
                   <div>
                     <label className="text-[11px] uppercase tracking-refined text-plum font-bold block mb-1.5">
                       Select Colorway:

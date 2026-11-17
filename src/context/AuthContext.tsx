@@ -232,6 +232,16 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function normalizeUser(u: any): User | null {
+  if (!u || typeof u !== 'object') return null;
+  return {
+    ...u,
+    addresses: Array.isArray(u.addresses) ? u.addresses : [],
+    orders: Array.isArray(u.orders) ? u.orders : [],
+    preferences: u.preferences || { preferredPalette: 'Champagne Gold & Pearl' },
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
@@ -291,7 +301,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const stored = typeof window !== 'undefined' ? localStorage.getItem('kalajay_user_session') : null;
             if (stored) {
               try {
-                setUser(JSON.parse(stored));
+                setUser(normalizeUser(JSON.parse(stored)));
               } catch {
                 setUser(null);
               }
@@ -305,7 +315,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const stored = typeof window !== 'undefined' ? localStorage.getItem('kalajay_user_session') : null;
         if (stored) {
           try {
-            setUser(JSON.parse(stored));
+            setUser(normalizeUser(JSON.parse(stored)));
           } catch {
             setUser(null);
           }
@@ -323,10 +333,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const saveUserSession = (newUser: User | null) => {
-    setUser(newUser);
+    const normalized = normalizeUser(newUser);
+    setUser(normalized);
     if (typeof window !== 'undefined') {
-      if (newUser) {
-        localStorage.setItem('kalajay_user_session', JSON.stringify(newUser));
+      if (normalized) {
+        localStorage.setItem('kalajay_user_session', JSON.stringify(normalized));
       } else {
         localStorage.removeItem('kalajay_user_session');
       }

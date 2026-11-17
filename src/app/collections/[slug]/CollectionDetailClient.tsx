@@ -185,7 +185,7 @@ export default function CollectionDetailClient({ slug: propSlug }: CollectionDet
                       Icon
                     </span>
                   )}
-                  {product.variants.length > 0 && (
+                  {Array.isArray(product.variants) && product.variants.length > 0 && (
                     <span className="absolute bottom-3 left-3 bg-canvas/90 backdrop-blur-sm text-plum text-[11px] font-medium px-2 py-0.5 rounded-sm border border-border-subtle">
                       {product.variants.length} Colors
                     </span>
