@@ -32,7 +32,90 @@ export interface Product {
   status?: 'active' | 'archived' | 'inactive';
   isActive?: boolean;
   active?: boolean;
+  artisanTitle?: string;
+  artisanNote?: string;
+  origin?: string;
+  dimensionsNote?: string;
+  careNote?: string;
+  shippingPolicy?: string;
+  transitGuarantee?: string;
+  dispatchTimeline?: string;
+  bulkEnquiryNote?: string;
 }
+
+export interface ReviewItem {
+  id: string;
+  patron: string;
+  email?: string;
+  product: string;
+  productId?: string;
+  productSlug?: string;
+  rating: number;
+  headline?: string;
+  comment: string;
+  date: string;
+  status: 'pending' | 'approved' | 'archived';
+  verifiedBuyer?: boolean;
+}
+
+export const DEFAULT_REVIEWS: ReviewItem[] = [
+  {
+    id: 'rev-01',
+    patron: 'Ananya Deshmukh',
+    email: 'ananya.deshmukh@example.com',
+    product: 'Vintage Pearl Beaded Evening Bag',
+    productId: 'KJ-BAG-001',
+    productSlug: 'vintage-pearl-beaded-evening-bag',
+    rating: 5,
+    headline: 'Breathtaking craftsmanship & tight weave',
+    comment: 'The beadwork is breathtaking. You can genuinely feel the hours of patient human craft in the tight, uniform weave.',
+    date: '2026-11-10',
+    status: 'approved',
+    verifiedBuyer: true,
+  },
+  {
+    id: 'rev-02',
+    patron: 'Meera Singhania',
+    email: 'meera.s@example.com',
+    product: 'Signature Pearl Beaded Vanity Box',
+    productId: 'KJ-ORG-101',
+    productSlug: 'signature-pearl-beaded-vanity-box',
+    rating: 5,
+    headline: 'Sits like a sculpted treasure on my dresser',
+    comment: 'Sits like a sculpted treasure on my dresser. The 90-degree corners are so rigid and well tensioned.',
+    date: '2026-11-09',
+    status: 'approved',
+    verifiedBuyer: true,
+  },
+  {
+    id: 'rev-03',
+    patron: 'Kavita Chawla',
+    email: 'kavita.c@example.com',
+    product: 'Colorful Beaded AirPod Case',
+    productId: 'KJ-APC-402',
+    productSlug: 'colorful-beaded-airpods-case-kj-apc-402',
+    rating: 5,
+    headline: 'A whimsical jewel in my handbag!',
+    comment: 'A whimsical jewel in my handbag! The snaps hold tight and the micro-beads sparkle wonderfully in natural light.',
+    date: '2026-11-08',
+    status: 'approved',
+    verifiedBuyer: true,
+  },
+  {
+    id: 'rev-04',
+    patron: 'Radhika Kothari',
+    email: 'radhika.k@example.com',
+    product: 'Radiant Crystal Beaded Tealight Lantern',
+    productId: 'KJ-CDL-601',
+    productSlug: 'radiant-crystal-beaded-tealight-lantern',
+    rating: 5,
+    headline: 'Sublime geometric amber shadows',
+    comment: 'Casts the most sublime geometric amber shadows across our dinner table. A true heritage conversation starter.',
+    date: '2026-11-07',
+    status: 'approved',
+    verifiedBuyer: true,
+  },
+];
 
 export interface Collection {
   name: string;

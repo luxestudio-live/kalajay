@@ -26,7 +26,15 @@ import {
   Info,
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
-import { PRODUCTS, COLLECTIONS, Product, Collection, ProductVariant } from '@/data/catalogue';
+import {
+  PRODUCTS,
+  COLLECTIONS,
+  Product,
+  Collection,
+  ProductVariant,
+  ReviewItem,
+  DEFAULT_REVIEWS,
+} from '@/data/catalogue';
 import {
   getFirestoreProducts,
   saveFirestoreProduct,
@@ -35,55 +43,6 @@ import {
   saveFirestoreCategory,
 } from '@/lib/firestore';
 import { uploadToCloudinary } from '@/lib/cloudinary';
-
-interface ReviewItem {
-  id: string;
-  patron: string;
-  product: string;
-  rating: number;
-  comment: string;
-  date: string;
-  status: 'pending' | 'approved' | 'archived';
-}
-
-const SEED_REVIEWS: ReviewItem[] = [
-  {
-    id: 'rev-01',
-    patron: 'Ananya Deshmukh (Verified Buyer)',
-    product: 'Vintage Pearl Beaded Evening Bag',
-    rating: 5,
-    comment: 'The beadwork is breathtaking. You can genuinely feel the hours of patient human craft in the tight, uniform weave.',
-    date: '2026-11-10',
-    status: 'pending',
-  },
-  {
-    id: 'rev-02',
-    patron: 'Meera Singhania (Verified Buyer)',
-    product: 'Signature Pearl Beaded Vanity Box',
-    rating: 5,
-    comment: 'Sits like a sculpted treasure on my dresser. The 90-degree corners are so rigid and well tensioned.',
-    date: '2026-11-09',
-    status: 'pending',
-  },
-  {
-    id: 'rev-03',
-    patron: 'Kavita Chawla (Verified Buyer)',
-    product: 'Colorful Beaded AirPod Case',
-    rating: 5,
-    comment: 'A whimsical jewel in my handbag! The snaps hold tight and the micro-beads sparkle wonderfully in natural light.',
-    date: '2026-11-08',
-    status: 'approved',
-  },
-  {
-    id: 'rev-04',
-    patron: 'Radhika Kothari (Verified Buyer)',
-    product: 'Radiant Crystal Beaded Tealight Lantern',
-    rating: 5,
-    comment: 'Casts the most sublime geometric amber shadows across our dinner table. A true heritage conversation starter.',
-    date: '2026-11-07',
-    status: 'approved',
-  },
-];
 
 export default function CatalogueView() {
   const { can, activeSubPage, setActiveSubPage, logAction, showModal } = useAdminStore();
@@ -107,7 +66,7 @@ export default function CatalogueView() {
   // State
   const [products, setProducts] = useState<Product[]>(PRODUCTS);
   const [collections, setCollections] = useState<Collection[]>(COLLECTIONS);
-  const [reviews, setReviews] = useState<ReviewItem[]>(SEED_REVIEWS);
+  const [reviews, setReviews] = useState<ReviewItem[]>(DEFAULT_REVIEWS);
 
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -153,12 +112,21 @@ export default function CatalogueView() {
     isFeatured: false,
     isNewArrival: true,
     variants: [] as ProductVariant[],
+    artisanTitle: 'Made by Hand: Variation is Part of the Charm',
+    artisanNote: 'Every Kalajay object is hand-strung by our independent women makers. Subtle nuances in bead tension, facet reflections, and minor dimensions are organic signatures of authentic human artistry.',
+    origin: 'Hand-crafted loom stringing; studio curation & dispatch.',
+    dimensionsNote: 'Cradles fine rings, heirloom pendants, vanity cosmetics, or everyday accessories.',
+    careNote: 'Avoid submerging in boiling water. Store inside the complimentary cotton dust bag.',
+    shippingPolicy: 'Complimentary Pan-India shipping for all orders above ₹599.',
+    transitGuarantee: '48-Hour Transit Guarantee: Immediate complimentary replacement for any transit damage.',
+    dispatchTimeline: 'Standard handcrafted dispatch within 3–5 business days.',
+    bulkEnquiryNote: 'Favours & corporate gifting (25+ units)',
   };
   const [newProduct, setNewProduct] = useState(INITIAL_NEW_PRODUCT);
 
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
-  // Sync products and collections from Cloud Firestore on mount
+  // Sync products, collections, and reviews on mount
   React.useEffect(() => {
     getFirestoreProducts().then((liveProds) => {
       if (liveProds && liveProds.length > 0) {
@@ -175,6 +143,15 @@ export default function CatalogueView() {
         setCollections(combined);
       }
     }).catch(() => {});
+
+    fetch('/api/reviews?all=true')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.reviews && Array.isArray(data.reviews)) {
+          setReviews(data.reviews);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const uploadImageFile = async (file: File): Promise<string | null> => {
@@ -359,6 +336,15 @@ export default function CatalogueView() {
       status: newProduct.inStock ? 'active' : 'inactive',
       isActive: newProduct.inStock,
       active: newProduct.inStock,
+      artisanTitle: newProduct.artisanTitle,
+      artisanNote: newProduct.artisanNote,
+      origin: newProduct.origin,
+      dimensionsNote: newProduct.dimensionsNote,
+      careNote: newProduct.careNote,
+      shippingPolicy: newProduct.shippingPolicy,
+      transitGuarantee: newProduct.transitGuarantee,
+      dispatchTimeline: newProduct.dispatchTimeline,
+      bulkEnquiryNote: newProduct.bulkEnquiryNote,
     };
 
     setProducts(prev => [productItem, ...prev]);
@@ -417,8 +403,17 @@ export default function CatalogueView() {
     showToast(`Saved updates for Collection "${editingCollection.name}".`);
   };
 
-  const handleReviewStatus = (reviewId: string, status: 'approved' | 'archived') => {
+  const handleReviewStatus = async (reviewId: string, status: 'approved' | 'archived') => {
     setReviews(prev => prev.map(r => (r.id === reviewId ? { ...r, status } : r)));
+    try {
+      await fetch('/api/reviews', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: reviewId, status }),
+      });
+    } catch (e) {
+      console.error('Failed to update review status in API', e);
+    }
     logAction('MODERATE_REVIEW', 'catalogue', `Set review ${reviewId} to ${status}`);
     showToast(`Review marked as ${status}.`);
   };
@@ -732,6 +727,11 @@ export default function CatalogueView() {
                   <span className="text-[11px] text-[#9E5430] font-medium block">
                     Product: {r.product}
                   </span>
+                  {r.headline && (
+                    <strong className="text-xs font-serif text-[#372921] block">
+                      &ldquo;{r.headline}&rdquo;
+                    </strong>
+                  )}
                   <p className="text-xs text-[#76695F] italic font-serif leading-relaxed">
                     &ldquo;{r.comment}&rdquo;
                   </p>
@@ -1311,44 +1311,192 @@ export default function CatalogueView() {
               {/* TAB 5: CRAFT SPECS */}
               {addModalTab === 'specs' && (
                 <div className="space-y-4 animate-fade-in">
-                  <div>
-                    <label className="block text-xs font-semibold text-[#372921] mb-1">
-                      Materials &amp; Composition
-                    </label>
-                    <input
-                      type="text"
-                      value={newProduct.materials}
-                      onChange={e => setNewProduct(prev => ({ ...prev, materials: e.target.value }))}
-                      className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
-                      placeholder="e.g. Japanese Miyuki glass beads, 24K gold-plated lock, raw silk lining"
-                    />
-                    <p className="text-[10.5px] text-[#76695F] mt-1">Separate materials with commas.</p>
+                  <div className="p-3 bg-[#9E5430]/5 border border-[#9E5430]/20 rounded-xl text-xs text-[#76695F] leading-relaxed">
+                    <strong className="text-[#372921] block mb-0.5">100% Dynamic Storefront Control</strong>
+                    Configure every accordian specification, handmade nuance note, care instructions, and dispatch policy rendered on the live product detail page.
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-[#372921] mb-1">
-                      Dimensions &amp; Sizing
-                    </label>
-                    <input
-                      type="text"
-                      value={newProduct.dimensions}
-                      onChange={e => setNewProduct(prev => ({ ...prev, dimensions: e.target.value }))}
-                      className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
-                      placeholder="e.g. 18 cm (L) × 12 cm (H) × 6 cm (W); 55 cm detachable chain"
-                    />
+                  {/* Section 1: Materials & Dimensions */}
+                  <div className="space-y-3 pt-1">
+                    <h4 className="text-[11px] uppercase tracking-wider font-bold text-[#9E5430]">
+                      1. Dimensions, Materials &amp; Origin
+                    </h4>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#372921] mb-1">
+                        Materials &amp; Composition
+                      </label>
+                      <input
+                        type="text"
+                        value={newProduct.materials}
+                        onChange={e => setNewProduct(prev => ({ ...prev, materials: e.target.value }))}
+                        className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                        placeholder="e.g. Japanese Miyuki glass beads, 24K gold-plated lock, raw silk lining"
+                      />
+                      <p className="text-[10.5px] text-[#76695F] mt-1">Separate materials with commas.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-[#372921] mb-1">
+                          Exact Dimensions &amp; Sizing
+                        </label>
+                        <input
+                          type="text"
+                          value={newProduct.dimensions}
+                          onChange={e => setNewProduct(prev => ({ ...prev, dimensions: e.target.value }))}
+                          className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                          placeholder="e.g. 18 cm (L) × 12 cm (H) × 6 cm (W)"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-[#372921] mb-1">
+                          Capacity &amp; Sizing Usage Note
+                        </label>
+                        <input
+                          type="text"
+                          value={newProduct.dimensionsNote}
+                          onChange={e => setNewProduct(prev => ({ ...prev, dimensionsNote: e.target.value }))}
+                          className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                          placeholder="e.g. Cradles fine rings, heirloom pendants, vanity cosmetics"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-[#372921] mb-1">
+                        Craft House Origin &amp; Assembly
+                      </label>
+                      <input
+                        type="text"
+                        value={newProduct.origin}
+                        onChange={e => setNewProduct(prev => ({ ...prev, origin: e.target.value }))}
+                        className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                        placeholder="e.g. Hand-crafted loom stringing; studio curation & dispatch."
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-[#372921] mb-1">
-                      Artisanal Care &amp; Preservation Instructions
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={newProduct.care}
-                      onChange={e => setNewProduct(prev => ({ ...prev, care: e.target.value }))}
-                      className="w-full bg-white border border-[#DED3C5] rounded-xl p-3 text-xs text-[#372921] leading-relaxed focus:outline-none focus:border-[#9E5430]"
-                      placeholder="e.g. Store in provided raw silk dust bag. Avoid water, perfume, and abrasive friction. Wipe gently with dry microfiber cloth."
-                    />
+                  {/* Section 2: Care & Longevity */}
+                  <div className="space-y-3 pt-3 border-t border-[#EAE2D8]">
+                    <h4 className="text-[11px] uppercase tracking-wider font-bold text-[#9E5430]">
+                      2. Heirloom Care &amp; Longevity
+                    </h4>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#372921] mb-1">
+                        Artisanal Care Instructions
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={newProduct.care}
+                        onChange={e => setNewProduct(prev => ({ ...prev, care: e.target.value }))}
+                        className="w-full bg-white border border-[#DED3C5] rounded-xl p-2.5 text-xs text-[#372921] leading-relaxed focus:outline-none focus:border-[#9E5430]"
+                        placeholder="e.g. Store in provided raw silk dust bag. Avoid water, perfume, and abrasive friction."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-[#372921] mb-1">
+                        Care &amp; Storage Longevity Note
+                      </label>
+                      <input
+                        type="text"
+                        value={newProduct.careNote}
+                        onChange={e => setNewProduct(prev => ({ ...prev, careNote: e.target.value }))}
+                        className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                        placeholder="e.g. Avoid submerging in boiling water. Store inside the complimentary cotton dust bag."
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 3: Artisan Nuance & Gifting */}
+                  <div className="space-y-3 pt-3 border-t border-[#EAE2D8]">
+                    <h4 className="text-[11px] uppercase tracking-wider font-bold text-[#9E5430]">
+                      3. Artisan Narrative &amp; Handcrafted Disclaimer
+                    </h4>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#372921] mb-1">
+                        Artisan Nuance Note Heading
+                      </label>
+                      <input
+                        type="text"
+                        value={newProduct.artisanTitle}
+                        onChange={e => setNewProduct(prev => ({ ...prev, artisanTitle: e.target.value }))}
+                        className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                        placeholder="e.g. Made by Hand: Variation is Part of the Charm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-[#372921] mb-1">
+                        Artisan Nuance Narrative
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={newProduct.artisanNote}
+                        onChange={e => setNewProduct(prev => ({ ...prev, artisanNote: e.target.value }))}
+                        className="w-full bg-white border border-[#DED3C5] rounded-xl p-2.5 text-xs text-[#372921] leading-relaxed focus:outline-none focus:border-[#9E5430]"
+                        placeholder="e.g. Every Kalajay object is hand-strung by our independent women makers..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-[#372921] mb-1">
+                        Bulk &amp; Gifting Enquiry Note
+                      </label>
+                      <input
+                        type="text"
+                        value={newProduct.bulkEnquiryNote}
+                        onChange={e => setNewProduct(prev => ({ ...prev, bulkEnquiryNote: e.target.value }))}
+                        className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                        placeholder="e.g. Favours & corporate gifting (25+ units)"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 4: Shipping & Dispatch Policies */}
+                  <div className="space-y-3 pt-3 border-t border-[#EAE2D8]">
+                    <h4 className="text-[11px] uppercase tracking-wider font-bold text-[#9E5430]">
+                      4. Shipping, Dispatch &amp; Guarantee Policies
+                    </h4>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#372921] mb-1">
+                        Pan-India Shipping Policy
+                      </label>
+                      <input
+                        type="text"
+                        value={newProduct.shippingPolicy}
+                        onChange={e => setNewProduct(prev => ({ ...prev, shippingPolicy: e.target.value }))}
+                        className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                        placeholder="e.g. Complimentary Pan-India shipping for all orders above ₹599."
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-[#372921] mb-1">
+                          Transit Guarantee Note
+                        </label>
+                        <input
+                          type="text"
+                          value={newProduct.transitGuarantee}
+                          onChange={e => setNewProduct(prev => ({ ...prev, transitGuarantee: e.target.value }))}
+                          className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                          placeholder="e.g. 48-Hour Transit Guarantee: Immediate complimentary replacement"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-[#372921] mb-1">
+                          Dispatch Lead Time
+                        </label>
+                        <input
+                          type="text"
+                          value={newProduct.dispatchTimeline}
+                          onChange={e => setNewProduct(prev => ({ ...prev, dispatchTimeline: e.target.value }))}
+                          className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                          placeholder="e.g. Standard handcrafted dispatch within 3–5 business days."
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1929,47 +2077,195 @@ export default function CatalogueView() {
               {/* TAB 5: CRAFT SPECS */}
               {editModalTab === 'specs' && (
                 <div className="space-y-4 animate-fade-in">
-                  <div>
-                    <label className="block text-xs font-semibold text-[#372921] mb-1">
-                      Materials &amp; Composition
-                    </label>
-                    <input
-                      type="text"
-                      value={Array.isArray(editingProduct.materials) ? editingProduct.materials.join(', ') : editingProduct.materials}
-                      onChange={e => setEditingProduct(prev => prev ? {
-                        ...prev,
-                        materials: e.target.value.split(',').map(m => m.trim()).filter(Boolean),
-                      } : null)}
-                      className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
-                      placeholder="e.g. Japanese Miyuki glass beads, 24K gold-plated lock, raw silk lining"
-                    />
-                    <p className="text-[10.5px] text-[#76695F] mt-1">Separate materials with commas.</p>
+                  <div className="p-3 bg-[#9E5430]/5 border border-[#9E5430]/20 rounded-xl text-xs text-[#76695F] leading-relaxed">
+                    <strong className="text-[#372921] block mb-0.5">100% Dynamic Storefront Control</strong>
+                    Configure every accordian specification, handmade nuance note, care instructions, and dispatch policy rendered on the live product detail page.
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-[#372921] mb-1">
-                      Dimensions &amp; Sizing
-                    </label>
-                    <input
-                      type="text"
-                      value={editingProduct.dimensions}
-                      onChange={e => setEditingProduct(prev => prev ? { ...prev, dimensions: e.target.value } : null)}
-                      className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
-                      placeholder="e.g. 18 cm (L) × 12 cm (H) × 6 cm (W); 55 cm detachable chain"
-                    />
+                  {/* Section 1: Materials & Dimensions */}
+                  <div className="space-y-3 pt-1">
+                    <h4 className="text-[11px] uppercase tracking-wider font-bold text-[#9E5430]">
+                      1. Dimensions, Materials &amp; Origin
+                    </h4>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#372921] mb-1">
+                        Materials &amp; Composition
+                      </label>
+                      <input
+                        type="text"
+                        value={Array.isArray(editingProduct.materials) ? editingProduct.materials.join(', ') : (editingProduct.materials || '')}
+                        onChange={e => setEditingProduct(prev => prev ? {
+                          ...prev,
+                          materials: e.target.value.split(',').map(m => m.trim()).filter(Boolean),
+                        } : null)}
+                        className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                        placeholder="e.g. Japanese Miyuki glass beads, 24K gold-plated lock, raw silk lining"
+                      />
+                      <p className="text-[10.5px] text-[#76695F] mt-1">Separate materials with commas.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-[#372921] mb-1">
+                          Exact Dimensions &amp; Sizing
+                        </label>
+                        <input
+                          type="text"
+                          value={editingProduct.dimensions || ''}
+                          onChange={e => setEditingProduct(prev => prev ? { ...prev, dimensions: e.target.value } : null)}
+                          className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                          placeholder="e.g. 18 cm (L) × 12 cm (H) × 6 cm (W)"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-[#372921] mb-1">
+                          Capacity &amp; Sizing Usage Note
+                        </label>
+                        <input
+                          type="text"
+                          value={editingProduct.dimensionsNote || ''}
+                          onChange={e => setEditingProduct(prev => prev ? { ...prev, dimensionsNote: e.target.value } : null)}
+                          className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                          placeholder="e.g. Cradles fine rings, heirloom pendants, vanity cosmetics"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-[#372921] mb-1">
+                        Craft House Origin &amp; Assembly
+                      </label>
+                      <input
+                        type="text"
+                        value={editingProduct.origin || ''}
+                        onChange={e => setEditingProduct(prev => prev ? { ...prev, origin: e.target.value } : null)}
+                        className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                        placeholder="e.g. Hand-crafted loom stringing; studio curation & dispatch."
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-[#372921] mb-1">
-                      Artisanal Care &amp; Preservation Instructions
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={editingProduct.care}
-                      onChange={e => setEditingProduct(prev => prev ? { ...prev, care: e.target.value } : null)}
-                      className="w-full bg-white border border-[#DED3C5] rounded-xl p-3 text-xs text-[#372921] leading-relaxed focus:outline-none focus:border-[#9E5430]"
-                      placeholder="e.g. Store in provided raw silk dust bag. Avoid water, perfume, and abrasive friction. Wipe gently with dry microfiber cloth."
-                    />
+                  {/* Section 2: Care & Longevity */}
+                  <div className="space-y-3 pt-3 border-t border-[#EAE2D8]">
+                    <h4 className="text-[11px] uppercase tracking-wider font-bold text-[#9E5430]">
+                      2. Heirloom Care &amp; Longevity
+                    </h4>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#372921] mb-1">
+                        Artisanal Care Instructions
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={editingProduct.care || ''}
+                        onChange={e => setEditingProduct(prev => prev ? { ...prev, care: e.target.value } : null)}
+                        className="w-full bg-white border border-[#DED3C5] rounded-xl p-2.5 text-xs text-[#372921] leading-relaxed focus:outline-none focus:border-[#9E5430]"
+                        placeholder="e.g. Store in provided raw silk dust bag. Avoid water, perfume, and abrasive friction."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-[#372921] mb-1">
+                        Care &amp; Storage Longevity Note
+                      </label>
+                      <input
+                        type="text"
+                        value={editingProduct.careNote || ''}
+                        onChange={e => setEditingProduct(prev => prev ? { ...prev, careNote: e.target.value } : null)}
+                        className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                        placeholder="e.g. Avoid submerging in boiling water. Store inside the complimentary cotton dust bag."
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 3: Artisan Nuance & Gifting */}
+                  <div className="space-y-3 pt-3 border-t border-[#EAE2D8]">
+                    <h4 className="text-[11px] uppercase tracking-wider font-bold text-[#9E5430]">
+                      3. Artisan Narrative &amp; Handcrafted Disclaimer
+                    </h4>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#372921] mb-1">
+                        Artisan Nuance Note Heading
+                      </label>
+                      <input
+                        type="text"
+                        value={editingProduct.artisanTitle || ''}
+                        onChange={e => setEditingProduct(prev => prev ? { ...prev, artisanTitle: e.target.value } : null)}
+                        className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                        placeholder="e.g. Made by Hand: Variation is Part of the Charm"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-[#372921] mb-1">
+                        Artisan Nuance Narrative
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={editingProduct.artisanNote || ''}
+                        onChange={e => setEditingProduct(prev => prev ? { ...prev, artisanNote: e.target.value } : null)}
+                        className="w-full bg-white border border-[#DED3C5] rounded-xl p-2.5 text-xs text-[#372921] leading-relaxed focus:outline-none focus:border-[#9E5430]"
+                        placeholder="e.g. Every Kalajay object is hand-strung by our independent women makers..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-[#372921] mb-1">
+                        Bulk &amp; Gifting Enquiry Note
+                      </label>
+                      <input
+                        type="text"
+                        value={editingProduct.bulkEnquiryNote || ''}
+                        onChange={e => setEditingProduct(prev => prev ? { ...prev, bulkEnquiryNote: e.target.value } : null)}
+                        className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                        placeholder="e.g. Favours & corporate gifting (25+ units)"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 4: Shipping & Dispatch Policies */}
+                  <div className="space-y-3 pt-3 border-t border-[#EAE2D8]">
+                    <h4 className="text-[11px] uppercase tracking-wider font-bold text-[#9E5430]">
+                      4. Shipping, Dispatch &amp; Guarantee Policies
+                    </h4>
+                    <div>
+                      <label className="block text-xs font-semibold text-[#372921] mb-1">
+                        Pan-India Shipping Policy
+                      </label>
+                      <input
+                        type="text"
+                        value={editingProduct.shippingPolicy || ''}
+                        onChange={e => setEditingProduct(prev => prev ? { ...prev, shippingPolicy: e.target.value } : null)}
+                        className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                        placeholder="e.g. Complimentary Pan-India shipping for all orders above ₹599."
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-[#372921] mb-1">
+                          Transit Guarantee Note
+                        </label>
+                        <input
+                          type="text"
+                          value={editingProduct.transitGuarantee || ''}
+                          onChange={e => setEditingProduct(prev => prev ? { ...prev, transitGuarantee: e.target.value } : null)}
+                          className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                          placeholder="e.g. 48-Hour Transit Guarantee: Immediate complimentary replacement"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-[#372921] mb-1">
+                          Dispatch Lead Time
+                        </label>
+                        <input
+                          type="text"
+                          value={editingProduct.dispatchTimeline || ''}
+                          onChange={e => setEditingProduct(prev => prev ? { ...prev, dispatchTimeline: e.target.value } : null)}
+                          className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                          placeholder="e.g. Standard handcrafted dispatch within 3–5 business days."
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
