@@ -145,7 +145,7 @@ function TrackOrderContent() {
           } catch {}
         }
 
-        let url = `/api/orders/track/?orderId=${encodeURIComponent(clean)}`;
+        let url = `/api/orders?orderId=${encodeURIComponent(clean)}`;
         const effectiveEmail = emailVal || verifyEmail;
         const effectiveExtra = extraVal || verifyExtra;
 

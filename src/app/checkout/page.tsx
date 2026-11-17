@@ -133,7 +133,7 @@ export default function CheckoutPage() {
         headers['Authorization'] = `Bearer ${authToken}`;
       }
 
-      const response = await fetch('/api/orders/create', {
+      const response = await fetch('/api/orders', {
         method: 'POST',
         headers,
         body: JSON.stringify({

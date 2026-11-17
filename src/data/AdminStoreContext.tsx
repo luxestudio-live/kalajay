@@ -389,7 +389,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       try {
         const [rolesRes, usersRes] = await Promise.all([
           adminFetch('/api/admin/roles/').then(r => r.json()).catch(() => null),
-          adminFetch('/api/admin/users/list/', {
+          adminFetch('/api/admin/users?action=list', {
             headers: { 'x-staff-username': currentUser?.username || 'soumya' },
           }).then(r => r.json()).catch(() => null),
         ]);
@@ -521,7 +521,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     try {
       const [rolesRes, usersRes] = await Promise.all([
         adminFetch('/api/admin/roles/').then(r => r.json()).catch(() => null),
-        adminFetch('/api/admin/users/list/', {
+        adminFetch('/api/admin/users?action=list', {
           headers: { 'x-staff-username': currentUser?.username || 'soumya' },
         }).then(r => r.json()).catch(() => null),
       ]);
@@ -650,10 +650,11 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     let provisionalPassword = '';
 
     try {
-      const res = await adminFetch('/api/admin/users/create/', {
+      const res = await adminFetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action: 'create',
           requestingStaffId: 'soumya',
           requestingUsername: 'soumya',
           name: data.name,
@@ -713,10 +714,11 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
 
   const updateAdminUser = async (userId: string, updates: Partial<AdminUser>): Promise<boolean> => {
     try {
-      const res = await adminFetch('/api/admin/users/update/', {
+      const res = await adminFetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action: 'update',
           requestingStaffId: 'soumya',
           requestingUsername: 'soumya',
           targetStaffId: userId,

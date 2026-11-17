@@ -158,7 +158,7 @@ function AdminSecurityGate({
     // 2. Fetch live staff list from backend API
     const fetchStaffDirectory = async () => {
       try {
-        const res = await fetch('/api/admin/users/list/').then(r => r.json());
+        const res = await fetch('/api/admin/users?action=list').then(r => r.json());
         if (res.success && Array.isArray(res.users)) {
           const list = res.users.map((u: any) => ({
             id: u.staffId || u.id,
@@ -204,10 +204,10 @@ function AdminSecurityGate({
     let serverRequiresReset = true;
 
     try {
-      const resolveRes = await fetch('/api/admin/auth/resolve/', {
+      const resolveRes = await fetch('/api/admin/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: cleanInput, password }),
+        body: JSON.stringify({ username: cleanInput, password, action: 'resolve' }),
       });
       const resolveData = await resolveRes.json();
 
@@ -298,10 +298,10 @@ function AdminSecurityGate({
 
     setIsSendingReset(true);
     try {
-      const res = await fetch('/api/admin/auth/forgot-password/', {
+      const res = await fetch('/api/admin/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: cleanInput }),
+        body: JSON.stringify({ username: cleanInput, action: 'forgot-password' }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -352,10 +352,11 @@ function AdminSecurityGate({
 
       // 2. Synchronize via backend API to clear reset requirements
       try {
-        await adminFetch('/api/admin/users/update/', {
+        await adminFetch('/api/admin/users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            action: 'update',
             requestingStaffId: 'KJ-ADM-001',
             targetStaffId: pendingStaff.id,
             updates: {

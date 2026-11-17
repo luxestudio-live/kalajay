@@ -108,7 +108,7 @@ export default function AdminUsersView() {
     const requester = currentUser?.username || currentUser?.staffId || currentUser?.id || 'soumya';
     try {
       const res = await adminFetch(
-        `/api/admin/users/check-username/?username=${encodeURIComponent(clean)}&requestingUsername=${encodeURIComponent(requester)}`,
+        `/api/admin/users?action=check-username&username=${encodeURIComponent(clean)}&requestingUsername=${encodeURIComponent(requester)}`,
         {
           headers: {
             'x-staff-username': requester,
