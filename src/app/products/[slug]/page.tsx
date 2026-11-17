@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import { PRODUCTS } from '@/data/catalogue';
 import ProductDetailClient from './ProductDetailClient';
 
+export const dynamicParams = false;
+
 export function generateStaticParams() {
   return PRODUCTS.map((p) => ({
     slug: p.slug,

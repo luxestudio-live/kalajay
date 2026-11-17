@@ -87,7 +87,7 @@ export default function CustomOrdersView() {
     updateCustomRequestStatus(req.id, 'in_loom', req.finalQuotedPrice);
 
     // Atomic server-side write combining work order creation & custom enquiry status
-    adminFetch('/api/admin/work-orders', {
+    adminFetch('/api/admin/production', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

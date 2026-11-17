@@ -229,10 +229,10 @@ export default function CustomersView() {
       onConfirm: async () => {
         try {
           if (patron.id && !patron.id.startsWith('PAT-')) {
-            const res = await adminFetch('/api/admin/customers/anonymize', {
+            const res = await adminFetch('/api/admin/operations', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ patronId: patron.id }),
+              body: JSON.stringify({ action: 'customer_anonymize', patronId: patron.id }),
             });
             const data = await res.json();
             if (!res.ok) {

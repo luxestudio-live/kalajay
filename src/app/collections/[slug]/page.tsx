@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import { COLLECTIONS } from '@/data/catalogue';
 import CollectionDetailClient from './CollectionDetailClient';
 
+export const dynamicParams = false;
+
 export function generateStaticParams() {
   return COLLECTIONS.map((c) => ({
     slug: c.slug,

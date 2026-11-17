@@ -388,7 +388,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     const hydrateRbac = async () => {
       try {
         const [rolesRes, usersRes] = await Promise.all([
-          adminFetch('/api/admin/roles/').then(r => r.json()).catch(() => null),
+          adminFetch('/api/admin/operations').then(r => r.json()).catch(() => null),
           adminFetch('/api/admin/users?action=list', {
             headers: { 'x-staff-username': currentUser?.username || 'soumya' },
           }).then(r => r.json()).catch(() => null),
@@ -520,7 +520,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
   const refreshRbacData = async () => {
     try {
       const [rolesRes, usersRes] = await Promise.all([
-        adminFetch('/api/admin/roles/').then(r => r.json()).catch(() => null),
+        adminFetch('/api/admin/operations').then(r => r.json()).catch(() => null),
         adminFetch('/api/admin/users?action=list', {
           headers: { 'x-staff-username': currentUser?.username || 'soumya' },
         }).then(r => r.json()).catch(() => null),
@@ -540,10 +540,11 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
   const createRole = async (roleData: Omit<AdminRole, 'id' | 'created' | 'updated'>): Promise<AdminRole> => {
     let createdRole: AdminRole;
     try {
-      const res = await adminFetch('/api/admin/roles/', {
+      const res = await adminFetch('/api/admin/operations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action: 'save_role',
           requestingStaffId: 'KJ-ADM-001',
           role: roleData,
         }),
@@ -583,10 +584,11 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     }
 
     try {
-      await adminFetch('/api/admin/roles/', {
+      await adminFetch('/api/admin/operations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action: 'save_role',
           requestingStaffId: 'KJ-ADM-001',
           role: { id, ...updates },
         }),
@@ -618,7 +620,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     }
 
     try {
-      const res = await adminFetch(`/api/admin/roles/?roleId=${encodeURIComponent(id)}&requestingStaffId=KJ-ADM-001`, {
+      const res = await adminFetch(`/api/admin/operations?roleId=${encodeURIComponent(id)}&requestingStaffId=KJ-ADM-001`, {
         method: 'DELETE',
       });
       const data = await res.json();
@@ -934,10 +936,10 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
 
     // Call server guard to ensure SKU is not committed to active pending orders
     try {
-      const res = await adminFetch('/api/admin/inventory/delete', {
+      const res = await adminFetch('/api/admin/operations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sku: targetSku }),
+        body: JSON.stringify({ action: 'inventory_delete', sku: targetSku }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -988,7 +990,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     saveState({ workOrders: next });
     if (updatedWo) {
       saveFirestoreWorkOrder(updatedWo).catch(() => {});
-      adminFetch('/api/admin/work-orders', {
+      adminFetch('/api/admin/production', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ workOrder: updatedWo, stage, qcPassed }),
@@ -1010,7 +1012,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     setWorkOrders(next);
     saveState({ workOrders: next });
     saveFirestoreWorkOrder(newWo).catch(() => {});
-    adminFetch('/api/admin/work-orders', {
+    adminFetch('/api/admin/production', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ workOrder: newWo }),
@@ -1292,9 +1294,9 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       orders: nextOrders,
     });
 
-    adminFetch('/api/admin/offline-orders', {
+    adminFetch('/api/admin/orders', {
       method: 'POST',
-      body: JSON.stringify({ orderData: newOrder }),
+      body: JSON.stringify({ action: 'offline', orderData: newOrder }),
     }).catch(() => {
       saveFirestoreOfflineOrder(newOrder).catch(() => {});
       createFirestoreOrder(companionAdminOrder).catch(() => {});

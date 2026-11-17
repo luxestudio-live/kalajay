@@ -153,7 +153,7 @@ export default function ProductionView() {
   // Load custom stages from shared Firestore backend with local fallback
   useEffect(() => {
     let isMounted = true;
-    adminFetch('/api/admin/production/stages')
+    adminFetch('/api/admin/production')
       .then(res => res.json())
       .then(data => {
         if (data?.success && Array.isArray(data.stages) && data.stages.length > 0 && isMounted) {
@@ -189,10 +189,10 @@ export default function ProductionView() {
     try {
       localStorage.setItem(STAGES_STORAGE_KEY, JSON.stringify(updated));
     } catch {}
-    adminFetch('/api/admin/production/stages', {
+    adminFetch('/api/admin/production', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stages: updated }),
+      body: JSON.stringify({ action: 'stages', stages: updated }),
     }).catch(() => {});
   };
 

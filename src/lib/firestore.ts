@@ -240,10 +240,11 @@ export async function updateFirestoreOrderStatus(
 ): Promise<void> {
   try {
     if (typeof window !== 'undefined') {
-      const res = await adminFetch('/api/admin/orders/update', {
+      const res = await adminFetch('/api/admin/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          action: 'update',
           orderId,
           fulfillmentStatus: updates.fulfillmentStatus,
           paymentStatus: updates.paymentStatus,
