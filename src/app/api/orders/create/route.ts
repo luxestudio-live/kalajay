@@ -229,10 +229,27 @@ export async function POST(request: Request) {
     }
 
     // 4. Server-Authoritative Shipping & Inclusive GST Calculation (Phase 7)
+    // Sourced dynamically from authoritative Firestore /settings/store if configured by Admin
+    let freeShippingThreshold = BRAND_CONFIG.shipping?.freeThreshold ?? 599;
+    let standardShippingRate = BRAND_CONFIG.shipping?.standardRate ?? 79;
+    try {
+      const adminDb = getAdminFirestore();
+      if (adminDb) {
+        const storeSettingsSnap = await adminDb.collection('settings').doc('store').get();
+        if (storeSettingsSnap.exists) {
+          const storeData = storeSettingsSnap.data();
+          if (storeData?.shippingThreshold != null && !isNaN(Number(storeData.shippingThreshold))) {
+            freeShippingThreshold = Number(storeData.shippingThreshold);
+          }
+          if (storeData?.standardFreight != null && !isNaN(Number(storeData.standardFreight))) {
+            standardShippingRate = Number(storeData.standardFreight);
+          }
+        }
+      }
+    } catch {}
+
     // Displayed retail prices (MRP) are inclusive of all taxes under Indian GST law.
     const discountedSubtotal = Math.max(0, calculatedSubtotal - calculatedDiscount);
-    const freeShippingThreshold = BRAND_CONFIG.shipping?.freeThreshold ?? 599;
-    const standardShippingRate = BRAND_CONFIG.shipping?.standardRate ?? 79;
     const calculatedShipping = discountedSubtotal >= freeShippingThreshold ? 0 : standardShippingRate;
     
     // Tax Extraction (Inclusive GST): Sourced from product-specific taxRate or central BRAND_CONFIG.tax.gstRate (3%)

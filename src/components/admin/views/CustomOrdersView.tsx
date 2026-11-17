@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
 import { CustomOrderRequest } from '@/data/adminTypes';
+import { adminFetch } from '@/lib/adminAuthClient';
 
 export default function CustomOrdersView() {
   const { customRequests, updateCustomRequestStatus, createWorkOrder, logAction } = useAdminStore();
@@ -67,22 +68,34 @@ export default function CustomOrdersView() {
   };
 
   const handleScheduleLoomRun = (req: CustomOrderRequest) => {
-    createWorkOrder({
+    const bespokeWorkOrder = {
       productName: `Bespoke ${req.silhouette} (${req.monogram ? 'Monogram ' + req.monogram : 'Custom'})`,
       sku: `BESPOKE-${req.id.replace('CUST-', '')}`,
       quantity: 1,
       artisanName: 'Renu Devi',
       artisanLocation: 'Bihar Hub · Loom Master',
       loomId: 'LM-BH-00',
-      stage: 'bead_weaving',
+      stage: 'bead_weaving' as const,
       targetDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
-      priority: 'bridal_express',
+      priority: 'bridal_express' as const,
       qcPassed: false,
       materialAllocated: true,
       notes: `Bespoke commission for ${req.customerName}. Occasion: ${req.occasion}. Palette: ${req.palette}. Monogram: ${req.monogram}. Specifics: ${req.notes}`,
-    });
+    };
 
+    createWorkOrder(bespokeWorkOrder);
     updateCustomRequestStatus(req.id, 'in_loom', req.finalQuotedPrice);
+
+    // Atomic server-side write combining work order creation & custom enquiry status
+    adminFetch('/api/admin/work-orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customRequestId: req.id,
+        workOrder: bespokeWorkOrder,
+      }),
+    }).catch(() => {});
+
     logAction('BESPOKE_LOOM_SCHEDULED', 'custom-orders', `Scheduled bespoke loom run for ${req.id} with Master Artisan Renu Devi`);
     showToast(`Loom scheduled: Allocated Master Loom in Bihar for bespoke order #${req.id}`);
   };

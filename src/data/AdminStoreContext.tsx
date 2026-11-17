@@ -926,18 +926,40 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     logAction('UPDATE_INVENTORY_ITEM', 'inventory', `Updated inventory SKU specifications: ${id}`);
   };
 
-  const deleteInventoryItem = (id: string) => {
+  const deleteInventoryItem = async (id: string) => {
     const target = inventory.find(i => i.id === id);
+    const targetSku = target?.sku || id;
+
+    // Call server guard to ensure SKU is not committed to active pending orders
+    try {
+      const res = await adminFetch('/api/admin/inventory/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sku: targetSku }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showModal({
+          title: 'Cannot Delete Inventory SKU',
+          subtitle: 'Active Order Commitment Guard',
+          message: data.error || `SKU ${targetSku} is currently committed to active customer orders.`,
+          icon: 'warning',
+        });
+        return;
+      }
+    } catch {
+      if (target?.sku) {
+        deleteFirestoreInventoryItem(target.sku).catch(() => {});
+      }
+    }
+
     const next = inventory.filter(item => item.id !== id);
     setInventory(next);
     saveState({ inventory: next });
-    if (target?.sku) {
-      deleteFirestoreInventoryItem(target.sku).catch(() => {});
-    }
     logAction(
       'DELETE_INVENTORY_ITEM',
       'inventory',
-      `Archived inventory item: ${target?.sku || id} (${target?.name || ''})`
+      `Archived inventory item: ${targetSku} (${target?.name || ''})`
     );
   };
 
@@ -964,6 +986,11 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     saveState({ workOrders: next });
     if (updatedWo) {
       saveFirestoreWorkOrder(updatedWo).catch(() => {});
+      adminFetch('/api/admin/work-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workOrder: updatedWo, stage, qcPassed }),
+      }).catch(() => {});
     }
     logAction(
       'PRODUCTION_STAGE_TRANSITION',
@@ -981,6 +1008,11 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     setWorkOrders(next);
     saveState({ workOrders: next });
     saveFirestoreWorkOrder(newWo).catch(() => {});
+    adminFetch('/api/admin/work-orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workOrder: newWo }),
+    }).catch(() => {});
     logAction('CREATE_WORK_ORDER', 'production', `Issued new work order for ${newWo.productName}`);
   };
 
@@ -1258,8 +1290,13 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       orders: nextOrders,
     });
 
-    saveFirestoreOfflineOrder(newOrder).catch(() => {});
-    createFirestoreOrder(companionAdminOrder).catch(() => {});
+    adminFetch('/api/admin/offline-orders', {
+      method: 'POST',
+      body: JSON.stringify({ orderData: newOrder }),
+    }).catch(() => {
+      saveFirestoreOfflineOrder(newOrder).catch(() => {});
+      createFirestoreOrder(companionAdminOrder).catch(() => {});
+    });
 
     logAction('RECORD_OFFLINE_ORDER', 'finance', `Recorded offline sale ${newOrder.invoiceNumber} (₹${newOrder.total}) via ${newOrder.channelLabel}`);
     return newOrder;

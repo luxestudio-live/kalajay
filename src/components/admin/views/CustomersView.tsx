@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
 import { getAllFirestoreUsers, updatePatronProfile } from '@/lib/firestore';
+import { adminFetch } from '@/lib/adminAuthClient';
 
 interface PatronProfile {
   id: string;
@@ -228,13 +229,20 @@ export default function CustomersView() {
       onConfirm: async () => {
         try {
           if (patron.id && !patron.id.startsWith('PAT-')) {
-            await updatePatronProfile(patron.id, {
-              name: 'Anonymized Patron (DPDP Request)',
-              email: 'redacted@privacy.kalajay.in',
-              phone: '',
+            const res = await adminFetch('/api/admin/customers/anonymize', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ patronId: patron.id }),
             });
+            const data = await res.json();
+            if (!res.ok) {
+              showToast(data.error || 'Failed to anonymize patron per guardrail.');
+              return;
+            }
           }
-        } catch {}
+        } catch {
+          // fallback
+        }
         setPatrons(prev =>
           prev.map(p =>
             p.id === patron.id

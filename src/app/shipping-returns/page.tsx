@@ -1,12 +1,32 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Truck, ShieldCheck, Clock, CheckCircle2, XCircle, RefreshCw, MessageCircle, AlertCircle, HelpCircle, ChevronDown, Package } from 'lucide-react';
 import { BRAND_CONFIG } from '@/data/catalogue';
+import { getFirestoreCmsDoc } from '@/lib/firestore';
 
 export default function ShippingReturnsPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [policies, setPolicies] = useState({
+    shippingThreshold: 599,
+    dispatchHours: 48,
+    returnDays: 7,
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    getFirestoreCmsDoc<{ shippingThreshold?: number; dispatchHours?: number; returnDays?: number }>('policies').then((res) => {
+      if (res && isMounted) {
+        setPolicies(prev => ({
+          shippingThreshold: res.shippingThreshold ?? prev.shippingThreshold,
+          dispatchHours: res.dispatchHours ?? prev.dispatchHours,
+          returnDays: res.returnDays ?? prev.returnDays,
+        }));
+      }
+    });
+    return () => { isMounted = false; };
+  }, []);
 
   const faqs = [
     {
@@ -45,9 +65,9 @@ export default function ShippingReturnsPage() {
           </p>
 
           <div className="pt-2 flex items-center justify-center gap-4 text-xs font-mono text-ink-light uppercase tracking-editorial">
-            <span>Free Pan-India Delivery Above ₹599</span>
+            <span>Free Pan-India Delivery Above ₹{policies.shippingThreshold}</span>
             <span className="w-1.5 h-1.5 rounded-full bg-gold" />
-            <span>48-Hour Transit Guarantee</span>
+            <span>{policies.dispatchHours}-Hour Transit Guarantee</span>
           </div>
         </div>
       </section>

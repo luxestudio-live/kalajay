@@ -33,6 +33,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
+import { adminFetch } from '@/lib/adminAuthClient';
 import { WorkOrder } from '@/data/adminTypes';
 import { PRODUCTS } from '@/data/catalogue';
 
@@ -149,28 +150,50 @@ export default function ProductionView() {
   const [stages, setStages] = useState<ProductionStageDef[]>(DEFAULT_STAGES);
   const [editingStage, setEditingStage] = useState<ProductionStageDef | null>(null);
 
-  // Load custom stages from localStorage
+  // Load custom stages from shared Firestore backend with local fallback
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STAGES_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setStages(parsed);
+    let isMounted = true;
+    adminFetch('/api/admin/production/stages')
+      .then(res => res.json())
+      .then(data => {
+        if (data?.success && Array.isArray(data.stages) && data.stages.length > 0 && isMounted) {
+          setStages(data.stages);
+        } else {
+          try {
+            const stored = localStorage.getItem(STAGES_STORAGE_KEY);
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              if (Array.isArray(parsed) && parsed.length > 0 && isMounted) {
+                setStages(parsed);
+              }
+            }
+          } catch {}
         }
-      }
-    } catch {
-      // fallback
-    }
+      })
+      .catch(() => {
+        try {
+          const stored = localStorage.getItem(STAGES_STORAGE_KEY);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length > 0 && isMounted) {
+              setStages(parsed);
+            }
+          }
+        } catch {}
+      });
+    return () => { isMounted = false; };
   }, []);
 
   const saveStages = (updated: ProductionStageDef[]) => {
     setStages(updated);
     try {
       localStorage.setItem(STAGES_STORAGE_KEY, JSON.stringify(updated));
-    } catch {
-      // ignore
-    }
+    } catch {}
+    adminFetch('/api/admin/production/stages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stages: updated }),
+    }).catch(() => {});
   };
 
   // Toast

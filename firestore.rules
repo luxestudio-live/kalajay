@@ -272,6 +272,72 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------
+    // 11a. Atelier Work Orders (/work_orders/{workOrderId})
+    // Read: Verified Administrators & Atelier Staff.
+    // Write: Production Head, Inventory Manager, Store Manager, Root Admin.
+    // -------------------------------------------------------------
+    match /work_orders/{workOrderId} {
+      allow read: if isAdmin();
+      allow write: if isInventoryStaffOrAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 11b. Offline Orders (/offline_orders/{orderId})
+    // Read: Verified Administrators.
+    // Write: Store Managers & Root Admin (and atomic server endpoint).
+    // -------------------------------------------------------------
+    match /offline_orders/{orderId} {
+      allow read: if isAdmin();
+      allow write: if isStoreManagerOrSuperAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 11c. Tax Slabs & HSN Registry (/tax_slabs/{slabId})
+    // Read: Verified Administrators.
+    // Write: Store Managers & Root Admin.
+    // -------------------------------------------------------------
+    match /tax_slabs/{slabId} {
+      allow read: if isAdmin();
+      allow write: if isStoreManagerOrSuperAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 11d. Store & Operational Settings (/settings/{settingId})
+    // Read: Public (for freight thresholds, support details, policies).
+    // Write: Store Managers & Root Admin.
+    // -------------------------------------------------------------
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isStoreManagerOrSuperAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 11e. Newsletter Subscribers (/subscribers/{subId})
+    // Create: Public (patron email opt-in).
+    // Read/Update/Delete: Store Managers & Root Admin.
+    // -------------------------------------------------------------
+    match /subscribers/{subId} {
+      allow create: if request.resource.data.email is string && request.resource.data.email.size() > 0;
+      allow read, update, delete: if isStoreManagerOrSuperAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // 11f. Patron Product Reviews (/reviews/{reviewId})
+    // Read: Public can read approved reviews; Admins can read all.
+    // Create: Public can submit review (must be pending moderation).
+    // Update/Delete: Moderated exclusively by Administrators.
+    // -------------------------------------------------------------
+    match /reviews/{reviewId} {
+      allow read: if (resource != null && resource.data.status == 'approved') || isAdmin();
+      allow create: if request.resource.data.rating is number &&
+                       request.resource.data.rating >= 1 && request.resource.data.rating <= 5 &&
+                       request.resource.data.productId is string &&
+                       request.resource.data.authorName is string &&
+                       request.resource.data.status == 'pending';
+      allow update, delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
     // 12. Admin Users ACL (/admin_users/{adminId})
     // Read: Verified Active Administrators only (customers and deactivated staff blocked).
     // Write: Strictly restricted to Root Super Admin (prevents staff privilege escalation).

@@ -1,13 +1,33 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ChevronDown, ChevronUp, MessageCircle, HelpCircle, Sparkles } from 'lucide-react';
 import { FAQS } from '@/data/extras';
 import { BRAND_CONFIG } from '@/data/catalogue';
+import { getFirestoreCmsDoc } from '@/lib/firestore';
 
 export default function FAQPage() {
   const [openIndices, setOpenIndices] = useState<number[]>([0, 1]);
+  const [faqsList, setFaqsList] = useState(FAQS);
+
+  useEffect(() => {
+    let isMounted = true;
+    getFirestoreCmsDoc<{ items: any[] }>('faqs').then((res) => {
+      if (res?.items && Array.isArray(res.items) && res.items.length > 0 && isMounted) {
+        setFaqsList(
+          res.items.map((f: any) => ({
+            q: f.question || f.q,
+            a: f.answer || f.a,
+            category: f.category || 'General',
+          }))
+        );
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const toggleFAQ = (index: number) => {
     setOpenIndices(prev =>
@@ -34,7 +54,7 @@ export default function FAQPage() {
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-16">
         <div className="space-y-4">
-          {FAQS.map((faq, idx) => {
+          {faqsList.map((faq, idx) => {
             const isOpen = openIndices.includes(idx);
             return (
               <div
