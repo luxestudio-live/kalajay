@@ -72,9 +72,9 @@ export default function AccountClient() {
     name: user?.name || '',
     email: user?.email || '',
     phone: user?.phone || '',
-    birthday: user?.preferences.birthday || '',
-    anniversary: user?.preferences.anniversary || '',
-    preferredPalette: user?.preferences.preferredPalette || 'Champagne Gold & Pearl',
+    birthday: user?.preferences?.birthday || '',
+    anniversary: user?.preferences?.anniversary || '',
+    preferredPalette: user?.preferences?.preferredPalette || 'Champagne Gold & Pearl',
   });
   const [profileSavedNotice, setProfileSavedNotice] = useState(false);
 
@@ -113,12 +113,12 @@ export default function AccountClient() {
   useEffect(() => {
     if (user) {
       setProfileForm({
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        birthday: user.preferences.birthday || '',
-        anniversary: user.preferences.anniversary || '',
-        preferredPalette: user.preferences.preferredPalette,
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        birthday: user.preferences?.birthday || '',
+        anniversary: user.preferences?.anniversary || '',
+        preferredPalette: user.preferences?.preferredPalette || 'Champagne Gold & Pearl',
       });
     }
   }, [user]);
@@ -314,6 +314,55 @@ export default function AccountClient() {
     }, 2200);
   };
 
+  if (isLoading) {
+    return (
+      <div className="bg-canvas min-h-screen flex items-center justify-center py-24 selection:bg-champagne selection:text-ink">
+        <div className="text-center space-y-4">
+          <div className="w-10 h-10 border-2 border-rosewood border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="font-serif text-lg text-ink">Opening your Kalajay Portfolio...</p>
+          <p className="text-xs text-ink-muted">Verifying patron security credentials</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="bg-canvas min-h-screen flex items-center justify-center py-24 selection:bg-champagne selection:text-ink">
+        <div className="text-center space-y-5 max-w-md mx-auto px-4 bg-canvas-subtle p-8 rounded-2xl border border-border-subtle shadow-xs">
+          <div className="w-12 h-12 rounded-full bg-champagne flex items-center justify-center mx-auto text-rosewood">
+            <Lock className="w-6 h-6" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="font-serif text-2xl text-ink font-normal">Patron Sign In Required</h2>
+            <p className="text-xs text-ink-muted leading-relaxed font-light">
+              Please authenticate to access your handcrafted jewelry portfolio, artisan dispatch chronicle, and delivery coordinates.
+            </p>
+          </div>
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              href="/login?redirect=/account"
+              className="w-full sm:w-auto px-6 py-2.5 rounded-full bg-ink hover:bg-gold hover:text-ink text-canvas text-xs uppercase tracking-refined font-semibold transition-all shadow-xs inline-flex items-center justify-center gap-2"
+            >
+              <span>Sign In to Portfolio</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+            <Link
+              href="/signup"
+              className="w-full sm:w-auto px-6 py-2.5 rounded-full bg-canvas border border-border-medium hover:border-gold text-ink text-xs uppercase tracking-refined font-medium transition-all inline-flex items-center justify-center"
+            >
+              Register Patron Account
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const userOrders = user.orders || [];
+  const userAddresses = user.addresses || [];
+  const userPreferences = user.preferences || { preferredPalette: 'Champagne Gold & Pearl' };
+
   return (
     <div className="bg-canvas min-h-screen pb-24 selection:bg-champagne selection:text-ink">
       {/* Editorial Member Hero Banner */}
@@ -381,7 +430,7 @@ export default function AccountClient() {
             }`}
           >
             <Package className="w-3.5 h-3.5 text-gold" />
-            <span>Orders & Provenance ({user.orders.length})</span>
+            <span>Orders & Provenance ({userOrders.length})</span>
           </button>
 
           <button
@@ -394,7 +443,7 @@ export default function AccountClient() {
             }`}
           >
             <MapPin className="w-3.5 h-3.5 text-gold" />
-            <span>Saved Addresses ({user.addresses.length})</span>
+            <span>Saved Addresses ({userAddresses.length})</span>
           </button>
 
           <button
@@ -434,9 +483,9 @@ export default function AccountClient() {
                   Treasures Owned
                 </span>
                 <div className="font-serif text-3xl text-ink font-semibold mt-1">
-                  {user.orders.reduce((sum, ord) => sum + ord.items.reduce((acc, it) => acc + it.quantity, 0), 0)}
+                  {userOrders.reduce((sum, ord) => sum + (ord.items || []).reduce((acc, it) => acc + it.quantity, 0), 0)}
                 </div>
-                <span className="text-[11px] text-gold-dark mt-1 block">Across {user.orders.length} orders</span>
+                <span className="text-[11px] text-gold-dark mt-1 block">Across {userOrders.length} orders</span>
               </div>
 
               <div className="bg-canvas-subtle p-5 rounded-2xl border border-border-gold shadow-2xs">
@@ -444,7 +493,7 @@ export default function AccountClient() {
                   Craft House Points
                 </span>
                 <div className="font-serif text-3xl text-rosewood font-semibold mt-1">
-                  ₹{user.rewardPoints}
+                  ₹{user.rewardPoints ?? 0}
                 </div>
                 <span className="text-[11px] text-ink-muted mt-1 block">Usable at checkout</span>
               </div>
@@ -470,12 +519,12 @@ export default function AccountClient() {
                   <Award className="w-4 h-4 text-gold" />
                   <span>Circle Patron</span>
                 </div>
-                <span className="text-[11px] text-ink-muted mt-1 block">Since {user.memberSince}</span>
+                <span className="text-[11px] text-ink-muted mt-1 block">Since {user.memberSince || '2026'}</span>
               </div>
             </div>
 
             {/* Active Order Spotlight Banner */}
-            {user.orders.length > 0 && (
+            {userOrders.length > 0 && (
               <div className="bg-gradient-to-r from-canvas-subtle to-canvas rounded-2xl border border-border-gold p-6 sm:p-8 shadow-md">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border-subtle">
                   <div>
@@ -484,21 +533,21 @@ export default function AccountClient() {
                         Live Tracking Spotlight
                       </span>
                       <span className="px-2 py-0.5 rounded-full bg-champagne/20 text-ink text-[10px] font-semibold border border-gold/40">
-                        {user.orders[0].status}
+                        {userOrders[0].status}
                       </span>
                     </div>
                     <h3 className="font-serif text-2xl text-ink font-normal mt-1">
-                      Order #{user.orders[0].id}
+                      Order #{userOrders[0].id}
                     </h3>
                     <p className="text-xs text-ink-muted mt-0.5">
-                      Estimated Arrival: <strong className="text-ink">{user.orders[0].estimatedDelivery}</strong>
+                      Estimated Arrival: <strong className="text-ink">{userOrders[0].estimatedDelivery || 'In Transit'}</strong>
                     </p>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => {
-                      setSelectedOrder(user.orders[0]);
+                      setSelectedOrder(userOrders[0]);
                       setActiveTab('orders');
                     }}
                     className="px-5 py-2.5 bg-ink text-canvas hover:bg-gold hover:text-ink rounded-full text-xs uppercase tracking-refined font-semibold transition-all cursor-pointer shadow-xs self-start sm:self-auto"
@@ -511,9 +560,9 @@ export default function AccountClient() {
                   <div className="md:col-span-8 space-y-3">
                     <p className="text-xs text-ink-muted leading-relaxed">
                       <strong className="text-ink font-medium">Artisan Signature: </strong>
-                      &ldquo;{user.orders[0].artisanNote}&rdquo; —{' '}
+                      &ldquo;{userOrders[0].artisanNote}&rdquo; —{' '}
                       <span className="text-gold-dark font-medium">
-                        {user.orders[0].artisanName} ({user.orders[0].artisanLocation})
+                        {userOrders[0].artisanName} ({userOrders[0].artisanLocation})
                       </span>
                     </p>
 
@@ -531,7 +580,7 @@ export default function AccountClient() {
                   </div>
 
                   <div className="md:col-span-4 flex items-center gap-3">
-                    {user.orders[0].items.map((item) => (
+                    {(userOrders[0].items || []).map((item) => (
                       <div
                         key={item.id}
                         className="w-16 h-20 rounded-xl overflow-hidden bg-canvas border border-border-medium shrink-0 shadow-2xs"
@@ -541,10 +590,10 @@ export default function AccountClient() {
                     ))}
                     <div className="text-xs">
                       <span className="font-serif text-sm font-semibold text-ink block">
-                        {user.orders[0].items[0].name}
+                        {userOrders[0].items?.[0]?.name || 'Kalajay Creation'}
                       </span>
                       <span className="text-[11px] text-ink-muted">
-                        {formatINR(user.orders[0].totalAmount)} · {user.orders[0].paymentMethod}
+                        {formatINR(userOrders[0].totalAmount)} · {userOrders[0].paymentMethod}
                       </span>
                     </div>
                   </div>
@@ -613,11 +662,11 @@ export default function AccountClient() {
                 </p>
               </div>
               <span className="text-xs text-ink-muted">
-                Showing <strong className="text-ink">{user.orders?.length || 0}</strong> orders
+                Showing <strong className="text-ink">{userOrders.length}</strong> orders
               </span>
             </div>
 
-            {!user.orders || user.orders.length === 0 ? (
+            {userOrders.length === 0 ? (
               <div className="text-center py-16 bg-canvas-subtle rounded-2xl border border-dashed border-border-medium space-y-4">
                 <div className="w-12 h-12 mx-auto rounded-full bg-champagne/30 text-rosewood flex items-center justify-center">
                   <Package className="w-6 h-6" />
@@ -638,7 +687,7 @@ export default function AccountClient() {
               </div>
             ) : (
               <div className="space-y-6">
-                {user.orders.map((order) => {
+                {userOrders.map((order) => {
                 const isSelected = selectedOrder?.id === order.id;
 
                 return (
@@ -793,8 +842,8 @@ export default function AccountClient() {
                           <div className="text-ink-muted">
                             <span className="font-semibold text-ink block">Shipping to:</span>
                             <span>
-                              {order.deliveryAddress.fullName}, {order.deliveryAddress.street},{' '}
-                              {order.deliveryAddress.city} - {order.deliveryAddress.pincode}
+                              {order.deliveryAddress?.fullName || 'Patron'}, {order.deliveryAddress?.street || ''},{' '}
+                              {order.deliveryAddress?.city || ''} - {order.deliveryAddress?.pincode || ''}
                             </span>
                           </div>
 
@@ -838,8 +887,17 @@ export default function AccountClient() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {user.addresses.map((addr) => (
+            {userAddresses.length === 0 ? (
+              <div className="text-center py-12 bg-canvas-subtle rounded-2xl border border-dashed border-border-medium space-y-3">
+                <MapPin className="w-8 h-8 text-rosewood mx-auto" />
+                <p className="font-serif text-base text-ink">No Saved Destinations</p>
+                <p className="text-xs text-ink-muted max-w-xs mx-auto">
+                  Add your primary residence or studio delivery coordinates for swift handcrafted order dispatch.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {userAddresses.map((addr) => (
                 <div
                   key={addr.id}
                   className={`p-6 rounded-2xl border transition-all bg-canvas-subtle relative flex flex-col justify-between ${
@@ -894,8 +952,9 @@ export default function AccountClient() {
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
+      )}
 
         {/* --- 4. PROFILE & PREFERENCES TAB --- */}
         {activeTab === 'profile' && (
@@ -1062,7 +1121,7 @@ export default function AccountClient() {
                       Celebration Birthday
                     </span>
                     <span className="text-sm text-ink font-medium mt-0.5 block">
-                      {user.preferences.birthday || 'Not specified'}
+                      {userPreferences.birthday || 'Not specified'}
                     </span>
                   </div>
                 </div>
@@ -1074,7 +1133,7 @@ export default function AccountClient() {
                   <div className="flex items-center gap-2 mt-1.5">
                     <Palette className="w-4 h-4 text-rosewood" />
                     <span className="text-sm font-serif font-semibold text-ink">
-                      {user.preferences.preferredPalette}
+                      {userPreferences.preferredPalette || 'Champagne Gold & Pearl'}
                     </span>
                   </div>
                 </div>
@@ -1211,7 +1270,7 @@ export default function AccountClient() {
                     >
                       <MapPin className="w-4 h-4 text-gold mb-1 group-hover:scale-110 transition-transform" />
                       <span className="font-semibold block text-xs">Manage Destinations</span>
-                      <span className="text-[10px] text-ink-muted">{user.addresses.length} saved addresses</span>
+                      <span className="text-[10px] text-ink-muted">{userAddresses.length} saved addresses</span>
                     </button>
                   </div>
                 </div>
