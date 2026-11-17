@@ -1,10 +1,8 @@
 import { getApps, initializeApp, cert, App } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
-import { getAuth as getAdminSdkAuth, Auth as AdminAuth } from 'firebase-admin/auth';
 
 let adminApp: App | null = null;
 let adminFirestore: Firestore | null = null;
-let adminAuth: AdminAuth | null = null;
 
 const PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'kalajay-667ff';
 
@@ -32,21 +30,20 @@ function hasAdminCredentials(): boolean {
  *
  * Secrets and credentials are NEVER logged or exposed.
  */
-function initAdminSDK(): { app: App | null; db: Firestore | null; auth: AdminAuth | null } {
-  if (adminApp && adminFirestore && adminAuth) {
-    return { app: adminApp, db: adminFirestore, auth: adminAuth };
+function initAdminSDK(): { app: App | null; db: Firestore | null } {
+  if (adminApp && adminFirestore) {
+    return { app: adminApp, db: adminFirestore };
   }
 
   const existingApps = getApps();
   if (existingApps.length > 0) {
     adminApp = existingApps[0];
     adminFirestore = getFirestore(adminApp);
-    adminAuth = getAdminSdkAuth(adminApp);
-    return { app: adminApp, db: adminFirestore, auth: adminAuth };
+    return { app: adminApp, db: adminFirestore };
   }
 
   if (!hasAdminCredentials()) {
-    return { app: null, db: null, auth: null };
+    return { app: null, db: null };
   }
 
   try {
@@ -60,8 +57,7 @@ function initAdminSDK(): { app: App | null; db: Firestore | null; auth: AdminAut
           projectId: parsed.project_id || PROJECT_ID,
         });
         adminFirestore = getFirestore(adminApp);
-        adminAuth = getAdminSdkAuth(adminApp);
-        return { app: adminApp, db: adminFirestore, auth: adminAuth };
+        return { app: adminApp, db: adminFirestore };
       } catch {
         // Suppress parsing error to prevent leaking partial configuration
       }
@@ -83,18 +79,16 @@ function initAdminSDK(): { app: App | null; db: Firestore | null; auth: AdminAut
         projectId: PROJECT_ID,
       });
       adminFirestore = getFirestore(adminApp);
-      adminAuth = getAdminSdkAuth(adminApp);
-      return { app: adminApp, db: adminFirestore, auth: adminAuth };
+      return { app: adminApp, db: adminFirestore };
     }
 
     // 3. Firestore Emulator or Google Cloud ADC (Application Default Credentials)
     adminApp = initializeApp({ projectId: PROJECT_ID });
     adminFirestore = getFirestore(adminApp);
-    adminAuth = getAdminSdkAuth(adminApp);
-    return { app: adminApp, db: adminFirestore, auth: adminAuth };
+    return { app: adminApp, db: adminFirestore };
   } catch {
     // Sanitize error; never print credential details
-    return { app: null, db: null, auth: null };
+    return { app: null, db: null };
   }
 }
 
@@ -105,14 +99,6 @@ function initAdminSDK(): { app: App | null; db: Firestore | null; auth: AdminAut
 export function getAdminFirestore(): Firestore | null {
   const { db } = initAdminSDK();
   return db;
-}
-
-/**
- * Returns the trusted server-side Auth instance powered by Firebase Admin SDK.
- */
-export function getAdminAuth(): AdminAuth | null {
-  const { auth } = initAdminSDK();
-  return auth;
 }
 
 /**

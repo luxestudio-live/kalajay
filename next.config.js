@@ -6,7 +6,7 @@ const nextConfig = {
   reactStrictMode: true,
   skipTrailingSlashRedirect: true,
   experimental: {
-    serverComponentsExternalPackages: ['firebase-admin', 'jwks-rsa', 'jose'],
+    serverComponentsExternalPackages: ['firebase-admin'],
   },
   images: {
     unoptimized: true,
