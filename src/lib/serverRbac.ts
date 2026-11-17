@@ -777,13 +777,18 @@ export async function verifyStaffPermission(
     };
   }
 
-  // Deactivated Account Guard (Strict immediate enforcement)
-  if (staffUser.status === 'deactivated' || staffUser.active === false || (staffUser as any).status === 'inactive') {
+  // Deactivated & Suspended Account Guard (Strict immediate enforcement)
+  if (
+    staffUser.status === 'deactivated' ||
+    staffUser.status === 'suspended' ||
+    staffUser.active === false ||
+    (staffUser as any).status === 'inactive'
+  ) {
     return {
       authorized: false,
       status: 403,
-      error: 'Access Denied: This staff account has been deactivated. Privileged operational requests are blocked.',
-      code: 'ACCOUNT_DEACTIVATED',
+      error: `Access Denied: This staff account is ${staffUser.status || 'deactivated'}. Privileged operational requests are blocked.`,
+      code: staffUser.status === 'suspended' ? 'ACCOUNT_SUSPENDED' : 'ACCOUNT_DEACTIVATED',
     };
   }
 

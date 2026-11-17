@@ -273,68 +273,94 @@ service cloud.firestore {
 
     // -------------------------------------------------------------
     // 11a. Atelier Work Orders (/work_orders/{workOrderId})
-    // Read: Verified Administrators & Atelier Staff.
-    // Write: Production Head, Inventory Manager, Store Manager, Root Admin.
+    // Read: Verified Active Administrators & Atelier Staff.
+    // Client SDK Write: Strictly restricted to Root Admin.
+    // Standard staff mutations MUST proceed via /api/admin/work-orders
+    // to guarantee atomic inquiry status updates and audit logging.
     // -------------------------------------------------------------
     match /work_orders/{workOrderId} {
       allow read: if isAdmin();
-      allow write: if isInventoryStaffOrAdmin();
+      allow write: if isRootAdmin();
     }
 
     // -------------------------------------------------------------
     // 11b. Offline Orders (/offline_orders/{orderId})
-    // Read: Verified Administrators.
-    // Write: Store Managers & Root Admin (and atomic server endpoint).
+    // Read: Verified Active Administrators.
+    // Client SDK Write: Strictly restricted to Root Admin.
+    // Standard staff offline sales MUST proceed via /api/admin/offline-orders
+    // to guarantee atomic Firestore transaction, inventory decrement, and audit trail.
     // -------------------------------------------------------------
     match /offline_orders/{orderId} {
       allow read: if isAdmin();
-      allow write: if isStoreManagerOrSuperAdmin();
+      allow write: if isRootAdmin();
     }
 
     // -------------------------------------------------------------
     // 11c. Tax Slabs & HSN Registry (/tax_slabs/{slabId})
-    // Read: Verified Administrators.
-    // Write: Store Managers & Root Admin.
+    // Read: Verified Active Administrators.
+    // Write: Store Managers & Root Admin (with valid rate bounds).
     // -------------------------------------------------------------
     match /tax_slabs/{slabId} {
       allow read: if isAdmin();
-      allow write: if isStoreManagerOrSuperAdmin();
+      allow write: if isStoreManagerOrSuperAdmin() &&
+                      request.resource.data.rate is number &&
+                      request.resource.data.rate >= 0 &&
+                      request.resource.data.rate <= 40;
     }
 
     // -------------------------------------------------------------
     // 11d. Store & Operational Settings (/settings/{settingId})
-    // Read: Public (for freight thresholds, support details, policies).
-    // Write: Store Managers & Root Admin.
+    // Read: Public read restricted to 'store' document for checkout parameters;
+    // other internal configuration documents require verified administrator.
+    // Write: Strictly restricted to Store Managers & Root Admin.
     // -------------------------------------------------------------
     match /settings/{settingId} {
-      allow read: if true;
+      allow read: if settingId == 'store' || isAdmin();
       allow write: if isStoreManagerOrSuperAdmin();
     }
 
     // -------------------------------------------------------------
     // 11e. Newsletter Subscribers (/subscribers/{subId})
-    // Create: Public (patron email opt-in).
-    // Read/Update/Delete: Store Managers & Root Admin.
+    // Create: Public patron opt-in with strict email syntax & field containment.
+    // Protects against arbitrary field injection, spam payloads, and customer data leaks.
+    // Read/Update/Delete: Strictly restricted to Store Managers & Root Admin.
     // -------------------------------------------------------------
     match /subscribers/{subId} {
-      allow create: if request.resource.data.email is string && request.resource.data.email.size() > 0;
+      allow create: if request.resource.data.email is string &&
+                       request.resource.data.email.size() >= 5 &&
+                       request.resource.data.email.size() <= 120 &&
+                       request.resource.data.email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$') &&
+                       request.resource.data.keys().hasOnly(['id', 'email', 'name', 'source', 'subscribedAt', 'status', 'createdAtServer']) &&
+                       (!('name' in request.resource.data) || (request.resource.data.name is string && request.resource.data.name.size() <= 100)) &&
+                       (!('status' in request.resource.data) || request.resource.data.status in ['active', 'pending']);
       allow read, update, delete: if isStoreManagerOrSuperAdmin();
     }
 
     // -------------------------------------------------------------
     // 11f. Patron Product Reviews (/reviews/{reviewId})
-    // Read: Public can read approved reviews; Admins can read all.
-    // Create: Public can submit review (must be pending moderation).
-    // Update/Delete: Moderated exclusively by Administrators.
+    // Read: Public can ONLY read approved reviews. Admins can read all.
+    // Create: Public submission strictly forced to status: 'pending'.
+    // Enforces rating bounds [1..5], length constraints, and anti-spam validation.
+    // Moderation (Update/Delete): Strictly restricted to Store Managers & Root Admin.
     // -------------------------------------------------------------
     match /reviews/{reviewId} {
       allow read: if (resource != null && resource.data.status == 'approved') || isAdmin();
       allow create: if request.resource.data.rating is number &&
                        request.resource.data.rating >= 1 && request.resource.data.rating <= 5 &&
-                       request.resource.data.productId is string &&
-                       request.resource.data.authorName is string &&
-                       request.resource.data.status == 'pending';
-      allow update, delete: if isAdmin();
+                       request.resource.data.productId is string && request.resource.data.productId.size() <= 100 &&
+                       (!('authorName' in request.resource.data) || (request.resource.data.authorName is string && request.resource.data.authorName.size() <= 100)) &&
+                       (!('patron' in request.resource.data) || (request.resource.data.patron is string && request.resource.data.patron.size() <= 100)) &&
+                       request.resource.data.comment is string &&
+                       request.resource.data.comment.size() >= 5 &&
+                       request.resource.data.comment.size() <= 1500 &&
+                       request.resource.data.status == 'pending' &&
+                       request.resource.data.keys().hasOnly([
+                         'id', 'patron', 'authorName', 'email', 'authorEmail',
+                         'productId', 'productSlug', 'product', 'productName',
+                         'rating', 'headline', 'comment', 'date', 'createdAt',
+                         'status', 'verifiedBuyer'
+                       ]);
+      allow update, delete: if isStoreManagerOrSuperAdmin();
     }
 
     // -------------------------------------------------------------

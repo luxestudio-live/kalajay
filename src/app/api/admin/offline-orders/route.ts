@@ -88,43 +88,55 @@ export async function POST(request: Request) {
       timestamp: new Date().toISOString(),
     };
 
-    // 2. Execute Atomic Multi-Document Batch Write via Firebase Admin SDK
+    // 2. Execute Atomic Multi-Document Transaction via Firebase Admin SDK
     const adminDb = getAdminFirestore();
     if (adminDb) {
-      const batch = adminDb.batch();
+      await adminDb.runTransaction(async (transaction) => {
+        // Step A: All reads must happen first in Firestore transactions
+        const inventoryUpdates: Array<{ ref: any; newAvailable: number; sku: string }> = [];
 
-      // Write 1: /offline_orders/{orderId}
-      const offRef = adminDb.collection('offline_orders').doc(orderId);
-      batch.set(offRef, newOfflineOrder, { merge: true });
+        for (const it of newOfflineOrder.items) {
+          if (it.sku) {
+            const invRef = adminDb.collection('inventory').doc(it.sku);
+            const invSnap = await transaction.get(invRef);
 
-      // Write 2: /orders/{orderId}
-      const ordRef = adminDb.collection('orders').doc(orderId);
-      batch.set(ordRef, companionAdminOrder, { merge: true });
-
-      // Write 3: /audit_logs/{logId}
-      const audRef = adminDb.collection('audit_logs').doc(auditLogRecord.id);
-      batch.set(audRef, auditLogRecord);
-
-      // Write 4: Decrement inventory for sold items if sku exists
-      for (const it of newOfflineOrder.items) {
-        if (it.sku) {
-          const invRef = adminDb.collection('inventory').doc(it.sku);
-          // Retrieve and decrement inside transaction/batch
-          try {
-            const invSnap = await invRef.get();
             if (invSnap.exists) {
-              const currentAvailable = invSnap.data()?.available ?? 0;
-              const newAvailable = Math.max(0, currentAvailable - (it.quantity || 1));
-              batch.update(invRef, {
-                available: newAvailable,
-                updatedAt: new Date().toISOString(),
-              });
-            }
-          } catch {}
-        }
-      }
+              const currentAvailable = Number(invSnap.data()?.available ?? 0);
+              const requestedQty = Number(it.quantity || 1);
 
-      await batch.commit();
+              if (currentAvailable < requestedQty) {
+                throw new Error(
+                  `INSUFFICIENT_STOCK: Atelier stock conflict. SKU "${it.sku}" has only ${currentAvailable} unit(s) available, but ${requestedQty} were requested.`
+                );
+              }
+
+              const newAvailable = Math.max(0, currentAvailable - requestedQty);
+              inventoryUpdates.push({ ref: invRef, newAvailable, sku: it.sku });
+            }
+          }
+        }
+
+        // Step B: Writes executed inside transaction
+        // Write 1: /offline_orders/{orderId}
+        const offRef = adminDb.collection('offline_orders').doc(orderId);
+        transaction.set(offRef, newOfflineOrder, { merge: true });
+
+        // Write 2: /orders/{orderId}
+        const ordRef = adminDb.collection('orders').doc(orderId);
+        transaction.set(ordRef, companionAdminOrder, { merge: true });
+
+        // Write 3: /audit_logs/{logId}
+        const audRef = adminDb.collection('audit_logs').doc(auditLogRecord.id);
+        transaction.set(audRef, auditLogRecord);
+
+        // Write 4: Decrement validated inventory
+        for (const update of inventoryUpdates) {
+          transaction.update(update.ref, {
+            available: update.newAvailable,
+            updatedAt: new Date().toISOString(),
+          });
+        }
+      });
     } else {
       // Fallback for non-admin SDK environment
       await setDoc(doc(db, 'offline_orders', orderId), newOfflineOrder, { merge: true });
@@ -135,12 +147,17 @@ export async function POST(request: Request) {
       success: true,
       offlineOrder: newOfflineOrder,
       companionOrder: companionAdminOrder,
-      message: `Offline order ${newOfflineOrder.invoiceNumber} recorded atomically.`,
+      message: `Offline order ${newOfflineOrder.invoiceNumber} recorded atomically via transaction.`,
     });
   } catch (err: any) {
+    const isStockError = err?.message?.includes('INSUFFICIENT_STOCK');
     return NextResponse.json(
-      { success: false, error: err?.message || 'Server error recording offline order.' },
-      { status: 500 }
+      {
+        success: false,
+        code: isStockError ? 'INSUFFICIENT_STOCK' : 'SERVER_ERROR',
+        error: err?.message || 'Server error recording offline order.',
+      },
+      { status: isStockError ? 400 : 500 }
     );
   }
 }

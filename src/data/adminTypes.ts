@@ -64,7 +64,7 @@ export interface AdminUser {
   roleId: string;
   roleName: string;
   department: string;
-  status: 'active' | 'deactivated';
+  status: 'active' | 'deactivated' | 'suspended';
   active?: boolean;
   staffId?: string;
   uid?: string;

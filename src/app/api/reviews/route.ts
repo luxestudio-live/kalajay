@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/serverFirebaseAdmin';
 import { DEFAULT_REVIEWS, ReviewItem } from '@/data/catalogue';
+import { verifyStaffPermission, verifyFirebaseIdToken } from '@/lib/serverRbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,17 +33,35 @@ export async function GET(request: Request) {
     }
 
     if (all) {
+      // Security: Viewing all reviews (including pending/rejected & email addresses) requires authenticated staff
+      const authHeader = request.headers.get('authorization') || '';
+      const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+      const authRes = token ? await verifyFirebaseIdToken(token) : { valid: false };
+
+      if (!authRes.valid) {
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized: Staff credentials required to view unmoderated reviews.' },
+          { status: 401 }
+        );
+      }
+
       return NextResponse.json({ success: true, reviews: memoryReviews });
     }
 
-    // Filter for approved reviews matching this product
-    const approvedReviews = memoryReviews.filter(r => {
-      if (r.status !== 'approved') return false;
-      if (slug && r.productSlug && r.productSlug.toLowerCase() === slug.toLowerCase()) return true;
-      if (productId && r.productId && r.productId.toLowerCase() === productId.toLowerCase()) return true;
-      if (slug && r.product && r.product.toLowerCase().replace(/[^a-z0-9]+/g, '-').includes(slug.toLowerCase())) return true;
-      return false;
-    });
+    // Public Storefront PDP Display: Approved reviews ONLY, with patron email stripped for privacy protection
+    const approvedReviews = memoryReviews
+      .filter(r => {
+        if (r.status !== 'approved') return false;
+        if (slug && r.productSlug && r.productSlug.toLowerCase() === slug.toLowerCase()) return true;
+        if (productId && r.productId && r.productId.toLowerCase() === productId.toLowerCase()) return true;
+        if (slug && r.product && r.product.toLowerCase().replace(/[^a-z0-9]+/g, '-').includes(slug.toLowerCase())) return true;
+        return false;
+      })
+      .map(r => {
+        // Redact patron email from public client responses
+        const { email, ...publicSafeReview } = r;
+        return publicSafeReview;
+      });
 
     return NextResponse.json({ success: true, reviews: approvedReviews });
   } catch (error: any) {
@@ -55,36 +74,44 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { patron, email, product, productSlug, productId, rating, headline, comment } = body;
 
-    if (!patron || !patron.trim()) {
-      return NextResponse.json({ success: false, error: 'Please provide your name.' }, { status: 400 });
+    // 1. Validation & Input Sanitization against Spam & Script Injection
+    const cleanPatron = (patron || '').replace(/<[^>]*>?/gm, '').trim();
+    if (!cleanPatron || cleanPatron.length > 80) {
+      return NextResponse.json({ success: false, error: 'Please provide a valid name (max 80 characters).' }, { status: 400 });
     }
 
-    if (!email || !email.includes('@')) {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!cleanEmail || !emailRegex.test(cleanEmail) || cleanEmail.length > 120) {
       return NextResponse.json({ success: false, error: 'Please provide a valid email address.' }, { status: 400 });
     }
 
     const numRating = Number(rating);
-    if (!numRating || numRating < 1 || numRating > 5) {
-      return NextResponse.json({ success: false, error: 'Rating must be between 1 and 5 stars.' }, { status: 400 });
+    if (!numRating || numRating < 1 || numRating > 5 || !Number.isInteger(numRating)) {
+      return NextResponse.json({ success: false, error: 'Rating must be an integer between 1 and 5 stars.' }, { status: 400 });
     }
 
-    if (!comment || comment.trim().length < 5) {
-      return NextResponse.json({ success: false, error: 'Please write a review of at least 5 characters.' }, { status: 400 });
+    const cleanComment = (comment || '').replace(/<[^>]*>?/gm, '').trim();
+    if (!cleanComment || cleanComment.length < 5 || cleanComment.length > 1000) {
+      return NextResponse.json({ success: false, error: 'Review text must be between 5 and 1000 characters.' }, { status: 400 });
     }
 
+    const cleanHeadline = (headline || '').replace(/<[^>]*>?/gm, '').trim().slice(0, 150);
+
+    // 2. Strict Zero-Trust Review Creation: Always status = 'pending', never auto-approved
     const newReview: ReviewItem = {
       id: `rev-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      patron: patron.trim(),
-      email: email.trim(),
+      patron: cleanPatron,
+      email: cleanEmail,
       product: product?.trim() || 'Handcrafted Creation',
       productSlug: productSlug?.trim() || '',
       productId: productId?.trim() || '',
       rating: numRating,
-      headline: headline?.trim() || '',
-      comment: comment.trim(),
+      headline: cleanHeadline,
+      comment: cleanComment,
       date: new Date().toISOString().split('T')[0],
       status: 'pending', // Requires admin moderation before public display
-      verifiedBuyer: true,
+      verifiedBuyer: false, // Default false; verified only upon completed order lookup
     };
 
     // Store in memory
@@ -103,7 +130,15 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       message: 'Thank you! Your review has been submitted to our atelier moderation queue and will appear once verified.',
-      review: newReview,
+      review: {
+        id: newReview.id,
+        patron: newReview.patron,
+        rating: newReview.rating,
+        headline: newReview.headline,
+        comment: newReview.comment,
+        date: newReview.date,
+        status: newReview.status,
+      },
     });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -114,6 +149,15 @@ export async function PATCH(request: Request) {
   try {
     const body = await request.json();
     const { id, status } = body;
+
+    // Security: Only authorized staff with catalogue.products -> edit permission can moderate reviews
+    const authCheck = await verifyStaffPermission(request, body, 'catalogue.products', 'edit');
+    if (!authCheck.authorized) {
+      return NextResponse.json(
+        { success: false, error: authCheck.error || 'Unauthorized: Staff moderation permission required.' },
+        { status: authCheck.status || 403 }
+      );
+    }
 
     if (!id || !['approved', 'archived', 'pending'].includes(status)) {
       return NextResponse.json({ success: false, error: 'Invalid review update parameters.' }, { status: 400 });
