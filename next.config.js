@@ -3,10 +3,10 @@ const isStaticExport = process.env.STATIC_EXPORT === 'true';
 
 const nextConfig = {
   ...(isStaticExport ? { output: 'export' } : {}),
-  trailingSlash: true,
   reactStrictMode: true,
+  skipTrailingSlashRedirect: true,
   experimental: {
-    serverComponentsExternalPackages: ['firebase-admin'],
+    serverComponentsExternalPackages: ['firebase-admin', 'jwks-rsa', 'jose'],
   },
   images: {
     unoptimized: true,
