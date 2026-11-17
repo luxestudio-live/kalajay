@@ -5,6 +5,9 @@ const nextConfig = {
   ...(isStaticExport ? { output: 'export' } : {}),
   trailingSlash: true,
   reactStrictMode: true,
+  experimental: {
+    serverComponentsExternalPackages: ['firebase-admin'],
+  },
   images: {
     unoptimized: true,
     remotePatterns: [
