@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Megaphone,
   Plus,
@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
 import { CouponItem } from '@/data/adminTypes';
+import { getFirestoreSubscribers } from '@/lib/firestore';
 
 interface NewsletterSubscriber {
   id: string;
@@ -46,9 +47,31 @@ export default function MarketingView() {
   const { coupons, createCoupon, toggleCouponStatus, logAction, activeSubPage, setActiveSubPage } = useAdminStore();
   const activeTab: 'coupons' | 'subscribers' = activeSubPage === 'marketing.subscribers' ? 'subscribers' : 'coupons';
   const [searchTerm, setSearchTerm] = useState('');
+  const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>(SEED_SUBSCRIBERS);
   const [isCreatingCoupon, setIsCreatingCoupon] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Sync live subscribers from Cloud Firestore
+  useEffect(() => {
+    getFirestoreSubscribers().then((liveSubs) => {
+      if (liveSubs && liveSubs.length > 0) {
+        const idSet = new Set(liveSubs.map(s => s.id || s.email));
+        const combined: NewsletterSubscriber[] = [
+          ...liveSubs.map(s => ({
+            id: s.id || `SUB-${s.email}`,
+            email: s.email,
+            name: s.name,
+            source: (s.source || 'Storefront Footer') as any,
+            subscribedAt: s.subscribedAt ? s.subscribedAt.replace('T', ' ').slice(0, 16) : 'Recent',
+            status: s.status || 'active',
+          })),
+          ...SEED_SUBSCRIBERS.filter(s => !idSet.has(s.id) && !idSet.has(s.email)),
+        ];
+        setSubscribers(combined);
+      }
+    }).catch(() => {});
+  }, []);
 
   // New coupon form state
   const [newCode, setNewCode] = useState('');
@@ -94,7 +117,7 @@ export default function MarketingView() {
     c.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredSubscribers = SEED_SUBSCRIBERS.filter(s =>
+  const filteredSubscribers = subscribers.filter(s =>
     s.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase()))
   );

@@ -38,6 +38,40 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // Promotional Coupon Code State
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [couponNotice, setCouponNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const handleApplyCoupon = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCouponNotice(null);
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+
+    if (code === 'FIRST10') {
+      const disc = Math.min(500, Math.round(subtotal * 0.1));
+      setDiscountAmount(disc);
+      setAppliedCoupon(code);
+      setCouponNotice({ type: 'success', message: `Promo code "${code}" applied: ₹${disc} privilege discount.` });
+    } else if (code === 'DIWALI15') {
+      const disc = Math.min(1000, Math.round(subtotal * 0.15));
+      setDiscountAmount(disc);
+      setAppliedCoupon(code);
+      setCouponNotice({ type: 'success', message: `Festive code "${code}" applied: ₹${disc} privilege discount.` });
+    } else if (code === 'HEIRLOOM20') {
+      const disc = Math.min(2000, Math.round(subtotal * 0.2));
+      setDiscountAmount(disc);
+      setAppliedCoupon(code);
+      setCouponNotice({ type: 'success', message: `Patron privilege code "${code}" applied: ₹${disc} discount.` });
+    } else {
+      setCouponNotice({ type: 'error', message: `Promo code "${code}" is unrecognised, expired, or threshold not met.` });
+    }
+  };
+
+  const finalTotal = Math.max(0, subtotal - discountAmount) + deliveryFee;
+
   // Auto-populate from authenticated patron profile
   useEffect(() => {
     if (user) {
@@ -118,6 +152,7 @@ export default function CheckoutPage() {
             quantity: item.quantity,
           })),
           ...(user?.id ? { userId: user.id } : {}),
+          ...(appliedCoupon ? { couponCode: appliedCoupon } : {}),
         }),
       });
 
@@ -532,7 +567,7 @@ export default function CheckoutPage() {
                   <span>
                     {isSubmitting
                       ? 'Securing Atelier Loom Reservation...'
-                      : `Place Order & Confirm Handcraft · ${formatINR(total)}`}
+                      : `Place Order & Confirm Handcraft · ${formatINR(finalTotal)}`}
                   </span>
                 </button>
 
@@ -577,11 +612,52 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
+              {/* Promotional Coupon Box */}
+              <div className="border-t border-border-subtle pt-4 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-plum font-semibold uppercase tracking-wider text-[10.5px]">Promotional Voucher / Privilege Code</span>
+                  {appliedCoupon && (
+                    <span className="text-emerald-700 font-mono text-[10.5px] font-bold">
+                      {appliedCoupon} ACTIVE
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={couponInput}
+                    onChange={e => setCouponInput(e.target.value.toUpperCase())}
+                    placeholder="e.g. FIRST10, DIWALI15"
+                    className="flex-1 px-3 py-2 bg-canvas border border-border-medium rounded-sm text-xs font-mono uppercase text-plum focus:outline-none focus:border-rosewood"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyCoupon}
+                    className="px-4 py-2 bg-plum hover:bg-rosewood text-canvas text-xs uppercase tracking-wider font-semibold rounded-sm transition-colors cursor-pointer"
+                  >
+                    Apply
+                  </button>
+                </div>
+
+                {couponNotice && (
+                  <p className={`text-[11px] leading-tight ${couponNotice.type === 'success' ? 'text-emerald-800 font-medium' : 'text-rose-700'}`}>
+                    {couponNotice.message}
+                  </p>
+                )}
+              </div>
+
               <div className="space-y-2.5 text-xs text-ink border-t border-border-subtle pt-4">
                 <div className="flex justify-between">
                   <span className="text-ink-muted">Subtotal</span>
                   <span className="font-medium text-plum">{formatINR(subtotal)}</span>
                 </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-emerald-800">
+                    <span>Privilege Discount ({appliedCoupon})</span>
+                    <span className="font-medium font-serif">- {formatINR(discountAmount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-ink-muted">Pan-India Delivery</span>
                   <span className="font-medium text-plum">
@@ -590,7 +666,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between text-base font-semibold text-plum border-t border-border-subtle pt-3">
                   <span>Grand Total</span>
-                  <span className="font-serif text-2xl text-rosewood">{formatINR(total)}</span>
+                  <span className="font-serif text-2xl text-rosewood">{formatINR(finalTotal)}</span>
                 </div>
               </div>
 

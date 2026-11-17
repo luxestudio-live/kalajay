@@ -4,15 +4,24 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Check, Heart, Instagram, MessageCircle, Mail, MapPin } from 'lucide-react';
 import { BRAND_CONFIG, COLLECTIONS } from '@/data/catalogue';
+import { saveFirestoreSubscriber } from '@/lib/firestore';
 
 export default function Footer() {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     if (email.trim()) {
       setSubscribed(true);
+      try {
+        await saveFirestoreSubscriber({
+          email: email.trim(),
+          source: 'Storefront Footer Gazette',
+        });
+      } catch (err) {
+        console.warn('Newsletter subscription notice:', err);
+      }
       setEmail('');
     }
   };

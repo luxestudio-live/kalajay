@@ -667,3 +667,57 @@ export async function getFirestoreAuditLogs(limitCount = 50): Promise<AuditLogIt
     return [];
   }
 }
+
+/* ===============================================================
+   11. NEWSLETTER SUBSCRIBERS (/subscribers)
+   =============================================================== */
+
+export interface NewsletterSubscriberDoc {
+  id: string;
+  email: string;
+  name?: string;
+  source: string;
+  subscribedAt: string;
+  status: 'active' | 'unsubscribed';
+}
+
+export async function saveFirestoreSubscriber(data: {
+  email: string;
+  name?: string;
+  source?: string;
+}): Promise<void> {
+  try {
+    if (!db || !db.type) return;
+    const cleanEmail = data.email.trim().toLowerCase();
+    const id = cleanEmail.replace(/[^a-z0-9]/g, '_');
+    const ref = doc(db, 'subscribers', id);
+    await setDoc(ref, {
+      id,
+      email: cleanEmail,
+      name: data.name || '',
+      source: data.source || 'Storefront Footer Gazette',
+      subscribedAt: new Date().toISOString(),
+      status: 'active',
+      createdAtServer: serverTimestamp(),
+    }, { merge: true });
+  } catch (error) {
+    console.error('Error saving newsletter subscriber:', error);
+  }
+}
+
+export async function getFirestoreSubscribers(): Promise<NewsletterSubscriberDoc[]> {
+  try {
+    if (!db || !db.type) return [];
+    const ref = collection(db, 'subscribers');
+    const snapshot = await getDocs(ref);
+    if (snapshot.empty) return [];
+    const list: NewsletterSubscriberDoc[] = [];
+    snapshot.forEach((snap) => {
+      list.push(snap.data() as NewsletterSubscriberDoc);
+    });
+    return list;
+  } catch (error) {
+    console.warn('Error fetching newsletter subscribers:', error);
+    return [];
+  }
+}
