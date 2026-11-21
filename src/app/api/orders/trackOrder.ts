@@ -7,6 +7,7 @@ import path from 'path';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { verifyFirebaseIdToken, INTERNAL_SERVICE_SECRET } from '@/lib/serverRbac';
+import { getAdminFirestore } from '@/lib/serverFirebaseAdmin';
 
 // Immutable set of static showroom showcase references ONLY
 const STATIC_SHOWROOM_IDS = new Set(['KJ-8924', 'KJ-7710', 'KJ-6502']);
@@ -255,9 +256,16 @@ export async function GET(request: Request) {
     let foundOrder: any = null;
     let isFromDatabase = false;
 
-    // 1. Authoritative Firestore Document Lookup (/orders/{orderId})
+    // 1. Authoritative Server Admin Firestore Document Lookup (/orders/{orderId})
     try {
-      if (db && db.type) {
+      const adminDb = getAdminFirestore();
+      if (adminDb) {
+        const orderSnap = await adminDb.collection('orders').doc(orderId).get();
+        if (orderSnap.exists) {
+          foundOrder = { id: orderSnap.id, ...orderSnap.data() };
+          isFromDatabase = true;
+        }
+      } else if (db && db.type) {
         const orderSnap = await getDoc(doc(db, 'orders', orderId));
         if (orderSnap.exists()) {
           foundOrder = { id: orderSnap.id, ...orderSnap.data() };
@@ -266,7 +274,25 @@ export async function GET(request: Request) {
       }
     } catch {}
 
-    // 2. Check update store (for recent status modifications)
+    // 2. Search in durable Firestore idempotency keys collection (/idempotency_keys)
+    if (!foundOrder) {
+      try {
+        const adminDb = getAdminFirestore();
+        if (adminDb) {
+          const idempSnap = await adminDb.collection('idempotency_keys')
+            .where('orderId', '==', orderId)
+            .limit(1)
+            .get();
+          if (!idempSnap.empty) {
+            const entry = idempSnap.docs[0].data();
+            foundOrder = entry.response?.order || entry.response;
+            if (foundOrder) isFromDatabase = true;
+          }
+        }
+      } catch {}
+    }
+
+    // 3. Optional local development cache fallback
     if (!foundOrder) {
       const updateStorePath = path.join(process.cwd(), '.next', 'cache', 'kalajay_orders_update_store.json');
       if (fs.existsSync(updateStorePath)) {
@@ -275,24 +301,6 @@ export async function GET(request: Request) {
           if (updateStore[orderId]) {
             foundOrder = updateStore[orderId];
             isFromDatabase = true;
-          }
-        } catch {}
-      }
-    }
-
-    // 3. Search in durable idempotency store (all placed orders)
-    if (!foundOrder) {
-      const idempStorePath = path.join(process.cwd(), '.next', 'cache', 'kalajay_idempotency_store.json');
-      if (fs.existsSync(idempStorePath)) {
-        try {
-          const idempStore = JSON.parse(fs.readFileSync(idempStorePath, 'utf-8'));
-          for (const key of Object.keys(idempStore)) {
-            const entry = idempStore[key];
-            if (entry?.orderId === orderId || entry?.response?.orderId === orderId) {
-              foundOrder = entry.response?.order;
-              isFromDatabase = true;
-              break;
-            }
           }
         } catch {}
       }
