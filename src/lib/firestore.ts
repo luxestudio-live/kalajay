@@ -102,7 +102,12 @@ export async function getFirestoreProducts(includeDrafts = false): Promise<Produ
     const productsRef = collection(db, 'products');
     const q = includeDrafts
       ? productsRef
-      : query(productsRef, where('status', 'in', ['published', 'active']));
+      : query(
+          productsRef,
+          where('status', 'in', ['published', 'active']),
+          where('archived', '==', false),
+          where('isActive', '==', true)
+        );
     const snapshot = await getDocs(q);
     if (snapshot.empty) return [];
     const list: Product[] = [];

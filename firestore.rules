@@ -129,11 +129,11 @@ service cloud.firestore {
           resource.data.status != 'archived' &&
           resource.data.status != 'inactive'
         )) &&
-        (!('isActive' in resource.data) || resource.data.isActive == true) &&
-        (!('active' in resource.data) || resource.data.active == true) &&
-        (!('archived' in resource.data) || resource.data.archived == false) &&
-        (!('isDraft' in resource.data) || resource.data.isDraft == false) &&
-        (!('published' in resource.data) || resource.data.published == true)
+        resource.data.get('isActive', true) == true &&
+        resource.data.get('active', true) == true &&
+        resource.data.get('archived', false) == false &&
+        resource.data.get('isDraft', false) == false &&
+        resource.data.get('published', true) == true
       );
     }
 
@@ -154,7 +154,11 @@ service cloud.firestore {
       // Administrators can list all products (drafts, archived, published) for catalogue management.
       // Anonymous public storefront visitors MUST query explicitly published, non-archived pieces.
       // Unconstrained queries over the entire collection containing mixed statuses are rejected.
-      allow list: if isAdmin() || isPublicProduct();
+      allow list: if isAdmin() || (
+        resource.data.status in ['published', 'active'] &&
+        resource.data.archived == false &&
+        resource.data.isActive == true
+      );
       allow create: if isStoreManagerOrSuperAdmin() && isValidProduct(request.resource.data);
       allow update: if isStoreManagerOrSuperAdmin() && isValidProduct(request.resource.data);
       allow delete: if isStoreManagerOrSuperAdmin();
