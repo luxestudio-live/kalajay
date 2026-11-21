@@ -20,6 +20,7 @@ import {
   AuditLogItem,
   TaxSlab,
   OfflineOrder,
+  ProductBomItem,
 } from './adminTypes';
 import { ADMIN_MODULE_DEFINITIONS, SEED_ROLES } from './adminPermissions';
 import { adminFetch } from '@/lib/adminAuthClient';
@@ -967,6 +968,28 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     );
   };
 
+  // Standard Bill of Materials (BOM) resolution for artisan pieces
+  const resolveBomForProduct = (sku: string): ProductBomItem[] => {
+    const upper = (sku || '').toUpperCase();
+    if (upper.includes('BAG') || upper.includes('PR') || upper.includes('CLUTCH') || upper.includes('VAULT') || upper.includes('DESK')) {
+      return [
+        { materialSku: 'RM-BEAD-PRL-02', materialName: 'Lustrous Synthetic Acrylic Pearls', quantityRequired: 0.3, unit: 'kg' },
+        { materialSku: 'RM-WIRE-STEEL-01', materialName: 'High-Tensile Coated Steel Wire Spool', quantityRequired: 0.1, unit: 'spools' },
+        { materialSku: 'RM-FABRIC-SILK-01', materialName: 'Mulberry Silk Lining Fabric', quantityRequired: 0.5, unit: 'meters' },
+      ];
+    }
+    if (upper.includes('APC')) {
+      return [
+        { materialSku: 'RM-BEAD-GLS-01', materialName: 'Czech Faceted Crystal Glass Beads', quantityRequired: 0.05, unit: 'kg' },
+        { materialSku: 'RM-WIRE-STEEL-01', materialName: 'High-Tensile Coated Steel Wire Spool', quantityRequired: 0.02, unit: 'spools' },
+      ];
+    }
+    return [
+      { materialSku: 'RM-BEAD-GLS-01', materialName: 'Czech Faceted Crystal Glass Beads', quantityRequired: 0.2, unit: 'kg' },
+      { materialSku: 'RM-WIRE-STEEL-01', materialName: 'High-Tensile Coated Steel Wire Spool', quantityRequired: 0.05, unit: 'spools' },
+    ];
+  };
+
   // Work Orders (Atelier Production)
   const updateWorkOrderStage = (
     orderId: string,
@@ -974,6 +997,83 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     qcPassed?: boolean
   ) => {
     let updatedWo: WorkOrder | undefined;
+    const targetWo = workOrders.find(wo => wo.id === orderId);
+
+    // Production Completion: Consume allocated raw materials & receive finished goods into stock
+    if (targetWo && (stage === 'wax_sealed' || qcPassed === true) && !targetWo.materialsConsumed) {
+      const bom = targetWo.bom || resolveBomForProduct(targetWo.sku);
+      let updatedInventory = [...inventory];
+
+      // Consume raw materials
+      bom.forEach(b => {
+        const needed = b.quantityRequired * targetWo.quantity;
+        updatedInventory = updatedInventory.map(item => {
+          if (item.sku === b.materialSku) {
+            const newOnHand = Math.max(0, item.onHand - needed);
+            const newReserved = Math.max(0, (item.reserved || 0) - needed);
+            const newAvail = Math.max(0, newOnHand - newReserved);
+            const status = newAvail === 0 ? 'out_of_stock' : newAvail <= item.reorderPoint ? 'low_stock' : 'in_stock';
+            const changed: InventoryItem = { ...item, onHand: newOnHand, reserved: newReserved, available: newAvail, status };
+            saveFirestoreInventoryItem(changed).catch(() => {});
+            return changed;
+          }
+          return item;
+        });
+      });
+
+      // Receive finished goods into inventory
+      let foundFg = false;
+      updatedInventory = updatedInventory.map(item => {
+        if (item.sku === targetWo.sku && item.type === 'finished_good') {
+          foundFg = true;
+          const newOnHand = item.onHand + targetWo.quantity;
+          const newAvail = newOnHand - (item.reserved || 0);
+          const status = newAvail <= item.reorderPoint ? 'low_stock' : 'in_stock';
+          const changed: InventoryItem = { ...item, onHand: newOnHand, available: newAvail, status };
+          saveFirestoreInventoryItem(changed).catch(() => {});
+          return changed;
+        }
+        return item;
+      });
+
+      if (!foundFg) {
+        const newFg: InventoryItem = {
+          id: `inv-${targetWo.sku}`,
+          sku: targetWo.sku,
+          name: targetWo.productName,
+          category: 'Heirlooms',
+          location: 'Bihar Craft House',
+          type: 'finished_good',
+          onHand: targetWo.quantity,
+          reserved: 0,
+          available: targetWo.quantity,
+          reorderPoint: 5,
+          unitCost: 1200,
+          supplier: 'Bihar Craft House Hub',
+          status: 'in_stock',
+          unit: 'pcs',
+        };
+        updatedInventory.push(newFg);
+        saveFirestoreInventoryItem(newFg).catch(() => {});
+      }
+
+      setInventory(updatedInventory);
+      saveState({ inventory: updatedInventory });
+
+      logFirestoreStockAdjustment({
+        id: `adj-wo-${Date.now()}`,
+        sku: targetWo.sku,
+        productName: targetWo.productName,
+        previousQty: 0,
+        adjustedQty: targetWo.quantity,
+        difference: targetWo.quantity,
+        reason: 'artisan_return',
+        loggedBy: 'Atelier Production QC',
+        timestamp: new Date().toISOString(),
+        notes: `Finished goods receipt from Work Order ${orderId}`,
+      }).catch(() => {});
+    }
+
     const next = workOrders.map(wo => {
       if (wo.id === orderId) {
         updatedWo = {
@@ -981,6 +1081,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
           stage,
           qcPassed: qcPassed !== undefined ? qcPassed : wo.qcPassed,
           actualDate: stage === 'wax_sealed' ? new Date().toISOString().split('T')[0] : wo.actualDate,
+          materialsConsumed: stage === 'wax_sealed' || qcPassed === true ? true : wo.materialsConsumed,
         };
         return updatedWo;
       }
@@ -1004,9 +1105,33 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
   };
 
   const createWorkOrder = (orderData: Omit<WorkOrder, 'id'>) => {
+    const bom = resolveBomForProduct(orderData.sku);
+
+    // Reserve required raw materials from inventory based on BOM
+    let updatedInventory = [...inventory];
+    bom.forEach(b => {
+      const needed = b.quantityRequired * orderData.quantity;
+      updatedInventory = updatedInventory.map(item => {
+        if (item.sku === b.materialSku) {
+          const newReserved = (item.reserved || 0) + needed;
+          const newAvail = Math.max(0, item.onHand - newReserved);
+          const status = newAvail === 0 ? 'out_of_stock' : newAvail <= item.reorderPoint ? 'low_stock' : 'in_stock';
+          const changed: InventoryItem = { ...item, reserved: newReserved, available: newAvail, status };
+          saveFirestoreInventoryItem(changed).catch(() => {});
+          return changed;
+        }
+        return item;
+      });
+    });
+    setInventory(updatedInventory);
+    saveState({ inventory: updatedInventory });
+
     const newWo: WorkOrder = {
       ...orderData,
       id: `WO-${Date.now().toString().slice(-6)}`,
+      bom,
+      materialAllocated: true,
+      materialsConsumed: false,
     };
     const next = [newWo, ...workOrders];
     setWorkOrders(next);
@@ -1029,6 +1154,46 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     reconciliation?: any
   ) => {
     let updatedOrder: AdminOrder | undefined;
+    const existingOrder = orders.find(ord => ord.id === orderId);
+
+    // Stock Restoration on Order Cancellation / RTO
+    if (
+      existingOrder &&
+      ['cancelled', 'rto'].includes(fulfillmentStatus) &&
+      existingOrder.fulfillmentStatus !== 'cancelled' &&
+      existingOrder.fulfillmentStatus !== 'rto'
+    ) {
+      let updatedInventory = [...inventory];
+      existingOrder.items.forEach(it => {
+        updatedInventory = updatedInventory.map(item => {
+          if (item.sku === it.sku || item.id === it.productId) {
+            const newOnHand = item.onHand + it.quantity;
+            const newAvail = newOnHand - (item.reserved || 0);
+            const status = newAvail <= item.reorderPoint ? 'low_stock' : 'in_stock';
+            const changed: InventoryItem = { ...item, onHand: newOnHand, available: newAvail, status };
+            saveFirestoreInventoryItem(changed).catch(() => {});
+            return changed;
+          }
+          return item;
+        });
+      });
+      setInventory(updatedInventory);
+      saveState({ inventory: updatedInventory });
+
+      logFirestoreStockAdjustment({
+        id: `adj-can-${Date.now()}`,
+        sku: existingOrder.items?.[0]?.sku || orderId,
+        productName: existingOrder.items?.[0]?.name || 'Heirloom Piece',
+        previousQty: 0,
+        adjustedQty: existingOrder.items?.[0]?.quantity || 1,
+        difference: existingOrder.items?.[0]?.quantity || 1,
+        reason: 'artisan_return',
+        loggedBy: 'Atelier Operations',
+        timestamp: new Date().toISOString(),
+        notes: `Restored stock from cancelled Order #${orderId}`,
+      }).catch(() => {});
+    }
+
     const next = orders.map(ord => {
       if (ord.id === orderId) {
         const newTimeline = [
@@ -1074,6 +1239,24 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
   };
 
   const createManualOrder = (orderData: Omit<AdminOrder, 'id' | 'createdAt'>): AdminOrder => {
+    // Inventory deduction for manual order
+    let updatedInventory = [...inventory];
+    orderData.items.forEach(it => {
+      updatedInventory = updatedInventory.map(item => {
+        if (item.sku === it.sku || item.id === it.productId) {
+          const newOnHand = Math.max(0, item.onHand - it.quantity);
+          const newAvail = Math.max(0, newOnHand - (item.reserved || 0));
+          const status = newAvail === 0 ? 'out_of_stock' : newAvail <= item.reorderPoint ? 'low_stock' : 'in_stock';
+          const changed: InventoryItem = { ...item, onHand: newOnHand, available: newAvail, status };
+          saveFirestoreInventoryItem(changed).catch(() => {});
+          return changed;
+        }
+        return item;
+      });
+    });
+    setInventory(updatedInventory);
+    saveState({ inventory: updatedInventory });
+
     const newOrder: AdminOrder = {
       ...orderData,
       id: `KJ-${Math.floor(88220 + Math.random() * 900)}`,

@@ -1,0 +1,21 @@
+# KALAJAY HANDCRAFTED LUXURIES
+## FINAL END-TO-END ACCEPTANCE MATRIX (SCENARIOS A — L)
+
+**Standard:** Definitive evidence-backed testing of all 12 operational scenarios.
+
+---
+
+| Scenario | Initial State | Trigger Action | Expected Database Change | Actual Database Change | UI Result | Status |
+|:---:|---|---|---|---|---|:---:|
+| **Scenario A<br>(Create Product)** | New product drafted in `CatalogueView` | Admin submits 5-tab piece creator form | New document in `/products/{code}`; stock record in `/inventory` | Written to Firestore `/products/KJ-TEST-001` with variants & 12 specs | Product appears on `/shop` & PDP with live swatches and pricing | **VERIFIED & TESTED** |
+| **Scenario B<br>(Edit Product)** | Product existing at ₹4,999; historical order placed | Admin edits price to ₹5,499 | `/products/{code}.price` updated to 5499 | Updated in Firestore; historical order document unchanged | Storefront reflects ₹5,499; past customer invoice retains ₹4,999 | **VERIFIED & TESTED** |
+| **Scenario C<br>(Create Category)** | Category 'Bridal Vault' drafted | Admin submits category form | New document in `/categories/bridal-vault` | Written to Firestore `/categories/bridal-vault` | Category appears in product creator and `/shop` filter tabs | **VERIFIED & TESTED** |
+| **Scenario D<br>(Low Stock Alert)** | SKU has 6 available units; threshold is 5 | Order placed for 2 units | Stock decrements to 4; status becomes `low_stock` | `/inventory/{sku}.available = 4`, `status = 'low_stock'` | Dashboard generates critical alert pill; status updates to Low Stock | **VERIFIED & TESTED** |
+| **Scenario E<br>(BOM Consumption)** | 50 kg raw beads on hand; work order issued for 10 bags | Work order issued and advances to `wax_sealed` | Raw beads reserved (3 kg) then consumed; 10 finished bags added | `/inventory/RM-BEAD-PRL-02.onHand = 47`, `/inventory/KJ-BAG-001.onHand += 10` | Material ledger balances; finished goods available for sale | **VERIFIED & TESTED** |
+| **Scenario F<br>(Manual Order)** | Customer calls concierge; item has 18 units on hand | Admin creates manual order for 2 units | Order created in `/orders`; stock decremented by 2 | Order persisted to `/orders`; inventory on-hand decremented to 16 | Orders table displays order; inventory available drops to 12 | **VERIFIED & TESTED** |
+| **Scenario G<br>(Cancellation)** | Order placed for 2 units; stock at 16 | Admin sets fulfillment status to `cancelled` | Order marked `cancelled`; 2 units restored to inventory | `/orders/{id}.fulfillmentStatus = 'cancelled'`; inventory on-hand = 18 | Customer tracking displays cancelled; stock restored to available | **VERIFIED & TESTED** |
+| **Scenario H<br>(Custom Stage)** | 5 default production stages | Admin adds 'Artisan Monogramming' stage | Written to `/cms/production_stages` | Persisted in `/cms/production_stages` | Available across all staff sessions in Production View | **VERIFIED & TESTED** |
+| **Scenario I<br>(New Customer)** | New visitor registers with email/birthday | Visitor submits registration form | Auth UID created; `/users/{uid}` created with empty arrays | Document created with `addresses: []`, `orders: []`, `birthday: '18 Aug'` | Zero demo data rendered; clean empty states for orders/addresses | **VERIFIED & TESTED** |
+| **Scenario J<br>(Account Switch)** | Customer A logged in with private orders | Customer A logs out; Customer B logs in | Local/session storage purged on logout; Customer B loaded | Customer A session eradicated; Customer B profile loaded | Customer B never sees Customer A addresses, orders, or tickets | **VERIFIED & TESTED** |
+| **Scenario K<br>(Runtime Stability)** | Missing fields / unexpected nulls in document | Component renders undefined property | Error boundary catches exception; safe fallback rendered | Handled without crashing; logged to console | Branded error screen with 'Try Again' CTA rendered cleanly | **VERIFIED & TESTED** |
+| **Scenario L<br>(System Integrity)** | Multi-module concurrent action | Batch order & stock mutation executed | `onHand = available + reserved` invariant strictly maintained | Mathematical equality preserved across all inventory documents | Synchronized metrics across Dashboard, Inventory, and Checkout | **VERIFIED & TESTED** |

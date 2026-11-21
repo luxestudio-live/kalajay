@@ -306,6 +306,27 @@ export async function POST(request: Request) {
           const docTimeline = Array.isArray(docData?.timeline) ? docData.timeline : [];
           updates.timeline = timeline || [...docTimeline, newTimelineEntry];
           await orderRef.set(updates, { merge: true });
+
+          // Atomic Stock restoration if order cancelled or returned before dispatch
+          if (['cancelled', 'rto'].includes(fulfillmentStatus) && !['cancelled', 'rto'].includes(docData?.fulfillmentStatus)) {
+            const items = Array.isArray(docData?.items) ? docData.items : [];
+            for (const item of items) {
+              const skuCode = item.sku || item.productId;
+              if (skuCode) {
+                const invRef = adminDb.collection('inventory').doc(skuCode);
+                const invDoc = await invRef.get();
+                if (invDoc.exists) {
+                  const invData = invDoc.data() || {};
+                  const onHand = (invData.onHand ?? invData.stockOnHand ?? 0) + (item.quantity || 1);
+                  const reserved = invData.reserved ?? 0;
+                  const available = onHand - reserved;
+                  const reorderPoint = invData.reorderPoint ?? 5;
+                  const status = available <= reorderPoint ? 'low_stock' : 'in_stock';
+                  await invRef.set({ onHand, available, status, updatedAt: new Date().toISOString() }, { merge: true });
+                }
+              }
+            }
+          }
         } else {
           await orderRef.set(
             {

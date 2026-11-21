@@ -144,6 +144,20 @@ export interface StockAdjustment {
   notes: string;
 }
 
+export interface ProductBomItem {
+  materialSku: string;
+  materialName: string;
+  quantityRequired: number; // per unit finished good
+  unit: string;
+}
+
+export interface ProductBom {
+  productId: string;
+  productSku: string;
+  materials: ProductBomItem[];
+  updatedAt: string;
+}
+
 export interface WorkOrder {
   id: string;
   productName: string;
@@ -164,6 +178,8 @@ export interface WorkOrder {
   priority: 'normal' | 'high' | 'bridal_express';
   qcPassed: boolean;
   materialAllocated: boolean;
+  materialsConsumed?: boolean;
+  bom?: ProductBomItem[];
   notes?: string;
 }
 
@@ -195,7 +211,8 @@ export interface AdminOrder {
     | 'quality_checked'
     | 'shipped'
     | 'delivered'
-    | 'rto';
+    | 'rto'
+    | 'cancelled';
   shippingAddress: {
     addressLine: string;
     city: string;

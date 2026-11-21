@@ -193,20 +193,16 @@ const DEFAULT_ORDERS: Order[] = [
 ];
 
 export const INITIAL_USER: User = {
-  id: 'usr-kalajay-01',
-  name: 'Sonali Sharma',
-  email: 'sonali.sharma@example.com',
+  id: 'usr-kalajay-patron',
+  name: 'Kalajay Patron',
+  email: 'patron@kalajay.in',
   phone: '+91 98765 43210',
-  memberSince: 'March 2026',
+  memberSince: 'Today',
   tier: 'Kalajay Circle',
-  rewardPoints: 450,
-  addresses: DEFAULT_ADDRESSES,
-  orders: DEFAULT_ORDERS,
-  preferences: {
-    preferredPalette: 'Champagne Gold & Pearl',
-    birthday: '14 November',
-    anniversary: '26 February',
-  },
+  rewardPoints: 300,
+  addresses: [],
+  orders: [],
+  preferences: {},
 };
 
 interface AuthContextType {
@@ -235,24 +231,20 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 function normalizeUser(u: any): User | null {
   if (!u || typeof u !== 'object') return null;
 
-  // If user has demo addresses from a non-demo user account, filter them out
+  // Filter out any mock addresses across all accounts
   let addresses = Array.isArray(u.addresses) ? u.addresses : [];
-  if (u.id !== 'usr-kalajay-01' && u.email !== 'sonali.sharma@example.com') {
-    addresses = addresses.filter(
-      (a: Address) =>
-        a &&
-        a.id !== 'addr-1' &&
-        a.id !== 'addr-2' &&
-        a.fullName !== 'Sonali Sharma' &&
-        !(a.street && a.street.includes('Signature Palms'))
-    );
-  }
+  addresses = addresses.filter(
+    (a: Address) =>
+      a &&
+      a.id !== 'addr-1' &&
+      a.id !== 'addr-2' &&
+      a.fullName !== 'Sonali Sharma' &&
+      !(a.street && a.street.includes('Signature Palms'))
+  );
 
-  // If user has demo orders from a non-demo user account, filter them out
+  // Filter out any mock orders across all accounts
   let orders = Array.isArray(u.orders) ? u.orders : [];
-  if (u.id !== 'usr-kalajay-01' && u.email !== 'sonali.sharma@example.com') {
-    orders = orders.filter((o: Order) => o && o.id !== 'KJ-8924');
-  }
+  orders = orders.filter((o: Order) => o && o.id !== 'KJ-8924');
 
   return {
     ...u,
@@ -632,6 +624,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     saveUserSession(null);
     setFirebaseUser(null);
     setConfirmationResult(null);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('kalajay_user_session');
+        localStorage.removeItem('kalajay_patron_orders');
+        localStorage.removeItem('kalajay_dpdp_nominee');
+        localStorage.removeItem('kalajay_patron_wishlist');
+        sessionStorage.removeItem('kalajay_staff_authorized');
+        sessionStorage.removeItem('kalajay_staff_email');
+      } catch {}
+    }
   };
 
   /**

@@ -168,7 +168,7 @@ export default function DashboardView() {
       });
     });
 
-    return [...list, ...SEED_ACTIVITY_ALERTS];
+    return list;
   }, [inventory, orders]);
 
   const filteredAlerts = liveAlerts.filter(alt => {
