@@ -127,17 +127,21 @@ export async function POST(request: Request) {
         );
       }
 
-      // Archiving / Inactive Product Guard: Never allow purchasing archived or unpublished pieces
+      // Archiving / Inactive / Draft Product Guard: Never allow purchasing archived, draft or unpublished pieces
       if (
         catalogItem.status === 'archived' ||
         catalogItem.status === 'inactive' ||
+        catalogItem.status === 'draft' ||
+        catalogItem.archived === true ||
         catalogItem.isActive === false ||
-        catalogItem.active === false
+        catalogItem.active === false ||
+        catalogItem.isDraft === true ||
+        catalogItem.published === false
       ) {
         return NextResponse.json(
           {
             success: false,
-            error: `Atelier Notice: "${catalogItem.name}" is archived or unavailable for purchase.`,
+            error: `Atelier Notice: "${catalogItem.name}" is archived, draft, or unavailable for purchase.`,
             code: 'PRODUCT_ARCHIVED',
           },
           { status: 400 }

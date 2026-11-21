@@ -102,12 +102,24 @@ export async function getFirestoreProducts(includeDrafts = false): Promise<Produ
     const productsRef = collection(db, 'products');
     const q = includeDrafts
       ? productsRef
-      : query(productsRef, where('status', '==', 'published'));
+      : query(productsRef, where('status', 'in', ['published', 'active']));
     const snapshot = await getDocs(q);
     if (snapshot.empty) return [];
     const list: Product[] = [];
     snapshot.forEach((snap) => {
       const d = snap.data();
+      if (!includeDrafts) {
+        if (
+          d.archived === true ||
+          d.isActive === false ||
+          d.active === false ||
+          d.isDraft === true ||
+          d.published === false ||
+          (d.status && !['published', 'active'].includes(d.status))
+        ) {
+          return;
+        }
+      }
       list.push({
         ...d,
         variants: Array.isArray(d.variants) ? d.variants : [],

@@ -348,9 +348,10 @@ export default function CatalogueView() {
       hasDynamicVariants: Boolean(newProduct.attributes && newProduct.attributes.length > 0),
       care: newProduct.care,
       description: newProduct.description,
-      status: newProduct.inStock ? 'active' : 'inactive',
+      status: newProduct.inStock ? 'published' : 'inactive',
       isActive: newProduct.inStock,
       active: newProduct.inStock,
+      archived: false,
       artisanTitle: newProduct.artisanTitle,
       artisanNote: newProduct.artisanNote,
       origin: newProduct.origin,
@@ -388,9 +389,10 @@ export default function CatalogueView() {
       attributes: editingProduct.attributes || [],
       variants: editingProduct.variants || [],
       hasDynamicVariants: Boolean(editingProduct.attributes && editingProduct.attributes.length > 0),
-      status: editingProduct.inStock ? 'active' : 'inactive',
+      status: editingProduct.inStock ? 'published' : 'inactive',
       isActive: editingProduct.inStock,
       active: editingProduct.inStock,
+      archived: false,
     };
     setProducts(prev => prev.map(p => (p.id === updated.id ? updated : p)));
     setEditProductModalOpen(false);

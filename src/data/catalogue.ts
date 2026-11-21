@@ -65,9 +65,12 @@ export interface Product {
   description: string;
   hsnCode?: string;
   taxRate?: number;
-  status?: 'active' | 'archived' | 'inactive';
+  status?: 'published' | 'active' | 'archived' | 'inactive' | 'draft';
   isActive?: boolean;
   active?: boolean;
+  archived?: boolean;
+  isDraft?: boolean;
+  published?: boolean;
   artisanTitle?: string;
   artisanNote?: string;
   origin?: string;

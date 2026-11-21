@@ -111,6 +111,26 @@ service cloud.firestore {
              data.messages is list && data.messages.size() > 0 && data.messages.size() <= 50;
     }
 
+    // Helper: Validates whether a product is currently published and publicly readable.
+    // Enforces conjunctive publication model: status MUST be published/active, AND
+    // product must NOT be flagged inactive, archived, or draft by any conflicting field.
+    // Safely guards property existence for legacy document compatibility.
+    function isPublicProduct() {
+      return (
+        (!('status' in resource.data) || (
+          resource.data.status in ['published', 'active'] &&
+          resource.data.status != 'draft' &&
+          resource.data.status != 'archived' &&
+          resource.data.status != 'inactive'
+        )) &&
+        (!('isActive' in resource.data) || resource.data.isActive == true) &&
+        (!('active' in resource.data) || resource.data.active == true) &&
+        (!('archived' in resource.data) || resource.data.archived == false) &&
+        (!('isDraft' in resource.data) || resource.data.isDraft == false) &&
+        (!('published' in resource.data) || resource.data.published == true)
+      );
+    }
+
     // -------------------------------------------------------------
     // 1. Products Catalogue (/products/{productId})
     // Storefront visitors have public read access to active, published pieces ONLY.
@@ -120,22 +140,18 @@ service cloud.firestore {
     // -------------------------------------------------------------
     match /products/{productId} {
       // Direct Document Fetch (get):
-      // Anonymous visitors can read published/active pieces. Drafts and archived pieces are staff-only.
-      allow get: if isAdmin() || (
-        resource.data.status == 'published' || (
-          (!('status' in resource.data) || (resource.data.status != 'archived' && resource.data.status != 'draft' && resource.data.status != 'inactive')) &&
-          (!('isActive' in resource.data) || resource.data.isActive == true) &&
-          (!('active' in resource.data) || resource.data.active == true) &&
-          (!('isDraft' in resource.data) || resource.data.isDraft == false) &&
-          (!('archived' in resource.data) || resource.data.archived == false)
-        )
-      );
+      // Anonymous visitors can read published/active pieces.
+      // Drafts, archived pieces, inactive pieces, or conflicting states are strictly staff-only.
+      allow get: if isAdmin() || isPublicProduct();
+
       // Collection Queries (list):
       // Administrators can list all products (drafts, archived, published) for catalogue management.
-      // Anonymous public storefront visitors MUST constrain their query to published pieces only (where status == 'published').
+      // Anonymous public storefront visitors MUST query explicitly published, non-archived pieces.
       // Unconstrained queries over the entire collection containing mixed statuses are rejected.
       allow list: if isAdmin() || (
-        resource.data.status == 'published'
+        resource.data.status in ['published', 'active'] &&
+        (!('archived' in resource.data) || resource.data.archived == false) &&
+        (!('isActive' in resource.data) || resource.data.isActive == true)
       );
       allow create: if isStoreManagerOrSuperAdmin() && isValidProduct(request.resource.data);
       allow update: if isStoreManagerOrSuperAdmin() && isValidProduct(request.resource.data);
