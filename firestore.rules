@@ -112,13 +112,19 @@ service cloud.firestore {
     }
 
     // Helper: Validates whether a product is currently published and publicly readable.
-    // Enforces conjunctive publication model: status MUST be published/active, AND
-    // product must NOT be flagged inactive, archived, or draft by any conflicting field.
-    // Safely guards property existence for legacy document compatibility.
+    // Enforces conjunctive publication model: piece must have explicit published/active status
+    // OR affirmative legacy active status (active: true or isActive: true).
+    // All negative restrictions (draft, archived, inactive) strictly deny read access.
     function isPublicProduct() {
       return (
+        (
+          ('status' in resource.data && resource.data.status in ['published', 'active']) ||
+          (!('status' in resource.data) && (
+            ('active' in resource.data && resource.data.active == true) ||
+            ('isActive' in resource.data && resource.data.isActive == true)
+          ))
+        ) &&
         (!('status' in resource.data) || (
-          resource.data.status in ['published', 'active'] &&
           resource.data.status != 'draft' &&
           resource.data.status != 'archived' &&
           resource.data.status != 'inactive'
@@ -148,11 +154,7 @@ service cloud.firestore {
       // Administrators can list all products (drafts, archived, published) for catalogue management.
       // Anonymous public storefront visitors MUST query explicitly published, non-archived pieces.
       // Unconstrained queries over the entire collection containing mixed statuses are rejected.
-      allow list: if isAdmin() || (
-        resource.data.status in ['published', 'active'] &&
-        (!('archived' in resource.data) || resource.data.archived == false) &&
-        (!('isActive' in resource.data) || resource.data.isActive == true)
-      );
+      allow list: if isAdmin() || isPublicProduct();
       allow create: if isStoreManagerOrSuperAdmin() && isValidProduct(request.resource.data);
       allow update: if isStoreManagerOrSuperAdmin() && isValidProduct(request.resource.data);
       allow delete: if isStoreManagerOrSuperAdmin();
