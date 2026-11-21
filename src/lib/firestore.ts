@@ -145,7 +145,7 @@ export async function deleteFirestoreProduct(productId: string): Promise<void> {
   }
 }
 
-export async function getFirestoreCategories(): Promise<Collection[]> {
+export async function getFirestoreCategories(includeArchived = false): Promise<Collection[]> {
   try {
     if (!db || !db.type) return [];
     const colRef = collection(db, 'categories');
@@ -154,13 +154,18 @@ export async function getFirestoreCategories(): Promise<Collection[]> {
     const list: Collection[] = [];
     snapshot.forEach((snap) => {
       const d = snap.data();
+      if (!includeArchived && d.status === 'archived') {
+        return;
+      }
       list.push({
         slug: d.slug || snap.id,
         name: d.name || snap.id,
+        tagline: d.tagline || '',
         description: d.description || '',
         image: d.image || '/products/bag1.png',
+        status: d.status || 'active',
         ...d,
-      } as Collection);
+      } as unknown as Collection);
     });
     return list;
   } catch (error) {
@@ -179,6 +184,7 @@ export async function saveFirestoreCategory(category: Collection): Promise<void>
     );
     await setDoc(catRef, {
       ...cleanData,
+      status: (category as any).status || 'active',
       updatedAt: serverTimestamp(),
     }, { merge: true });
   } catch (error) {
@@ -186,13 +192,35 @@ export async function saveFirestoreCategory(category: Collection): Promise<void>
   }
 }
 
-export async function deleteFirestoreCategory(slug: string): Promise<void> {
+export async function archiveFirestoreCategory(slug: string): Promise<void> {
   try {
     if (!db || !db.type) return;
     const catRef = doc(db, 'categories', slug);
-    await deleteDoc(catRef);
+    await updateDoc(catRef, {
+      status: 'archived',
+      archivedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
   } catch (error) {
-    console.error('Error deleting category from Firestore:', error);
+    console.error('Error archiving category in Firestore:', error);
+  }
+}
+
+export async function deleteFirestoreCategory(slug: string, permanent = false): Promise<void> {
+  try {
+    if (!db || !db.type) return;
+    const catRef = doc(db, 'categories', slug);
+    if (permanent) {
+      await deleteDoc(catRef);
+    } else {
+      await updateDoc(catRef, {
+        status: 'archived',
+        archivedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
+  } catch (error) {
+    console.error('Error deleting/archiving category from Firestore:', error);
   }
 }
 

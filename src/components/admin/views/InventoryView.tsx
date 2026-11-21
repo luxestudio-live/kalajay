@@ -400,7 +400,13 @@ export default function InventoryView() {
                       {item.available} {item.unit}
                     </td>
                     <td className="py-3 px-4 text-right font-mono text-[#372921]">
-                      ₹{(item.unitCost || 0).toLocaleString('en-IN')}
+                      {item.unitCost != null && !isNaN(Number(item.unitCost)) && Number(item.unitCost) > 0 ? (
+                        `₹${Number(item.unitCost).toLocaleString('en-IN')}`
+                      ) : item.unitCost === 0 ? (
+                        <span className="text-[#76695F] italic" title="Explicitly recorded as zero cost">₹0.00</span>
+                      ) : (
+                        <span className="text-[#A09383] italic text-[11px]" title="Procurement cost unrecorded">—</span>
+                      )}
                     </td>
                     <td className="py-3 px-4">
                       <span

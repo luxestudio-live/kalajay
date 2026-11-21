@@ -25,7 +25,7 @@ export default function CollectionDetailClient({ slug: propSlug }: CollectionDet
   useEffect(() => {
     let isMounted = true;
 
-    getFirestoreCategories().then((liveCats) => {
+    getFirestoreCategories(true).then((liveCats) => {
       if (!isMounted) return;
       if (liveCats && liveCats.length > 0) {
         const matchingCat = liveCats.find(c => 

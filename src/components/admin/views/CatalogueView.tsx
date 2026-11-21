@@ -438,10 +438,21 @@ export default function CatalogueView() {
   };
 
   const handleDeleteCollection = (slug: string, name: string) => {
+    const linkedProducts = products.filter(
+      p => p.category === name || (p as any).categorySlug === slug
+    );
     setCollections(prev => prev.filter(c => c.slug !== slug));
-    deleteFirestoreCategory(slug).catch(() => {});
-    logAction('DELETE_COLLECTION', 'catalogue', `Archived collection: ${name} (${slug})`);
-    showToast(`Archived collection "${name}".`);
+    deleteFirestoreCategory(slug, false).catch(() => {});
+    logAction(
+      'ARCHIVE_COLLECTION',
+      'catalogue',
+      `Archived collection "${name}" (${slug}). ${linkedProducts.length} linked products preserved.`
+    );
+    showToast(
+      linkedProducts.length > 0
+        ? `Archived collection "${name}". Preserved references for ${linkedProducts.length} linked creations.`
+        : `Archived collection "${name}".`
+    );
   };
 
   const handleReviewStatus = async (reviewId: string, status: 'approved' | 'archived') => {
