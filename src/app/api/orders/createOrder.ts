@@ -174,6 +174,15 @@ export async function POST(request: Request) {
             { status: 400 }
           );
         }
+      } else if (catalogItem.inStock === false) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Atelier Notice: "${catalogItem.name}" is currently sold out or out of stock.`,
+            code: 'OUT_OF_STOCK',
+          },
+          { status: 400 }
+        );
       }
 
       const qty = Math.max(1, Math.floor(Number(item.quantity) || 1));

@@ -149,10 +149,12 @@ export async function saveFirestoreProduct(product: Product): Promise<void> {
     const productRef = doc(db, 'products', id);
     const cleanData = JSON.parse(JSON.stringify(product));
 
-    // Harmonize canonical publication flags to prevent conflicting states in Firestore
-    const isExplicitlyPublished = (cleanData.status === 'published' || cleanData.inStock === true) &&
+    // Harmonize canonical publication flags to prevent conflicting states in Firestore.
+    // Publication status is strictly independent from inventory/stock availability.
+    const isExplicitlyPublished = (cleanData.status === 'published' || cleanData.published === true || (cleanData.isPublished === true && cleanData.status !== 'draft')) &&
       cleanData.archived !== true &&
-      cleanData.isDraft !== true;
+      cleanData.isDraft !== true &&
+      cleanData.status !== 'draft';
 
     if (isExplicitlyPublished) {
       cleanData.status = 'published';
@@ -161,6 +163,18 @@ export async function saveFirestoreProduct(product: Product): Promise<void> {
       cleanData.archived = false;
       cleanData.isDraft = false;
       cleanData.published = true;
+    } else if (cleanData.status === 'draft' || cleanData.isDraft === true || cleanData.isPublished === false) {
+      cleanData.status = 'draft';
+      cleanData.isActive = false;
+      cleanData.active = false;
+      cleanData.archived = false;
+      cleanData.isDraft = true;
+      cleanData.published = false;
+    }
+
+    // Preserve inStock as independent inventory availability boolean (defaults to true if unspecified)
+    if (cleanData.inStock === undefined) {
+      cleanData.inStock = true;
     }
 
     await setDoc(productRef, {

@@ -118,6 +118,7 @@ export default function CatalogueView() {
     coverImage: '/products/bag1.png',
     images: ['/products/bag1.png'],
     description: 'Masterfully hand-threaded by artisan women in Bihar using Japanese micro-beads.',
+    isPublished: true,
     inStock: true,
     isBestSeller: false,
     isFeatured: false,
@@ -348,12 +349,12 @@ export default function CatalogueView() {
       hasDynamicVariants: Boolean(newProduct.attributes && newProduct.attributes.length > 0),
       care: newProduct.care,
       description: newProduct.description,
-      status: newProduct.inStock ? 'published' : 'inactive',
-      isActive: newProduct.inStock,
-      active: newProduct.inStock,
+      status: (newProduct as any).isPublished !== false ? 'published' : 'draft',
+      isActive: (newProduct as any).isPublished !== false,
+      active: (newProduct as any).isPublished !== false,
       archived: false,
-      isDraft: !newProduct.inStock,
-      published: Boolean(newProduct.inStock),
+      isDraft: (newProduct as any).isPublished === false,
+      published: (newProduct as any).isPublished !== false,
       artisanTitle: newProduct.artisanTitle,
       artisanNote: newProduct.artisanNote,
       origin: newProduct.origin,
@@ -391,12 +392,13 @@ export default function CatalogueView() {
       attributes: editingProduct.attributes || [],
       variants: editingProduct.variants || [],
       hasDynamicVariants: Boolean(editingProduct.attributes && editingProduct.attributes.length > 0),
-      status: editingProduct.inStock ? 'published' : 'inactive',
-      isActive: editingProduct.inStock,
-      active: editingProduct.inStock,
+      inStock: Boolean(editingProduct.inStock),
+      status: (editingProduct as any).isPublished !== false ? 'published' : 'draft',
+      isActive: (editingProduct as any).isPublished !== false,
+      active: (editingProduct as any).isPublished !== false,
       archived: false,
-      isDraft: !editingProduct.inStock,
-      published: Boolean(editingProduct.inStock),
+      isDraft: (editingProduct as any).isPublished === false,
+      published: (editingProduct as any).isPublished !== false,
     };
     setProducts(prev => prev.map(p => (p.id === updated.id ? updated : p)));
     setEditProductModalOpen(false);
@@ -631,9 +633,20 @@ export default function CatalogueView() {
                         ₹{p.price.toLocaleString('en-IN')}
                       </td>
                       <td className="py-3 px-4">
-                        <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full uppercase font-mono">
-                          {p.inStock ? 'Published' : 'Draft'}
-                        </span>
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full uppercase font-mono ${
+                            p.status === 'published' || p.published === true || (p.isDraft === false && p.status !== 'draft')
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}>
+                            {p.status === 'published' || p.published === true || (p.isDraft === false && p.status !== 'draft') ? 'Published' : 'Draft'}
+                          </span>
+                          <span className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded uppercase font-mono ${
+                            p.inStock !== false ? 'text-emerald-700 bg-emerald-50' : 'text-stone-500 bg-stone-100'
+                          }`}>
+                            {p.inStock !== false ? 'In Stock' : 'Out of Stock'}
+                          </span>
+                        </div>
                       </td>
                       <td className="py-3 px-4 text-right">
                         <div className="inline-flex items-center gap-1.5">
@@ -653,6 +666,7 @@ export default function CatalogueView() {
                                 description: p.description || '',
                                 originalPrice: p.originalPrice || p.price,
                                 inStock: p.inStock ?? true,
+                                isPublished: p.status === 'published' || p.published === true || (p.isDraft === false && p.status !== 'draft'),
                                 isBestSeller: p.isBestSeller ?? false,
                                 isFeatured: p.isFeatured ?? false,
                                 isNewArrival: p.isNewArrival ?? false,
@@ -1084,13 +1098,26 @@ export default function CatalogueView() {
                       <label className="flex items-start gap-3 p-3 bg-white border border-[#DED3C5] rounded-xl cursor-pointer hover:border-[#9E5430] transition-colors">
                         <input
                           type="checkbox"
+                          checked={(newProduct as any).isPublished !== false}
+                          onChange={e => setNewProduct(prev => ({ ...prev, isPublished: e.target.checked }))}
+                          className="mt-0.5 rounded text-[#9E5430] focus:ring-[#9E5430]"
+                        />
+                        <div>
+                          <span className="font-semibold text-[#372921] block">Published &amp; Visible</span>
+                          <span className="text-[11px] text-[#76695F]">Piece is published to the public storefront catalogue (uncheck for Draft)</span>
+                        </div>
+                      </label>
+
+                      <label className="flex items-start gap-3 p-3 bg-white border border-[#DED3C5] rounded-xl cursor-pointer hover:border-[#9E5430] transition-colors">
+                        <input
+                          type="checkbox"
                           checked={newProduct.inStock}
                           onChange={e => setNewProduct(prev => ({ ...prev, inStock: e.target.checked }))}
                           className="mt-0.5 rounded text-[#9E5430] focus:ring-[#9E5430]"
                         />
                         <div>
-                          <span className="font-semibold text-[#372921] block">Published &amp; Active</span>
-                          <span className="text-[11px] text-[#76695F]">Piece is visible and available for checkout on website</span>
+                          <span className="font-semibold text-[#372921] block">In Stock &amp; Available</span>
+                          <span className="text-[11px] text-[#76695F]">Inventory is ready for checkout (out of stock items show "Sold Out")</span>
                         </div>
                       </label>
 
@@ -1712,13 +1739,26 @@ export default function CatalogueView() {
                       <label className="flex items-start gap-3 p-3 bg-white border border-[#DED3C5] rounded-xl cursor-pointer hover:border-[#9E5430] transition-colors">
                         <input
                           type="checkbox"
+                          checked={(editingProduct as any).isPublished !== false}
+                          onChange={e => setEditingProduct(prev => prev ? { ...prev, isPublished: e.target.checked } : null)}
+                          className="mt-0.5 rounded text-[#9E5430] focus:ring-[#9E5430]"
+                        />
+                        <div>
+                          <span className="font-semibold text-[#372921] block">Published &amp; Visible</span>
+                          <span className="text-[11px] text-[#76695F]">Piece is published to the public storefront catalogue (uncheck for Draft)</span>
+                        </div>
+                      </label>
+
+                      <label className="flex items-start gap-3 p-3 bg-white border border-[#DED3C5] rounded-xl cursor-pointer hover:border-[#9E5430] transition-colors">
+                        <input
+                          type="checkbox"
                           checked={editingProduct.inStock}
                           onChange={e => setEditingProduct(prev => prev ? { ...prev, inStock: e.target.checked } : null)}
                           className="mt-0.5 rounded text-[#9E5430] focus:ring-[#9E5430]"
                         />
                         <div>
-                          <span className="font-semibold text-[#372921] block">Published &amp; Active</span>
-                          <span className="text-[11px] text-[#76695F]">Piece is visible and available for checkout on website</span>
+                          <span className="font-semibold text-[#372921] block">In Stock &amp; Available</span>
+                          <span className="text-[11px] text-[#76695F]">Inventory is ready for checkout (out of stock items show "Sold Out")</span>
                         </div>
                       </label>
 

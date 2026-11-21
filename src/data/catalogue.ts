@@ -71,6 +71,7 @@ export interface Product {
   archived?: boolean;
   isDraft?: boolean;
   published?: boolean;
+  isPublished?: boolean;
   artisanTitle?: string;
   artisanNote?: string;
   origin?: string;
