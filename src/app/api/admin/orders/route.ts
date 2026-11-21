@@ -311,10 +311,18 @@ export async function POST(request: Request) {
           if (['cancelled', 'rto'].includes(fulfillmentStatus) && !['cancelled', 'rto'].includes(docData?.fulfillmentStatus)) {
             const items = Array.isArray(docData?.items) ? docData.items : [];
             for (const item of items) {
-              const skuCode = item.sku || item.productId;
+              let skuCode = item.sku || item.productId;
               if (skuCode) {
-                const invRef = adminDb.collection('inventory').doc(skuCode);
-                const invDoc = await invRef.get();
+                let invRef = adminDb.collection('inventory').doc(skuCode);
+                let invDoc = await invRef.get();
+                if (!invDoc.exists && item.productId && item.productId !== skuCode) {
+                  const baseRef = adminDb.collection('inventory').doc(item.productId);
+                  const baseDoc = await baseRef.get();
+                  if (baseDoc.exists) {
+                    invRef = baseRef;
+                    invDoc = baseDoc;
+                  }
+                }
                 if (invDoc.exists) {
                   const invData = invDoc.data() || {};
                   const onHand = (invData.onHand ?? invData.stockOnHand ?? 0) + (item.quantity || 1);

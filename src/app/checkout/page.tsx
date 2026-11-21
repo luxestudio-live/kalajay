@@ -149,6 +149,10 @@ export default function CheckoutPage() {
           paymentMethod,
           items: cart.map(item => ({
             productId: item.code || item.id,
+            variantCode: item.variantCode,
+            variantId: item.variantId,
+            variantLabel: item.variantLabel,
+            attributes: item.attributes,
             quantity: item.quantity,
           })),
           ...(user?.id ? { userId: user.id } : {}),
@@ -190,9 +194,11 @@ export default function CheckoutPage() {
           items: cart.map(item => ({
             id: item.code || item.id,
             name: item.name,
-            code: item.code,
+            code: item.variantCode || item.code,
             category: item.category || 'Atelier',
             colorway: item.variantLabel || 'Classic Heirloom',
+            variantLabel: item.variantLabel,
+            attributes: item.attributes,
             price: item.price,
             quantity: item.quantity,
             image: item.image,

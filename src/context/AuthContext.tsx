@@ -45,6 +45,8 @@ export interface OrderItem {
   price: number;
   quantity: number;
   image: string;
+  variantLabel?: string;
+  attributes?: Record<string, string>;
 }
 
 export interface TrackingStep {

@@ -32,9 +32,11 @@ import {
   Product,
   Collection,
   ProductVariant,
+  ProductAttribute,
   ReviewItem,
   DEFAULT_REVIEWS,
 } from '@/data/catalogue';
+import ProductVariantManager from '@/components/admin/ProductVariantManager';
 import {
   getFirestoreProducts,
   saveFirestoreProduct,
@@ -121,6 +123,8 @@ export default function CatalogueView() {
     isFeatured: false,
     isNewArrival: true,
     variants: [] as ProductVariant[],
+    attributes: [] as ProductAttribute[],
+    hasDynamicVariants: true,
     artisanTitle: 'Made by Hand: Variation is Part of the Charm',
     artisanNote: 'Every Kalajay object is hand-strung by our independent women makers. Subtle nuances in bead tension, facet reflections, and minor dimensions are organic signatures of authentic human artistry.',
     origin: 'Hand-crafted loom stringing; studio curation & dispatch.',
@@ -137,7 +141,7 @@ export default function CatalogueView() {
 
   // Sync products, collections, and reviews on mount
   React.useEffect(() => {
-    getFirestoreProducts().then((liveProds) => {
+    getFirestoreProducts(true).then((liveProds) => {
       if (liveProds && liveProds.length > 0) {
         const codeSet = new Set(liveProds.map(p => p.code));
         const combined = [...liveProds, ...PRODUCTS.filter(p => !codeSet.has(p.code))];
@@ -339,7 +343,9 @@ export default function CatalogueView() {
       materials: typeof newProduct.materials === 'string'
         ? newProduct.materials.split(',').map(m => m.trim()).filter(Boolean)
         : newProduct.materials,
-      variants: newProduct.variants,
+      attributes: newProduct.attributes || [],
+      variants: newProduct.variants || [],
+      hasDynamicVariants: Boolean(newProduct.attributes && newProduct.attributes.length > 0),
       care: newProduct.care,
       description: newProduct.description,
       status: newProduct.inStock ? 'active' : 'inactive',
@@ -379,7 +385,9 @@ export default function CatalogueView() {
       materials: Array.isArray(editingProduct.materials)
         ? editingProduct.materials
         : (typeof (editingProduct as any).materials === 'string' ? (editingProduct as any).materials.split(',').map((m: string) => m.trim()).filter(Boolean) : []),
+      attributes: editingProduct.attributes || [],
       variants: editingProduct.variants || [],
+      hasDynamicVariants: Boolean(editingProduct.attributes && editingProduct.attributes.length > 0),
       status: editingProduct.inStock ? 'active' : 'inactive',
       isActive: editingProduct.inStock,
       active: editingProduct.inStock,
@@ -628,7 +636,9 @@ export default function CatalogueView() {
                             onClick={() => {
                               setEditingProduct({
                                 ...p,
+                                attributes: Array.isArray(p.attributes) ? p.attributes.map(a => ({ ...a, values: a.values.map(v => ({ ...v })) })) : [],
                                 variants: Array.isArray(p.variants) ? p.variants.map(v => ({ ...v })) : [],
+                                hasDynamicVariants: p.hasDynamicVariants ?? (Array.isArray(p.attributes) && p.attributes.length > 0),
                                 images: Array.isArray(p.images) && p.images.length > 0 ? [...p.images] : (p.coverImage ? [p.coverImage] : []),
                                 materials: Array.isArray(p.materials) ? [...p.materials] : (typeof (p as any).materials === 'string' ? [(p as any).materials] : []),
                                 dimensions: p.dimensions || '',
@@ -1123,154 +1133,16 @@ export default function CatalogueView() {
 
               {/* TAB 3: VARIANTS & FINISHES */}
               {addModalTab === 'variants' && (
-                <div className="space-y-4 animate-fade-in">
-                  <div className="p-3.5 bg-[#FAF7F2] border border-[#DED3C5] rounded-xl text-xs text-[#76695F] flex items-start gap-2.5">
-                    <Palette className="w-4 h-4 text-[#9E5430] shrink-0 mt-0.5" />
-                    <div className="leading-relaxed">
-                      <strong className="text-[#372921] block font-semibold">Storefront Colorways &amp; Finish Options</strong>
-                      Shoppers on the Product Detail Page can select between these finishes. Each variant can have its own price, SKU, stock status, and photo preview.
-                    </div>
-                  </div>
-
-                  {newProduct.variants.length === 0 ? (
-                    <div className="text-center py-8 px-4 border border-dashed border-[#DED3C5] rounded-xl bg-white/50 space-y-2">
-                      <p className="text-xs text-[#76695F]">No variants configured. This piece is currently sold as a single standard finish.</p>
-                      <button
-                        type="button"
-                        onClick={handleAddNewProductVariant}
-                        className="px-4 py-2 rounded-full bg-[#9E5430]/10 hover:bg-[#9E5430]/20 text-[#9E5430] font-semibold text-xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Add First Variant / Colorway</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {newProduct.variants.map((variant, idx) => (
-                        <div key={idx} className="p-4 bg-white border border-[#DED3C5] rounded-xl space-y-3 shadow-2xs">
-                          <div className="flex items-center justify-between pb-2 border-b border-[#EAE2D8]">
-                            <span className="font-mono text-[11px] font-bold text-[#9E5430] uppercase">
-                              Variant #{idx + 1}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveNewProductVariant(idx)}
-                              className="p-1 rounded text-rose-500 hover:bg-rose-50 cursor-pointer transition-colors"
-                              title="Remove variant"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <div>
-                              <label className="block text-[11px] font-semibold text-[#372921] mb-1">
-                                Variant Label / Finish <span className="text-[#9E5430]">*</span>
-                              </label>
-                              <input
-                                type="text"
-                                placeholder="e.g. Ivory Pearl & 24K Gold"
-                                value={variant.label}
-                                onChange={e => handleUpdateNewProductVariant(idx, { label: e.target.value })}
-                                className="w-full bg-[#FCFAF6] border border-[#DED3C5] rounded-lg px-2.5 py-1.5 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-[11px] font-semibold text-[#372921] mb-1">
-                                Variant SKU Code
-                              </label>
-                              <input
-                                type="text"
-                                value={variant.code}
-                                onChange={e => handleUpdateNewProductVariant(idx, { code: e.target.value.toUpperCase() })}
-                                className="w-full bg-[#FCFAF6] border border-[#DED3C5] rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-[#372921] focus:outline-none focus:border-[#9E5430]"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-[11px] font-semibold text-[#372921] mb-1">
-                                Variant Price (₹)
-                              </label>
-                              <input
-                                type="number"
-                                min={0}
-                                value={variant.price}
-                                onChange={e => handleUpdateNewProductVariant(idx, { price: Number(e.target.value) })}
-                                className="w-full bg-[#FCFAF6] border border-[#DED3C5] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#372921] focus:outline-none focus:border-[#9E5430]"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center pt-1">
-                            <div className="sm:col-span-2">
-                              <label className="block text-[11px] font-semibold text-[#372921] mb-1">
-                                Variant Photo URL
-                              </label>
-                              <div className="flex gap-2">
-                                <input
-                                  type="text"
-                                  placeholder="https://... or upload photo"
-                                  value={variant.image}
-                                  onChange={e => handleUpdateNewProductVariant(idx, { image: e.target.value })}
-                                  className="flex-1 bg-[#FCFAF6] border border-[#DED3C5] rounded-lg px-2.5 py-1.5 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
-                                />
-                                <label className="cursor-pointer px-2.5 py-1.5 bg-[#FAF7F2] border border-[#DED3C5] hover:border-[#9E5430] hover:text-[#9E5430] text-[#372921] rounded-lg text-xs font-medium flex items-center gap-1 transition-colors shrink-0">
-                                  <Upload className="w-3 h-3" />
-                                  <span>Upload</span>
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    onChange={async e => {
-                                      const file = e.target.files?.[0];
-                                      if (file) {
-                                        const url = await uploadImageFile(file);
-                                        if (url) handleUpdateNewProductVariant(idx, { image: url });
-                                      }
-                                    }}
-                                  />
-                                </label>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                              {variant.image ? (
-                                <img
-                                  src={variant.image}
-                                  alt={variant.label || 'Variant preview'}
-                                  className="w-10 h-10 object-cover rounded-lg border border-[#DED3C5] shrink-0"
-                                />
-                              ) : (
-                                <div className="w-10 h-10 rounded-lg border border-dashed border-[#DED3C5] flex items-center justify-center text-[#76695F] shrink-0">
-                                  <ImageIcon className="w-4 h-4 opacity-40" />
-                                </div>
-                              )}
-                              <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#372921]">
-                                <input
-                                  type="checkbox"
-                                  checked={variant.inStock}
-                                  onChange={e => handleUpdateNewProductVariant(idx, { inStock: e.target.checked })}
-                                  className="rounded text-[#9E5430] focus:ring-[#9E5430]"
-                                />
-                                <span>In Stock</span>
-                              </label>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-
-                      <button
-                        type="button"
-                        onClick={handleAddNewProductVariant}
-                        className="w-full py-2.5 rounded-xl border-2 border-dashed border-[#DED3C5] hover:border-[#9E5430] text-[#76695F] hover:text-[#9E5430] font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors bg-white/40"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>Add Another Colorway / Variant</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <ProductVariantManager
+                  baseSku={newProduct.code || 'KJ-NEW'}
+                  basePrice={Number(newProduct.price) || 0}
+                  baseImage={newProduct.coverImage || newProduct.images[0] || ''}
+                  attributes={newProduct.attributes || []}
+                  variants={newProduct.variants || []}
+                  onChangeAttributes={attrs => setNewProduct(prev => ({ ...prev, attributes: attrs }))}
+                  onChangeVariants={vars => setNewProduct(prev => ({ ...prev, variants: vars }))}
+                  uploadImageFile={uploadImageFile}
+                />
               )}
 
               {/* TAB 4: MEDIA & GALLERY */}
@@ -1889,154 +1761,16 @@ export default function CatalogueView() {
 
               {/* TAB 3: VARIANTS & FINISHES */}
               {editModalTab === 'variants' && (
-                <div className="space-y-4 animate-fade-in">
-                  <div className="p-3.5 bg-[#FAF7F2] border border-[#DED3C5] rounded-xl text-xs text-[#76695F] flex items-start gap-2.5">
-                    <Palette className="w-4 h-4 text-[#9E5430] shrink-0 mt-0.5" />
-                    <div className="leading-relaxed">
-                      <strong className="text-[#372921] block font-semibold">Storefront Colorways &amp; Finish Options</strong>
-                      Shoppers on the Product Detail Page can select between these finishes. Each variant can have its own price, SKU, stock status, and photo preview.
-                    </div>
-                  </div>
-
-                  {(!editingProduct.variants || editingProduct.variants.length === 0) ? (
-                    <div className="text-center py-8 px-4 border border-dashed border-[#DED3C5] rounded-xl bg-white/50 space-y-2">
-                      <p className="text-xs text-[#76695F]">No variants configured yet. This creation is sold as a single standard finish.</p>
-                      <button
-                        type="button"
-                        onClick={handleAddVariantToEditing}
-                        className="px-4 py-2 rounded-full bg-[#9E5430]/10 hover:bg-[#9E5430]/20 text-[#9E5430] font-semibold text-xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Add First Variant / Colorway</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {editingProduct.variants.map((variant, idx) => (
-                        <div key={idx} className="p-4 bg-white border border-[#DED3C5] rounded-xl space-y-3 shadow-2xs">
-                          <div className="flex items-center justify-between pb-2 border-b border-[#EAE2D8]">
-                            <span className="font-mono text-[11px] font-bold text-[#9E5430] uppercase">
-                              Variant #{idx + 1}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveEditingVariant(idx)}
-                              className="p-1 rounded text-rose-500 hover:bg-rose-50 cursor-pointer transition-colors"
-                              title="Remove variant"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <div>
-                              <label className="block text-[11px] font-semibold text-[#372921] mb-1">
-                                Variant Label / Finish <span className="text-[#9E5430]">*</span>
-                              </label>
-                              <input
-                                type="text"
-                                placeholder="e.g. Ivory Pearl & 24K Gold"
-                                value={variant.label}
-                                onChange={e => handleUpdateEditingVariant(idx, { label: e.target.value })}
-                                className="w-full bg-[#FCFAF6] border border-[#DED3C5] rounded-lg px-2.5 py-1.5 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-[11px] font-semibold text-[#372921] mb-1">
-                                Variant SKU Code
-                              </label>
-                              <input
-                                type="text"
-                                value={variant.code}
-                                onChange={e => handleUpdateEditingVariant(idx, { code: e.target.value.toUpperCase() })}
-                                className="w-full bg-[#FCFAF6] border border-[#DED3C5] rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-[#372921] focus:outline-none focus:border-[#9E5430]"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-[11px] font-semibold text-[#372921] mb-1">
-                                Variant Price (₹)
-                              </label>
-                              <input
-                                type="number"
-                                min={0}
-                                value={variant.price}
-                                onChange={e => handleUpdateEditingVariant(idx, { price: Number(e.target.value) })}
-                                className="w-full bg-[#FCFAF6] border border-[#DED3C5] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#372921] focus:outline-none focus:border-[#9E5430]"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center pt-1">
-                            <div className="sm:col-span-2">
-                              <label className="block text-[11px] font-semibold text-[#372921] mb-1">
-                                Variant Photo URL
-                              </label>
-                              <div className="flex gap-2">
-                                <input
-                                  type="text"
-                                  placeholder="https://... or upload photo"
-                                  value={variant.image}
-                                  onChange={e => handleUpdateEditingVariant(idx, { image: e.target.value })}
-                                  className="flex-1 bg-[#FCFAF6] border border-[#DED3C5] rounded-lg px-2.5 py-1.5 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
-                                />
-                                <label className="cursor-pointer px-2.5 py-1.5 bg-[#FAF7F2] border border-[#DED3C5] hover:border-[#9E5430] hover:text-[#9E5430] text-[#372921] rounded-lg text-xs font-medium flex items-center gap-1 transition-colors shrink-0">
-                                  <Upload className="w-3 h-3" />
-                                  <span>Upload</span>
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    onChange={async e => {
-                                      const file = e.target.files?.[0];
-                                      if (file) {
-                                        const url = await uploadImageFile(file);
-                                        if (url) handleUpdateEditingVariant(idx, { image: url });
-                                      }
-                                    }}
-                                  />
-                                </label>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                              {variant.image ? (
-                                <img
-                                  src={variant.image}
-                                  alt={variant.label || 'Variant preview'}
-                                  className="w-10 h-10 object-cover rounded-lg border border-[#DED3C5] shrink-0"
-                                />
-                              ) : (
-                                <div className="w-10 h-10 rounded-lg border border-dashed border-[#DED3C5] flex items-center justify-center text-[#76695F] shrink-0">
-                                  <ImageIcon className="w-4 h-4 opacity-40" />
-                                </div>
-                              )}
-                              <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-[#372921]">
-                                <input
-                                  type="checkbox"
-                                  checked={variant.inStock}
-                                  onChange={e => handleUpdateEditingVariant(idx, { inStock: e.target.checked })}
-                                  className="rounded text-[#9E5430] focus:ring-[#9E5430]"
-                                />
-                                <span>In Stock</span>
-                              </label>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-
-                      <button
-                        type="button"
-                        onClick={handleAddVariantToEditing}
-                        className="w-full py-2.5 rounded-xl border-2 border-dashed border-[#DED3C5] hover:border-[#9E5430] text-[#76695F] hover:text-[#9E5430] font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors bg-white/40"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>Add Another Colorway / Variant</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <ProductVariantManager
+                  baseSku={editingProduct.code || 'KJ-PROD'}
+                  basePrice={Number(editingProduct.price) || 0}
+                  baseImage={editingProduct.coverImage || editingProduct.images?.[0] || ''}
+                  attributes={editingProduct.attributes || []}
+                  variants={editingProduct.variants || []}
+                  onChangeAttributes={attrs => setEditingProduct(prev => prev ? ({ ...prev, attributes: attrs }) : null)}
+                  onChangeVariants={vars => setEditingProduct(prev => prev ? ({ ...prev, variants: vars }) : null)}
+                  uploadImageFile={uploadImageFile}
+                />
               )}
 
               {/* TAB 4: MEDIA & GALLERY */}

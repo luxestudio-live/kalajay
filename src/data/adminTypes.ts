@@ -190,6 +190,10 @@ export interface AdminOrderItem {
   price: number;
   quantity: number;
   image: string;
+  variantId?: string;
+  variantLabel?: string;
+  attributes?: Record<string, string>;
+  leadTimeDays?: number;
 }
 
 export interface AdminOrder {

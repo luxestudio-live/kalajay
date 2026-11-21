@@ -342,13 +342,13 @@ export default function DashboardView() {
                         </span>
                       </div>
                       <p className="text-xs text-[#76695F] mt-1">
-                        {order.customerName} · {order.items.length} item(s) · {order.shippingAddress.city}
+                        {order.customerName || 'Patron'} · {order.items?.length ?? 0} item(s) · {order.shippingAddress?.city || (typeof order.shippingAddress === 'string' ? order.shippingAddress : 'India')}
                       </p>
                     </div>
 
                     <div className="text-right">
                       <span className="font-serif text-sm font-bold text-[#372921] block">
-                        ₹{order.total.toLocaleString('en-IN')}
+                        ₹{(order.total || 0).toLocaleString('en-IN')}
                       </span>
                       <span
                         className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase mt-1 ${
@@ -359,7 +359,7 @@ export default function DashboardView() {
                             : 'bg-emerald-100 text-emerald-800'
                         }`}
                       >
-                        {order.fulfillmentStatus.replace('_', ' ')}
+                        {(order.fulfillmentStatus || 'confirmed').replace('_', ' ')}
                       </span>
                     </div>
                   </div>

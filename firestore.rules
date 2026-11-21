@@ -119,12 +119,23 @@ service cloud.firestore {
     // Writes are restricted to Store Managers and Super Admins.
     // -------------------------------------------------------------
     match /products/{productId} {
-      allow read: if isAdmin() || (
-        (!('status' in resource.data) || (resource.data.status != 'archived' && resource.data.status != 'draft' && resource.data.status != 'inactive')) &&
-        (!('isActive' in resource.data) || resource.data.isActive == true) &&
-        (!('active' in resource.data) || resource.data.active == true) &&
-        (!('isDraft' in resource.data) || resource.data.isDraft == false) &&
-        (!('archived' in resource.data) || resource.data.archived == false)
+      // Direct Document Fetch (get):
+      // Anonymous visitors can read published/active pieces. Drafts and archived pieces are staff-only.
+      allow get: if isAdmin() || (
+        resource.data.status == 'published' || (
+          (!('status' in resource.data) || (resource.data.status != 'archived' && resource.data.status != 'draft' && resource.data.status != 'inactive')) &&
+          (!('isActive' in resource.data) || resource.data.isActive == true) &&
+          (!('active' in resource.data) || resource.data.active == true) &&
+          (!('isDraft' in resource.data) || resource.data.isDraft == false) &&
+          (!('archived' in resource.data) || resource.data.archived == false)
+        )
+      );
+      // Collection Queries (list):
+      // Administrators can list all products (drafts, archived, published) for catalogue management.
+      // Anonymous public storefront visitors MUST constrain their query to published pieces only (where status == 'published').
+      // Unconstrained queries over the entire collection containing mixed statuses are rejected.
+      allow list: if isAdmin() || (
+        resource.data.status == 'published'
       );
       allow create: if isStoreManagerOrSuperAdmin() && isValidProduct(request.resource.data);
       allow update: if isStoreManagerOrSuperAdmin() && isValidProduct(request.resource.data);

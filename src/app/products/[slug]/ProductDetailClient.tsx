@@ -23,10 +23,13 @@ import {
   Sparkles,
   Send,
   UserCheck,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
 import { PRODUCTS, Product, ProductVariant, DEFAULT_REVIEWS, ReviewItem } from '@/data/catalogue';
 import { getFirestoreProducts, getFirestoreInventory } from '@/lib/firestore';
 import { useCart } from '@/context/CartContext';
+import { findMatchingVariant, validateHexColor, getContrastingTextColor } from '@/lib/variantUtils';
 
 interface ProductDetailClientProps {
   slug?: string;
@@ -79,18 +82,70 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
   const { addToCart, formatINR } = useCart();
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | undefined>(
-    product?.variants && product.variants.length > 0 ? product.variants[0] : undefined
-  );
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | undefined>(() => {
+    if (product?.variants && product.variants.length > 0) {
+      const def = product.variants.find(v => v.isDefault || v.code === product.defaultVariantCode);
+      return def || product.variants[0];
+    }
+    return undefined;
+  });
+
+  // Dynamic Multi-Attribute Selected State: { [attrId]: valId }
+  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    if (product?.attributes && product.attributes.length > 0) {
+      const def = product.variants?.find(v => v.isDefault || v.code === product.defaultVariantCode);
+      if (def?.attributes) {
+        return { ...def.attributes };
+      }
+      product.attributes.forEach(attr => {
+        if (attr.values && attr.values.length > 0) {
+          initial[attr.id] = attr.values[0].id;
+        }
+      });
+    }
+    return initial;
+  });
+
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
 
-  // Synchronize variant if product data updates from Firestore
+  // Synchronize variant and attributes when product data loads from Firestore
   useEffect(() => {
-    if (product?.variants && product.variants.length > 0 && !selectedVariant) {
+    if (product?.attributes && product.attributes.length > 0) {
+      // Find matching variant based on currently selected attributes
+      const matched = findMatchingVariant(product.variants || [], selectedAttributes);
+      if (matched) {
+        setSelectedVariant(matched);
+      } else if (product.variants && product.variants.length > 0) {
+        const def = product.variants.find(v => v.isDefault || v.code === product.defaultVariantCode) || product.variants[0];
+        setSelectedVariant(def);
+        if (def.attributes) {
+          setSelectedAttributes({ ...def.attributes });
+        }
+      }
+    } else if (product?.variants && product.variants.length > 0 && !selectedVariant) {
       setSelectedVariant(product.variants[0]);
     }
-  }, [product, selectedVariant]);
+  }, [product]);
+
+  // When user selects an attribute value
+  const handleSelectAttribute = (attrId: string, valId: string) => {
+    const nextAttributes = { ...selectedAttributes, [attrId]: valId };
+    setSelectedAttributes(nextAttributes);
+    if (product?.variants && product.variants.length > 0) {
+      const matched = findMatchingVariant(product.variants, nextAttributes);
+      if (matched) {
+        setSelectedVariant(matched);
+        if (matched.image) {
+          const idx = currentImages.indexOf(matched.image);
+          if (idx !== -1) {
+            setActiveImageIndex(idx);
+          }
+        }
+      }
+    }
+  };
 
   // Accordion open states
   const [openAccordions, setOpenAccordions] = useState<{ [key: string]: boolean }>({
@@ -234,11 +289,23 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
     (p) => p.id !== product.id && p.category !== product.category
   ).slice(0, 3);
 
-  const currentPrice = selectedVariant ? selectedVariant.price : product.price;
+  const isDynamicVariantSystem = Boolean(product?.attributes && product.attributes.length > 0);
+  const currentPrice = selectedVariant ? Number(selectedVariant.price) : Number(product.price);
+  const effectiveMrp = (selectedVariant?.mrp && selectedVariant.mrp > currentPrice)
+    ? selectedVariant.mrp
+    : (product.originalPrice > currentPrice ? product.originalPrice : currentPrice);
+  const effectiveSku = selectedVariant?.code || product.code;
+  const isCombinationAvailable = selectedVariant
+    ? (selectedVariant.isAvailable !== false && selectedVariant.inStock !== false)
+    : (product.inStock !== false);
+  const variantLeadTimeDays = selectedVariant?.leadTimeDays || 3;
+  const variantStock = selectedVariant?.stock;
+
   const currentImages = Array.isArray(product.images) && product.images.length > 0 ? product.images : [product.coverImage];
   const activeImage = currentImages[activeImageIndex] || product.coverImage;
 
   const handleAddToCart = () => {
+    if (!isCombinationAvailable) return;
     addToCart(product, selectedVariant, quantity);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
@@ -246,13 +313,13 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
 
   const waOrderText = `Hi Kalajay! I'm interested in ordering:\n• ${product.name}${
     selectedVariant ? ` (${selectedVariant.label})` : ''
-  } [${selectedVariant ? selectedVariant.code : product.code}]\nQuantity: ${quantity}\nPrice: ${formatINR(
+  } [${effectiveSku}]\nQuantity: ${quantity}\nPrice: ${formatINR(
     currentPrice * quantity
   )}\n\nCan you please confirm dispatch timeline?`;
 
   const waUrl = `https://wa.me/919740540847?text=${encodeURIComponent(waOrderText)}`;
 
-  const waBulkText = `Hi Kalajay! I would like to enquire about bulk / wedding favour pricing for:\n• ${product.name} [${product.code}]\nEstimated quantity: 25+ pieces.\nCould you please share your volume tier pricing and lead time?`;
+  const waBulkText = `Hi Kalajay! I would like to enquire about bulk / wedding favour pricing for:\n• ${product.name} [${effectiveSku}]\nEstimated quantity: 25+ pieces.\nCould you please share your volume tier pricing and lead time?`;
   const waBulkUrl = `https://wa.me/919740540847?text=${encodeURIComponent(waBulkText)}`;
 
   return (
@@ -335,21 +402,26 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
           <div className="lg:col-span-5 space-y-6">
             <div>
               <span className="text-[11px] uppercase tracking-refined text-rosewood font-sans font-semibold block mb-1">
-                {product.category} · {product.code}
+                {product.category} · {effectiveSku}
               </span>
               <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-plum font-normal leading-tight">
                 {product.name}
               </h1>
 
               {/* Price Row */}
-              <div className="flex items-baseline gap-3 mt-3">
+              <div className="flex flex-wrap items-baseline gap-3 mt-3">
                 <span className="font-serif text-2xl sm:text-3xl text-plum font-semibold">
                   {formatINR(currentPrice)}
                 </span>
-                {product.originalPrice > currentPrice && (
-                  <span className="text-sm text-ink-faint line-through">
-                    {formatINR(product.originalPrice)}
-                  </span>
+                {effectiveMrp > currentPrice && (
+                  <>
+                    <span className="text-sm text-ink-faint line-through">
+                      {formatINR(effectiveMrp)}
+                    </span>
+                    <span className="text-[10.5px] font-bold text-[#9E5430] bg-[#FAF7F2] border border-[#DED3C5] px-2 py-0.5 rounded-full">
+                      Save {Math.round(((effectiveMrp - currentPrice) / effectiveMrp) * 100)}%
+                    </span>
+                  </>
                 )}
                 <span className="text-[11px] text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full font-medium">
                   Inclusive of all taxes
@@ -362,37 +434,212 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
               {product.description}
             </p>
 
-            {/* Variants Selector */}
-            {Array.isArray(product.variants) && product.variants.length > 0 && (
-              <div className="pt-4 border-t border-border-subtle space-y-3">
-                <label className="text-[11px] uppercase tracking-refined text-plum font-bold block">
-                  Select Colorway & Finish ({product.variants.length} available):
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {product.variants.map((v) => (
-                    <button
-                      key={v.code}
-                      type="button"
-                      onClick={() => {
-                        setSelectedVariant(v);
-                        if (v.image) {
-                          const idx = currentImages.indexOf(v.image);
-                          if (idx !== -1) setActiveImageIndex(idx);
-                        }
-                      }}
-                      className={`px-3.5 py-2 rounded-full text-xs font-sans transition-all border cursor-pointer ${
-                        selectedVariant?.code === v.code
-                          ? 'bg-[#9E5430] text-white border-[#9E5430] shadow-sm font-medium'
-                          : 'bg-canvas text-ink border-border-medium hover:border-[#A99583]'
-                      }`}
-                    >
-                      <span>{v.label}</span>
-                      <span className="opacity-60 ml-1.5 text-[11px]">{formatINR(v.price)}</span>
-                    </button>
-                  ))}
-                </div>
+            {/* Dynamic Multi-Attribute Selector */}
+            {isDynamicVariantSystem ? (
+              <div className="pt-4 border-t border-border-subtle space-y-4">
+                {product.attributes!.map(attr => {
+                  const selectedValId = selectedAttributes[attr.id] || attr.values[0]?.id;
+                  const selectedVal = attr.values.find(v => v.id === selectedValId) || attr.values[0];
+
+                  if (attr.displayType === 'color') {
+                    return (
+                      <div key={attr.id} className="space-y-2">
+                        <label className="text-[11px] uppercase tracking-refined text-plum font-bold block">
+                          {attr.name}: <span className="font-normal text-ink-muted capitalize">{selectedVal?.label}</span>
+                        </label>
+                        <div className="flex flex-wrap gap-2.5 items-center" role="radiogroup" aria-label={attr.name}>
+                          {attr.values.map(val => {
+                            const isSelected = selectedValId === val.id;
+                            const isValHex = validateHexColor(val.hexColor || '');
+                            const contrastColor = getContrastingTextColor(val.hexColor);
+
+                            return (
+                              <button
+                                key={val.id}
+                                type="button"
+                                role="radio"
+                                aria-checked={isSelected}
+                                aria-label={`${val.label} ${attr.name}`}
+                                title={val.label}
+                                onClick={() => handleSelectAttribute(attr.id, val.id)}
+                                style={{
+                                  backgroundColor: isValHex ? val.hexColor : '#9E5430',
+                                  backgroundImage: val.swatchImage ? `url(${val.swatchImage})` : undefined,
+                                  backgroundSize: 'cover',
+                                  backgroundPosition: 'center',
+                                }}
+                                className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-black/10 transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9E5430] flex items-center justify-center ${
+                                  isSelected
+                                    ? 'ring-2 ring-[#9E5430] ring-offset-2 scale-105 shadow-sm'
+                                    : 'hover:scale-105 opacity-90 hover:opacity-100'
+                                }`}
+                              >
+                                {isSelected && (
+                                  <Check
+                                    className="w-3.5 h-3.5 stroke-[2.5]"
+                                    style={{ color: contrastColor }}
+                                  />
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (attr.displayType === 'image') {
+                    return (
+                      <div key={attr.id} className="space-y-2">
+                        <label className="text-[11px] uppercase tracking-refined text-plum font-bold block">
+                          {attr.name}: <span className="font-normal text-ink-muted">{selectedVal?.label}</span>
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {attr.values.map(val => {
+                            const isSelected = selectedValId === val.id;
+                            return (
+                              <button
+                                key={val.id}
+                                type="button"
+                                onClick={() => handleSelectAttribute(attr.id, val.id)}
+                                className={`p-1.5 rounded-xl border transition-all cursor-pointer flex items-center gap-2 ${
+                                  isSelected
+                                    ? 'border-[#9E5430] bg-[#FAF7F2] shadow-2xs font-medium'
+                                    : 'border-border-medium bg-canvas hover:border-border-strong'
+                                }`}
+                              >
+                                {val.swatchImage ? (
+                                  <img src={val.swatchImage} alt={val.label} className="w-7 h-7 rounded-lg object-cover" />
+                                ) : (
+                                  <div className="w-7 h-7 rounded-lg bg-[#FAF7F2] flex items-center justify-center text-[10px] font-bold text-[#9E5430]">
+                                    {val.label.slice(0, 2).toUpperCase()}
+                                  </div>
+                                )}
+                                <span className="text-xs px-1 text-ink">{val.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (attr.displayType === 'dropdown') {
+                    return (
+                      <div key={attr.id} className="space-y-1.5">
+                        <label className="text-[11px] uppercase tracking-refined text-plum font-bold block">
+                          {attr.name}
+                        </label>
+                        <div className="relative max-w-xs">
+                          <select
+                            value={selectedValId}
+                            onChange={e => handleSelectAttribute(attr.id, e.target.value)}
+                            className="w-full appearance-none bg-canvas border border-border-medium hover:border-[#9E5430] rounded-xl px-3.5 py-2.5 text-xs text-ink focus:outline-none focus:border-[#9E5430] cursor-pointer"
+                          >
+                            {attr.values.map(val => (
+                              <option key={val.id} value={val.id}>
+                                {val.label}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown className="w-4 h-4 text-ink-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (attr.displayType === 'text') {
+                    return (
+                      <div key={attr.id} className="p-3 bg-[#FAF8F5] border border-[#DED3C5] rounded-xl space-y-1">
+                        <span className="text-[10.5px] font-bold text-plum block uppercase tracking-refined">{attr.name}</span>
+                        {attr.values.map(val => (
+                          <p key={val.id} className="text-xs text-ink-muted font-light leading-relaxed">{val.label}</p>
+                        ))}
+                      </div>
+                    );
+                  }
+
+                  // Default: 'button' pill selector
+                  return (
+                    <div key={attr.id} className="space-y-2">
+                      <label className="text-[11px] uppercase tracking-refined text-plum font-bold block">
+                        {attr.name}: <span className="font-normal text-ink-muted">{selectedVal?.label}</span>
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {attr.values.map(val => {
+                          const isSelected = selectedValId === val.id;
+                          return (
+                            <button
+                              key={val.id}
+                              type="button"
+                              onClick={() => handleSelectAttribute(attr.id, val.id)}
+                              className={`px-3.5 py-2 rounded-full text-xs font-sans transition-all border cursor-pointer ${
+                                isSelected
+                                  ? 'bg-[#9E5430] text-white border-[#9E5430] shadow-sm font-medium'
+                                  : 'bg-canvas text-ink border-border-medium hover:border-[#A99583]'
+                              }`}
+                            >
+                              <span>{val.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+            ) : (
+              /* Legacy Fallback: Single-Dimension Finish Options */
+              Array.isArray(product.variants) && product.variants.length > 0 && (
+                <div className="pt-4 border-t border-border-subtle space-y-3">
+                  <label className="text-[11px] uppercase tracking-refined text-plum font-bold block">
+                    Select Colorway &amp; Finish ({product.variants.length} available):
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {product.variants.map((v) => (
+                      <button
+                        key={v.code}
+                        type="button"
+                        onClick={() => {
+                          setSelectedVariant(v);
+                          if (v.image) {
+                            const idx = currentImages.indexOf(v.image);
+                            if (idx !== -1) setActiveImageIndex(idx);
+                          }
+                        }}
+                        className={`px-3.5 py-2 rounded-full text-xs font-sans transition-all border cursor-pointer ${
+                          selectedVariant?.code === v.code
+                            ? 'bg-[#9E5430] text-white border-[#9E5430] shadow-sm font-medium'
+                            : 'bg-canvas text-ink border-border-medium hover:border-[#A99583]'
+                        }`}
+                      >
+                        <span>{v.label}</span>
+                        <span className="opacity-60 ml-1.5 text-[11px]">{formatINR(v.price)}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
             )}
+
+            {/* Stock, Lead Time & Availability Notice */}
+            <div className="pt-1">
+              {!isCombinationAvailable ? (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>This specific finish / size combination is currently unavailable or sold out.</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-xs text-emerald-800">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>
+                    {variantStock !== undefined && variantStock <= 3
+                      ? `Atelier Notice: Only ${variantStock} pieces remaining in current loom`
+                      : 'In Stock & Handcrafted'} · Dispatches in {variantLeadTimeDays} business days
+                  </span>
+                </div>
+              )}
+            </div>
 
             {/* Quantity Selector & Add to Bag Buttons */}
             <div className="pt-4 border-t border-border-subtle space-y-4">
@@ -404,7 +651,8 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
                   <button
                     type="button"
                     onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    className="w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center text-ink hover:text-rosewood transition-colors cursor-pointer"
+                    disabled={!isCombinationAvailable}
+                    className="w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center text-ink hover:text-rosewood transition-colors cursor-pointer disabled:opacity-40"
                     aria-label="Decrease quantity"
                   >
                     <Minus className="w-3.5 h-3.5" />
@@ -415,7 +663,8 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
                   <button
                     type="button"
                     onClick={() => setQuantity((q) => q + 1)}
-                    className="w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center text-ink hover:text-rosewood transition-colors cursor-pointer"
+                    disabled={!isCombinationAvailable}
+                    className="w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center text-ink hover:text-rosewood transition-colors cursor-pointer disabled:opacity-40"
                     aria-label="Increase quantity"
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -427,32 +676,52 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
               <div className="space-y-2.5 pt-1">
                 <button
                   type="button"
+                  disabled={!isCombinationAvailable}
                   onClick={handleAddToCart}
-                  className="w-full py-4 px-6 bg-[#372921] hover:bg-[#503A2E] text-[#F7F3EC] text-xs uppercase tracking-monumental font-semibold rounded-full flex items-center justify-center gap-2.5 transition-all shadow-md cursor-pointer"
+                  className={`w-full py-4 px-6 text-xs uppercase tracking-monumental font-semibold rounded-full flex items-center justify-center gap-2.5 transition-all shadow-md ${
+                    isCombinationAvailable
+                      ? 'bg-[#372921] hover:bg-[#503A2E] text-[#F7F3EC] cursor-pointer'
+                      : 'bg-stone-300 text-stone-500 cursor-not-allowed shadow-none'
+                  }`}
                 >
-                  {added ? (
-                    <>
-                      <Check className="w-4 h-4 text-champagne" />
-                      <span>Added to Your Shopping Bag</span>
-                    </>
+                  {isCombinationAvailable ? (
+                    added ? (
+                      <>
+                        <Check className="w-4 h-4 text-champagne" />
+                        <span>Added to Your Shopping Bag</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingBag className="w-4 h-4" />
+                        <span>Add to Shopping Bag · {formatINR(currentPrice * quantity)}</span>
+                      </>
+                    )
                   ) : (
-                    <>
-                      <ShoppingBag className="w-4 h-4" />
-                      <span>Add to Shopping Bag · {formatINR(currentPrice * quantity)}</span>
-                    </>
+                    <span>Currently Unavailable in this Selection</span>
                   )}
                 </button>
 
                 {/* Instant WhatsApp Order Link */}
-                <a
-                  href={waUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-3.5 px-6 bg-canvas border border-rosewood/40 hover:border-rosewood text-rosewood hover:text-plum text-xs uppercase tracking-refined font-medium rounded-full flex items-center justify-center gap-2 transition-colors cursor-pointer"
-                >
-                  <MessageCircle className="w-4 h-4 shrink-0 text-rosewood" />
-                  <span>Order Directly via WhatsApp</span>
-                </a>
+                {isCombinationAvailable ? (
+                  <a
+                    href={waUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-3.5 px-6 bg-canvas border border-rosewood/40 hover:border-rosewood text-rosewood hover:text-plum text-xs uppercase tracking-refined font-medium rounded-full flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <MessageCircle className="w-4 h-4 shrink-0 text-rosewood" />
+                    <span>Order Directly via WhatsApp</span>
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full py-3.5 px-6 bg-canvas border border-stone-200 text-stone-400 text-xs uppercase tracking-refined font-medium rounded-full flex items-center justify-center gap-2 cursor-not-allowed"
+                  >
+                    <MessageCircle className="w-4 h-4 shrink-0 opacity-40" />
+                    <span>Unavailable for Direct Order</span>
+                  </button>
+                )}
               </div>
 
               {/* Bulk Prices on Request Line */}

@@ -263,11 +263,11 @@ export default function OrdersView() {
                           {order.customerName}
                         </span>
                         <span className="text-[11px] text-[#76695F]">
-                          {order.shippingAddress.city}, {order.shippingAddress.state}
+                          {order.shippingAddress?.city || 'India'}, {order.shippingAddress?.state || ''}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-[#76695F]">
-                        {order.items.map(i => `${i.name} (x${i.quantity})`).join(', ')}
+                        {order.items?.map(i => `${i.name}${i.variantLabel ? ` (${i.variantLabel})` : ''} (x${i.quantity})`).join(', ') || 'No line items'}
                       </td>
                       <td className="py-3 px-4">
                         <span className="font-serif font-bold text-[#372921] block">
@@ -534,7 +534,7 @@ export default function OrdersView() {
                       </td>
                       <td className="py-3 px-4 text-[#372921]">
                         <span className="font-semibold block">{o.customerName}</span>
-                        <span className="text-[11px] text-[#76695F]">{o.shippingAddress.state}</span>
+                        <span className="text-[11px] text-[#76695F]">{o.shippingAddress?.state || o.shippingAddress?.city || 'India'}</span>
                       </td>
                       <td className="py-3 px-4 text-right font-serif text-[#372921]">
                         ₹{o.subtotal.toLocaleString('en-IN')}
@@ -593,13 +593,25 @@ export default function OrdersView() {
               {/* Items List */}
               <div className="space-y-2">
                 <span className="font-bold uppercase tracking-wider text-[10.5px] text-[#76695F]">Purchased Pieces</span>
-                {selectedOrder.items.map(i => (
-                  <div key={i.productId} className="flex items-center justify-between p-3 bg-[#FAF8F5] rounded-xl border border-[#DED3C5]">
+                {selectedOrder.items?.map(i => (
+                  <div key={i.productId || i.sku} className="flex items-center justify-between p-3 bg-[#FAF8F5] rounded-xl border border-[#DED3C5]">
                     <div>
                       <strong className="text-[#372921] block">{i.name}</strong>
-                      <span className="text-[11px] text-[#76695F]">SKU: {i.sku} · Qty: {i.quantity}</span>
+                      <span className="text-[11px] text-[#76695F]">
+                        SKU: {i.sku} · Qty: {i.quantity}
+                        {i.variantLabel ? ` · Finish: ${i.variantLabel}` : ''}
+                      </span>
+                      {i.attributes && Object.keys(i.attributes).length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {Object.entries(i.attributes).map(([attr, val]) => (
+                            <span key={attr} className="text-[10px] px-1.5 py-0.5 bg-[#EAE2D8] text-[#372921] rounded font-medium">
+                              {attr}: {val}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <span className="font-serif font-bold text-[#372921]">₹{i.price.toLocaleString('en-IN')}</span>
+                    <span className="font-serif font-bold text-[#372921]">₹{(i.price || 0).toLocaleString('en-IN')}</span>
                   </div>
                 ))}
               </div>
@@ -608,7 +620,7 @@ export default function OrdersView() {
               <div className="p-3 bg-[#F7F3EC] rounded-xl border border-[#DED3C5] text-xs">
                 <span className="font-bold block text-[#372921]">Delivery Destination:</span>
                 <p className="text-[#76695F] mt-0.5">
-                  {selectedOrder.shippingAddress.addressLine}, {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} - {selectedOrder.shippingAddress.pincode}
+                  {selectedOrder.shippingAddress?.addressLine || ''}, {selectedOrder.shippingAddress?.city || 'India'}, {selectedOrder.shippingAddress?.state || ''} - {selectedOrder.shippingAddress?.pincode || ''}
                 </p>
                 <span className="text-[#76695F] block mt-1">Contact: {selectedOrder.customerPhone} ({selectedOrder.customerEmail})</span>
               </div>

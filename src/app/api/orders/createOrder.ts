@@ -22,6 +22,10 @@ interface CreateOrderRequestBody {
   paymentMethod: 'upi' | 'card' | 'whatsapp';
   items: Array<{
     productId: string;
+    variantId?: string;
+    variantCode?: string;
+    variantLabel?: string;
+    attributes?: Record<string, string>;
     quantity: number;
   }>;
   couponCode?: string;
@@ -140,15 +144,53 @@ export async function POST(request: Request) {
         );
       }
 
+      // Match exact variant if variantId or variantCode is provided
+      let matchedVariant: any = null;
+      if (Array.isArray(catalogItem.variants) && catalogItem.variants.length > 0) {
+        if (item.variantId) {
+          matchedVariant = catalogItem.variants.find((v: any) => v.id === item.variantId);
+        }
+        if (!matchedVariant && item.variantCode) {
+          matchedVariant = catalogItem.variants.find((v: any) => v.code === item.variantCode);
+        }
+        if (!matchedVariant) {
+          matchedVariant = catalogItem.variants.find((v: any) => v.code === targetId || v.id === targetId);
+        }
+      }
+
+      // If a specific variant was matched, validate variant availability
+      if (matchedVariant) {
+        if (matchedVariant.isAvailable === false || matchedVariant.inStock === false) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: `Atelier Notice: The requested finish / variant "${matchedVariant.label || matchedVariant.code}" of "${catalogItem.name}" is currently unavailable.`,
+              code: 'VARIANT_UNAVAILABLE',
+            },
+            { status: 400 }
+          );
+        }
+      }
+
       const qty = Math.max(1, Math.floor(Number(item.quantity) || 1));
-      const authoritativePrice = Number(catalogItem.price); // ALWAYS sourced from authoritative server/Firestore product, NEVER from client
+      const authoritativePrice = (matchedVariant && matchedVariant.price != null && !isNaN(Number(matchedVariant.price)))
+        ? Number(matchedVariant.price)
+        : Number(catalogItem.price); // ALWAYS sourced from authoritative server/Firestore product, NEVER from client
+
+      const effectiveSku = (matchedVariant && matchedVariant.code) ? matchedVariant.code : (catalogItem.code || targetId);
+      const effectiveImage = (matchedVariant && matchedVariant.image) ? matchedVariant.image : (catalogItem.images?.[0] || catalogItem.coverImage || 'https://www.kalajay.in/v2/p1-1.jpg');
+      const effectiveLabel = matchedVariant?.label || item.variantLabel;
+      const effectiveAttributes = matchedVariant?.attributeNames || matchedVariant?.attributes || item.attributes;
 
       // Server Stock Validation Pre-check
-      const skuCode = catalogItem.code || targetId;
+      const skuCode = effectiveSku;
       let availableStock: number | null = null;
       if (adminDb) {
         try {
-          const invSnap = await adminDb.collection('inventory').doc(skuCode).get();
+          let invSnap = await adminDb.collection('inventory').doc(skuCode).get();
+          if (!invSnap.exists && catalogItem.code && catalogItem.code !== skuCode) {
+            invSnap = await adminDb.collection('inventory').doc(catalogItem.code).get();
+          }
           if (invSnap.exists) {
             const invData = invSnap.data()!;
             availableStock = Number(
@@ -162,8 +204,10 @@ export async function POST(request: Request) {
         } catch {}
       } else if (db && db.type) {
         try {
-          const invRef = doc(db, 'inventory', skuCode);
-          const invSnap = await getDoc(invRef);
+          let invSnap = await getDoc(doc(db, 'inventory', skuCode));
+          if (!invSnap.exists() && catalogItem.code && catalogItem.code !== skuCode) {
+            invSnap = await getDoc(doc(db, 'inventory', catalogItem.code));
+          }
           if (invSnap.exists()) {
             const invData = invSnap.data();
             availableStock = Number(
@@ -183,21 +227,34 @@ export async function POST(request: Request) {
         return NextResponse.json(
           {
             success: false,
-            error: `Atelier Stock Notice: Only ${availableStock} pieces of "${catalogItem.name}" remain in current loom.`,
+            error: `Atelier Stock Notice: Only ${availableStock} pieces of "${catalogItem.name}${effectiveLabel ? ` (${effectiveLabel})` : ''}" remain in current loom.`,
           },
           { status: 400 }
         );
       }
 
       calculatedSubtotal += authoritativePrice * qty;
-      verifiedOrderItems.push({
-        productId: skuCode,
+      const orderItemRecord: any = {
+        productId: catalogItem.id || catalogItem.code || targetId,
         name: catalogItem.name,
         sku: skuCode,
         price: authoritativePrice,
         quantity: qty,
-        image: catalogItem.images?.[0] || catalogItem.coverImage || 'https://www.kalajay.in/v2/p1-1.jpg',
-      });
+        image: effectiveImage,
+      };
+      if (matchedVariant?.id || item.variantId) {
+        orderItemRecord.variantId = matchedVariant?.id || item.variantId;
+      }
+      if (effectiveLabel) {
+        orderItemRecord.variantLabel = effectiveLabel;
+      }
+      if (effectiveAttributes && Object.keys(effectiveAttributes).length > 0) {
+        orderItemRecord.attributes = effectiveAttributes;
+      }
+      if (matchedVariant?.leadTimeDays !== undefined && !isNaN(Number(matchedVariant.leadTimeDays))) {
+        orderItemRecord.leadTimeDays = Number(matchedVariant.leadTimeDays);
+      }
+      verifiedOrderItems.push(orderItemRecord);
     }
 
     // 3. Server-Side Coupon & Discount Verification
@@ -476,8 +533,17 @@ export async function POST(request: Request) {
 
           // 2. Atomic Stock Validation & Reservation
           for (const item of verifiedOrderItems) {
-            const invRef = adminDb.collection('inventory').doc(item.sku);
-            const invSnap = await transaction.get(invRef);
+            let invRef = adminDb.collection('inventory').doc(item.sku);
+            let invSnap = await transaction.get(invRef);
+
+            if (!invSnap.exists && item.productId && item.productId !== item.sku) {
+              const baseRef = adminDb.collection('inventory').doc(item.productId);
+              const baseSnap = await transaction.get(baseRef);
+              if (baseSnap.exists) {
+                invRef = baseRef;
+                invSnap = baseSnap;
+              }
+            }
 
             if (invSnap.exists) {
               const invData = invSnap.data()!;
@@ -506,11 +572,14 @@ export async function POST(request: Request) {
 
           // 3. Persist verified order in /orders
           const orderDocRef = adminDb.collection('orders').doc(generatedOrderNumber);
-          transaction.set(orderDocRef, {
-            ...orderRecord,
-            createdAtServer: new Date().toISOString(),
-            verifiedByServer: true,
-          });
+          const cleanOrderData = JSON.parse(
+            JSON.stringify({
+              ...orderRecord,
+              createdAtServer: new Date().toISOString(),
+              verifiedByServer: true,
+            })
+          );
+          transaction.set(orderDocRef, cleanOrderData);
 
           // 4. Register completed idempotency key atomically
           transaction.set(idempRef, {

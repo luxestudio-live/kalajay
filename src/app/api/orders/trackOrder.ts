@@ -431,6 +431,9 @@ export async function GET(request: Request) {
           price: Number(it.price) || 0,
           quantity: Number(it.quantity) || 1,
           image: it.image || 'https://www.kalajay.in/v2/p3-2.jpg',
+          variantLabel: it.variantLabel || it.colorway,
+          variantId: it.variantId,
+          attributes: it.attributes,
         }))
       : []; // Strictly redacted for unverified lookups to prevent cross-customer data leakage
 

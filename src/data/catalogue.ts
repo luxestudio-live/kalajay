@@ -1,9 +1,42 @@
+export type AttributeDisplayType = 'color' | 'image' | 'button' | 'dropdown' | 'text';
+
+export interface AttributeValue {
+  id: string;
+  label: string;
+  value: string;
+  hexColor?: string;
+  swatchImage?: string;
+  displayOrder?: number;
+}
+
+export interface ProductAttribute {
+  id: string;
+  name: string;
+  displayType: AttributeDisplayType;
+  isVariantDimension: boolean;
+  displayOrder: number;
+  values: AttributeValue[];
+}
+
 export interface ProductVariant {
   code: string;
   label: string;
   price: number;
   inStock: boolean;
   image: string;
+  id?: string;
+  barcode?: string;
+  mrp?: number;
+  stock?: number;
+  reservedStock?: number;
+  reorderThreshold?: number;
+  weightGrams?: number;
+  dimensions?: string;
+  leadTimeDays?: number;
+  isAvailable?: boolean;
+  isDefault?: boolean;
+  attributes?: Record<string, string>; // attributeId -> valueId
+  attributeNames?: Record<string, string>; // attributeName -> valueLabel
 }
 
 export interface Product {
@@ -22,6 +55,9 @@ export interface Product {
   isFeatured: boolean;
   isNewArrival: boolean;
   variants: ProductVariant[];
+  attributes?: ProductAttribute[];
+  defaultVariantCode?: string;
+  hasDynamicVariants?: boolean;
   materials: string[];
   dimensions: string;
   craftHours: string;

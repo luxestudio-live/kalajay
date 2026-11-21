@@ -96,11 +96,14 @@ export async function updatePatronProfile(uid: string, data: Partial<User>): Pro
    2. PRODUCTS & CATEGORIES (/products & /categories)
    =============================================================== */
 
-export async function getFirestoreProducts(): Promise<Product[]> {
+export async function getFirestoreProducts(includeDrafts = false): Promise<Product[]> {
   try {
     if (!db || !db.type) return [];
     const productsRef = collection(db, 'products');
-    const snapshot = await getDocs(productsRef);
+    const q = includeDrafts
+      ? productsRef
+      : query(productsRef, where('status', '==', 'published'));
+    const snapshot = await getDocs(q);
     if (snapshot.empty) return [];
     const list: Product[] = [];
     snapshot.forEach((snap) => {
@@ -108,6 +111,7 @@ export async function getFirestoreProducts(): Promise<Product[]> {
       list.push({
         ...d,
         variants: Array.isArray(d.variants) ? d.variants : [],
+        attributes: Array.isArray(d.attributes) ? d.attributes : [],
         images: Array.isArray(d.images) && d.images.length > 0 ? d.images : (d.coverImage ? [d.coverImage] : []),
       } as Product);
     });
@@ -123,9 +127,7 @@ export async function saveFirestoreProduct(product: Product): Promise<void> {
     if (!db || !db.type) return;
     const id = product.id || product.code;
     const productRef = doc(db, 'products', id);
-    const cleanData = Object.fromEntries(
-      Object.entries(product).filter(([_, v]) => v !== undefined)
-    );
+    const cleanData = JSON.parse(JSON.stringify(product));
     await setDoc(productRef, {
       ...cleanData,
       updatedAt: serverTimestamp(),

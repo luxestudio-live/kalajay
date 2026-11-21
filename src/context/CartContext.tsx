@@ -11,9 +11,13 @@ export interface CartItem {
   name: string;
   category: string;
   price: number;
+  originalPrice?: number;
   image: string;
   variantLabel?: string;
   variantCode?: string;
+  variantId?: string;
+  attributes?: Record<string, string>;
+  leadTimeDays?: number;
   quantity: number;
 }
 
@@ -70,10 +74,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addToCart = (product: Product, variant?: ProductVariant, quantity: number = 1) => {
     const itemPrice = variant ? variant.price : product.price;
+    const itemOriginalPrice = variant?.mrp || product.originalPrice;
     const itemImg = variant?.image || product.coverImage;
     const variantLabel = variant?.label;
     const variantCode = variant?.code || product.code;
-    const key = variantCode ? `${product.code}-${variantCode}` : product.code;
+    const variantId = variant?.id;
+    const attributes = variant?.attributeNames || variant?.attributes;
+    const leadTimeDays = variant?.leadTimeDays;
+    const key = variantId
+      ? `${product.code}-${variantId}`
+      : variantCode
+      ? `${product.code}-${variantCode}`
+      : product.code;
 
     setCart(prev => {
       const existing = prev.find(item => item.key === key);
@@ -92,9 +104,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           name: product.name,
           category: product.category,
           price: itemPrice,
+          originalPrice: itemOriginalPrice,
           image: itemImg,
           variantLabel,
           variantCode,
+          variantId,
+          attributes,
+          leadTimeDays,
           quantity
         }
       ];

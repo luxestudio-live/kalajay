@@ -70,8 +70,14 @@ export async function POST(request: Request) {
         try {
           const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '';
           if (apiKey) {
+            const isLocalHost = !process.env.VERCEL && !process.env.AWS_BRANCH && (Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST) || Boolean(process.env.FIRESTORE_EMULATOR_HOST) || process.env.NODE_ENV !== 'production');
+            const authEmulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || (isLocalHost ? '127.0.0.1:9099' : undefined);
+            const resetUrl = authEmulatorHost
+              ? `http://${authEmulatorHost}/identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`
+              : `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`;
+
             await fetch(
-              `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`,
+              resetUrl,
               {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -145,8 +151,14 @@ export async function POST(request: Request) {
     }
 
     try {
+      const isLocalHost = !process.env.VERCEL && !process.env.AWS_BRANCH && (Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST) || Boolean(process.env.FIRESTORE_EMULATOR_HOST) || process.env.NODE_ENV !== 'production');
+      const authEmulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || (isLocalHost ? '127.0.0.1:9099' : undefined);
+      const signInUrl = authEmulatorHost
+        ? `http://${authEmulatorHost}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`
+        : `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`;
+
       const authRes = await fetch(
-        `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
+        signInUrl,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -160,6 +172,7 @@ export async function POST(request: Request) {
 
       const authData = await authRes.json();
       if (!authRes.ok || !authData.idToken) {
+        console.warn('AUTH FAILURE DEBUG:', { signInUrl, email: resolved.email, authStatus: authRes.status, authData });
         return genericAuthFailure();
       }
 
