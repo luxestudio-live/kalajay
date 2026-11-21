@@ -144,28 +144,40 @@ service cloud.firestore {
 
     // -------------------------------------------------------------
     // 3. CMS & Homepage Rails (/cms/{docId})
-    // Public read for featured creations and banners.
+    // Public read for published storefront content (banners, faqs, policies, pages, published featured products).
+    // Operational configuration (e.g. production_stages) and draft documents (e.g. featured_products_draft
+    // or status: 'draft') are strictly staff-only (isAdmin()).
     // Write restricted to Store Managers & Super Admins.
     // -------------------------------------------------------------
     match /cms/{docId} {
-      allow read: if true;
+      allow read: if isAdmin() || (
+        !(docId in ['production_stages']) &&
+        !docId.matches('.*_draft$') &&
+        (!('status' in resource.data) || resource.data.status == 'published')
+      );
       allow write: if isStoreManagerOrSuperAdmin();
     }
 
     // -------------------------------------------------------------
     // 4. Inventory ERP & Stock (/inventory/{sku})
-    // Read: Public (to display stock status on product pages).
-    // Write: Restricted to Inventory Managers, Store Managers, Production Heads, and Super Admins.
+    // Read: Strictly restricted to verified Active Administrators & Atelier Staff.
+    // Anonymous visitors and patrons CANNOT inspect ERP documents directly,
+    // keeping procurement costs (unitCost), supplier identities, BOM allocations,
+    // and raw materials completely confidential.
+    // Storefront availability is projected via the /api/products/availability server endpoint.
+    // Write: Strictly restricted to Root Super Admin to prevent direct staff client SDK writes
+    // from bypassing stock transactions, reservations, or audit logging.
+    // Regular staff mutations MUST proceed via authoritative server routes (/api/admin/operations).
     // -------------------------------------------------------------
     match /inventory/{sku} {
-      allow read: if true;
-      allow write: if isInventoryStaffOrAdmin();
+      allow read: if isAdmin();
+      allow write: if isRootAdmin();
     }
 
-    // Stock adjustments audit trail - Verified inventory & admin staff only
+    // Stock adjustments audit trail - Strictly Root Admin write, Staff read
     match /stock_adjustments/{adjId} {
       allow read: if isAdmin();
-      allow write: if isInventoryStaffOrAdmin();
+      allow write: if isRootAdmin();
     }
 
     // -------------------------------------------------------------

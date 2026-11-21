@@ -62,15 +62,17 @@ export default function ProductDetailClient({ slug: propSlug }: ProductDetailCli
     };
   }, [slug]);
 
-  // Sync live inventory stock for accurate availability
+  // Sync live inventory stock for accurate availability via secure server projection
   useEffect(() => {
     if (product?.code) {
-      getFirestoreInventory().then((invItems) => {
-        const item = invItems.find(i => i.sku === product.code);
-        if (item) {
-          setLiveInventoryStock(item.available !== undefined ? item.available : item.onHand);
-        }
-      }).catch(() => {});
+      fetch(`/api/products/availability?sku=${encodeURIComponent(product.code)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.success && data.available !== undefined) {
+            setLiveInventoryStock(data.available);
+          }
+        })
+        .catch(() => {});
     }
   }, [product?.code]);
 

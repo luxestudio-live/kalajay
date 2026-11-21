@@ -109,6 +109,23 @@ export async function POST(request: Request) {
 
     // Scenario 1: Atomic Bespoke Order Scheduling
     if (customRequestId && workOrder) {
+      // 1. Idempotency Check: Prevent duplicate work order generation on network/UI retries
+      if (adminDb) {
+        const canonicalEnquiryRef = adminDb.collection('custom_enquiries').doc(String(customRequestId));
+        const enquirySnap = await canonicalEnquiryRef.get();
+        if (enquirySnap.exists) {
+          const data = enquirySnap.data();
+          if (data?.workOrderId && data?.status === 'production_scheduled') {
+            return NextResponse.json({
+              success: true,
+              workOrderId: data.workOrderId,
+              idempotent: true,
+              message: `Bespoke commission #${customRequestId} was already scheduled under Work Order ${data.workOrderId}.`,
+            });
+          }
+        }
+      }
+
       const woId = workOrder.id || `WO-BESPOKE-${Date.now().toString().slice(-6)}`;
       const newWorkOrder: WorkOrder = {
         ...workOrder,

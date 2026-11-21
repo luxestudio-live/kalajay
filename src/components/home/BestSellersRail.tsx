@@ -32,10 +32,10 @@ export default function BestSellersRail() {
   const [dynamicFeaturedIds, setDynamicFeaturedIds] = useState<string[]>([]);
   const [liveProducts, setLiveProducts] = useState<Product[]>(PRODUCTS);
 
-  // Fetch dynamic curation from Cloud Firestore /cms/featured_products
+  // Fetch dynamic curation from Cloud Firestore /cms/featured_products (Published only)
   useEffect(() => {
     getFirestoreFeaturedConfig().then(cfg => {
-      if (cfg && cfg.productIds && cfg.productIds.length > 0) {
+      if (cfg && cfg.status === 'published' && cfg.productIds && cfg.productIds.length > 0) {
         setDynamicFeaturedIds(cfg.productIds);
       }
     }).catch(() => {});

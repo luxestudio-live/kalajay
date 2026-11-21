@@ -585,10 +585,20 @@ export async function getFirestoreFeaturedConfig(): Promise<FeaturedProductsConf
 export async function saveFirestoreFeaturedConfig(config: FeaturedProductsConfig): Promise<void> {
   try {
     if (!db || !db.type) return;
-    await setDoc(doc(db, 'cms', 'featured_products'), {
-      ...config,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
+    if (config.status === 'draft') {
+      // Drafts are isolated to featured_products_draft, completely hidden from public visitors
+      await setDoc(doc(db, 'cms', 'featured_products_draft'), {
+        ...config,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    } else {
+      // Published curation live deployment
+      await setDoc(doc(db, 'cms', 'featured_products'), {
+        ...config,
+        status: 'published',
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
   } catch (error) {
     console.error('Error saving featured config to Firestore:', error);
   }
@@ -643,6 +653,18 @@ export async function getFirestoreInventory(): Promise<InventoryItem[]> {
 
 export async function saveFirestoreInventoryItem(item: InventoryItem): Promise<void> {
   try {
+    if (typeof window !== 'undefined') {
+      const token = sessionStorage.getItem('kalajay_staff_token') || localStorage.getItem('kalajay_staff_token') || '';
+      const res = await fetch('/api/admin/operations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ action: 'inventory_save', item }),
+      });
+      if (res.ok) return;
+    }
     if (!db || !db.type) return;
     const ref = doc(db, 'inventory', item.sku);
     await setDoc(ref, {
@@ -656,6 +678,18 @@ export async function saveFirestoreInventoryItem(item: InventoryItem): Promise<v
 
 export async function logFirestoreStockAdjustment(adjustment: StockAdjustment): Promise<void> {
   try {
+    if (typeof window !== 'undefined') {
+      const token = sessionStorage.getItem('kalajay_staff_token') || localStorage.getItem('kalajay_staff_token') || '';
+      const res = await fetch('/api/admin/operations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ action: 'stock_adjust', adjustment }),
+      });
+      if (res.ok) return;
+    }
     if (!db || !db.type) return;
     const ref = doc(db, 'stock_adjustments', adjustment.id);
     await setDoc(ref, {

@@ -79,9 +79,124 @@ export async function POST(request: Request) {
     const action = body.action;
 
     // ------------------------------------------
+    // ACTION 0A: Save Inventory SKU (Create/Update)
+    // ------------------------------------------
+    if (action === 'inventory_save') {
+      const item = body.item || body;
+      const targetSku = item.sku || item.id;
+      if (!targetSku) {
+        return NextResponse.json(
+          { success: false, error: 'Mandatory field missing: sku is required.' },
+          { status: 400 }
+        );
+      }
+
+      const authCheck = await verifyStaffPermission(request, body, 'inventory.all', 'edit');
+      if (!authCheck.authorized) {
+        return NextResponse.json(
+          { success: false, error: authCheck.error, code: authCheck.code },
+          { status: authCheck.status }
+        );
+      }
+
+      const adminDb = getAdminFirestore();
+      if (adminDb) {
+        const invRef = adminDb.collection('inventory').doc(targetSku);
+        await invRef.set({
+          ...item,
+          sku: targetSku,
+          updatedAt: new Date().toISOString(),
+        }, { merge: true });
+
+        const auditLogRecord = {
+          id: `aud-inv-${Date.now()}`,
+          userId: authCheck.staffUser?.staffId || authCheck.staffUser?.id || 'KJ-ADM-001',
+          userName: authCheck.staffUser?.name || 'Staff User',
+          action: 'SAVE_INVENTORY_SKU',
+          module: 'inventory',
+          details: `Saved inventory SKU ${targetSku} (${item.name || ''}, available: ${item.available ?? item.onHand}) with server RBAC enforcement.`,
+          timestamp: new Date().toISOString(),
+        };
+        await adminDb.collection('audit_logs').doc(auditLogRecord.id).set(auditLogRecord);
+      }
+
+      return NextResponse.json({
+        success: true,
+        sku: targetSku,
+        message: `Inventory SKU ${targetSku} saved successfully.`,
+      });
+    }
+
+    // ------------------------------------------
+    // ACTION 0B: Stock Adjustment Audit
+    // ------------------------------------------
+    if (action === 'stock_adjust') {
+      const { adjustment } = body;
+      if (!adjustment || !adjustment.sku) {
+        return NextResponse.json(
+          { success: false, error: 'Mandatory fields missing: adjustment and sku are required.' },
+          { status: 400 }
+        );
+      }
+
+      const authCheck = await verifyStaffPermission(request, body, 'inventory.all', 'adjust_stock');
+      if (!authCheck.authorized) {
+        return NextResponse.json(
+          { success: false, error: authCheck.error, code: authCheck.code },
+          { status: authCheck.status }
+        );
+      }
+
+      const adminDb = getAdminFirestore();
+      if (adminDb) {
+        const invRef = adminDb.collection('inventory').doc(adjustment.sku);
+        const invSnap = await invRef.get();
+        if (invSnap.exists) {
+          const invData = invSnap.data()!;
+          const currentReserved = Number(invData.reserved ?? 0);
+          const nextOnHand = Number(adjustment.adjustedQty);
+          const nextAvailable = Math.max(0, nextOnHand - currentReserved);
+          const nextStatus = nextAvailable === 0 ? 'out_of_stock' : nextAvailable <= (invData.reorderPoint || 5) ? 'low_stock' : 'in_stock';
+
+          await invRef.update({
+            onHand: nextOnHand,
+            available: nextAvailable,
+            status: nextStatus,
+            updatedAt: new Date().toISOString(),
+          });
+        }
+
+        const adjId = adjustment.id || `adj-${Date.now()}`;
+        await adminDb.collection('stock_adjustments').doc(adjId).set({
+          ...adjustment,
+          id: adjId,
+          loggedBy: authCheck.staffUser?.name || 'Authorized Staff',
+          timestamp: new Date().toISOString(),
+        });
+
+        const auditLogRecord = {
+          id: `aud-adj-${Date.now()}`,
+          userId: authCheck.staffUser?.staffId || authCheck.staffUser?.id || 'KJ-ADM-001',
+          userName: authCheck.staffUser?.name || 'Staff User',
+          action: 'LOG_STOCK_ADJUSTMENT',
+          module: 'inventory',
+          details: `Adjusted physical stock for SKU ${adjustment.sku}: ${adjustment.previousQty} -> ${adjustment.adjustedQty} (diff: ${adjustment.difference}) [Reason: ${adjustment.reason}]`,
+          timestamp: new Date().toISOString(),
+        };
+        await adminDb.collection('audit_logs').doc(auditLogRecord.id).set(auditLogRecord);
+      }
+
+      return NextResponse.json({
+        success: true,
+        adjustmentId: adjustment.id,
+        message: `Stock adjustment for ${adjustment.sku} logged in audit ledger.`,
+      });
+    }
+
+    // ------------------------------------------
     // ACTION 1: Delete Inventory SKU
     // ------------------------------------------
-    if (action === 'inventory_delete' || (body.sku && !body.role && !body.patronId)) {
+    if (action === 'inventory_delete' || (body.sku && !body.role && !body.patronId && !action)) {
       const targetSku = body.sku || body.id;
 
       if (!targetSku) {
