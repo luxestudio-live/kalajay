@@ -216,13 +216,6 @@ export async function POST(request: Request) {
       reconciliation,
     } = body;
 
-    if (!orderId) {
-      return NextResponse.json(
-        { success: false, error: 'Order ID is required.' },
-        { status: 400 }
-      );
-    }
-
     let requiredPermissionModule = 'orders.all';
     let requiredAction: PermissionAction = 'edit';
 
@@ -239,6 +232,13 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, error: authCheck.error, code: authCheck.code },
         { status: authCheck.status }
+      );
+    }
+
+    if (!orderId) {
+      return NextResponse.json(
+        { success: false, error: 'Order ID is required.' },
+        { status: 400 }
       );
     }
 

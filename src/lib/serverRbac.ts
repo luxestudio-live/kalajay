@@ -4,9 +4,11 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { SEED_ROLES } from '@/data/adminPermissions';
 import { AdminRole, AdminUser, PermissionAction } from '@/data/adminTypes';
+import { getAdminFirestore } from '@/lib/serverFirebaseAdmin';
 
-export const INTERNAL_SERVICE_SECRET =
-  process.env.INTERNAL_SERVICE_SECRET || '';
+// Internal service secret is deprecated and removed to enforce strict cryptographic token verification
+// for all administrative requests. No M2M secret bypass is permitted.
+export const INTERNAL_SERVICE_SECRET = '';
 
 export const RESERVED_USERNAMES = new Set([
   'admin',
@@ -415,24 +417,50 @@ export async function getStaffUserByEmail(email: string): Promise<AdminUser | nu
     }
   }
   try {
-    const qSnap = await getDocs(query(collection(db, 'admin_users'), where('email', '==', cleanEmail)));
-    if (!qSnap.empty) {
-      const data = qSnap.docs[0].data();
-      return {
-        id: data.staffId || data.id || qSnap.docs[0].id,
-        staffId: data.staffId || data.id || qSnap.docs[0].id,
-        username: data.username || suggestUsername(data.name || ''),
-        uid: data.uid || qSnap.docs[0].id,
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        department: data.department,
-        roleId: data.roleId,
-        roleName: data.roleName,
-        status: data.status || 'active',
-        requiresPasswordReset: data.requiresPasswordReset,
-        createdAt: data.createdAt,
-      };
+    const adminDb = getAdminFirestore();
+    if (adminDb) {
+      const qSnap = await adminDb.collection('admin_users').where('email', '==', cleanEmail).limit(1).get();
+      if (!qSnap.empty) {
+        const snapDoc = qSnap.docs[0];
+        const data = snapDoc.data();
+        return {
+          id: data.staffId || data.id || snapDoc.id,
+          staffId: data.staffId || data.id || snapDoc.id,
+          username: data.username || suggestUsername(data.name || ''),
+          uid: data.uid || snapDoc.id,
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          department: data.department,
+          roleId: data.roleId,
+          roleName: data.roleName,
+          status: data.status || 'active',
+          active: data.active !== undefined ? data.active : data.status === 'active',
+          requiresPasswordReset: data.requiresPasswordReset,
+          createdAt: data.createdAt,
+        };
+      }
+    } else {
+      const qSnap = await getDocs(query(collection(db, 'admin_users'), where('email', '==', cleanEmail)));
+      if (!qSnap.empty) {
+        const data = qSnap.docs[0].data();
+        return {
+          id: data.staffId || data.id || qSnap.docs[0].id,
+          staffId: data.staffId || data.id || qSnap.docs[0].id,
+          username: data.username || suggestUsername(data.name || ''),
+          uid: data.uid || qSnap.docs[0].id,
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          department: data.department,
+          roleId: data.roleId,
+          roleName: data.roleName,
+          status: data.status || 'active',
+          active: data.active !== undefined ? data.active : data.status === 'active',
+          requiresPasswordReset: data.requiresPasswordReset,
+          createdAt: data.createdAt,
+        };
+      }
     }
   } catch {}
   return null;
@@ -517,74 +545,158 @@ export async function getStaffUser(identifier: string): Promise<AdminUser | null
 
   // 5. Cloud Firestore direct doc lookup by UID (/admin_users/{uid})
   try {
-    const directDoc = await getDoc(doc(db, 'admin_users', raw));
-    if (directDoc.exists()) {
-      const data = directDoc.data();
-      return {
-        id: data.staffId || data.id || raw,
-        staffId: data.staffId || data.id || raw,
-        username: data.username || normalizedUser,
-        uid: raw,
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        department: data.department,
-        roleId: data.roleId,
-        roleName: data.roleName,
-        status: data.status || 'active',
-        requiresPasswordReset: data.requiresPasswordReset,
-        createdAt: data.createdAt,
-      };
+    const adminDb = getAdminFirestore();
+    if (adminDb) {
+      const directDoc = await adminDb.collection('admin_users').doc(raw).get();
+      if (directDoc.exists) {
+        const data = directDoc.data()!;
+        return {
+          id: data.staffId || data.id || raw,
+          staffId: data.staffId || data.id || raw,
+          username: data.username || normalizedUser,
+          uid: raw,
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          department: data.department,
+          roleId: data.roleId,
+          roleName: data.roleName,
+          status: data.status || 'active',
+          active: data.active !== undefined ? data.active : data.status === 'active',
+          requiresPasswordReset: data.requiresPasswordReset,
+          createdAt: data.createdAt,
+        };
+      }
+    } else {
+      const directDoc = await getDoc(doc(db, 'admin_users', raw));
+      if (directDoc.exists()) {
+        const data = directDoc.data();
+        return {
+          id: data.staffId || data.id || raw,
+          staffId: data.staffId || data.id || raw,
+          username: data.username || normalizedUser,
+          uid: raw,
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          department: data.department,
+          roleId: data.roleId,
+          roleName: data.roleName,
+          status: data.status || 'active',
+          active: data.active !== undefined ? data.active : data.status === 'active',
+          requiresPasswordReset: data.requiresPasswordReset,
+          createdAt: data.createdAt,
+        };
+      }
     }
   } catch {}
 
   // 6. Cloud Firestore lookup by username (/admin_usernames/{username})
   try {
-    const usernameSnap = await getDoc(doc(db, 'admin_usernames', normalizedUser));
-    if (usernameSnap.exists()) {
-      const uData = usernameSnap.data();
-      const userSnap = await getDoc(doc(db, 'admin_users', uData.uid));
-      if (userSnap.exists()) {
-        const fullData = userSnap.data();
-        return {
-          id: fullData.staffId || fullData.id || upperStaffId,
-          staffId: fullData.staffId || fullData.id || upperStaffId,
-          username: normalizedUser,
-          uid: uData.uid,
-          name: fullData.name,
-          email: fullData.email,
-          phone: fullData.phone,
-          department: fullData.department,
-          roleId: fullData.roleId,
-          roleName: fullData.roleName,
-          status: fullData.status || 'active',
-          requiresPasswordReset: fullData.requiresPasswordReset,
-          createdAt: fullData.createdAt,
-        };
+    const adminDb = getAdminFirestore();
+    if (adminDb) {
+      const usernameSnap = await adminDb.collection('admin_usernames').doc(normalizedUser).get();
+      if (usernameSnap.exists) {
+        const uData = usernameSnap.data()!;
+        if (uData.uid) {
+          const userDoc = await adminDb.collection('admin_users').doc(uData.uid).get();
+          if (userDoc.exists) {
+            const data = userDoc.data()!;
+            return {
+              id: data.staffId || data.id || upperStaffId,
+              staffId: data.staffId || data.id || upperStaffId,
+              username: normalizedUser,
+              uid: uData.uid,
+              name: data.name,
+              email: data.email,
+              phone: data.phone,
+              department: data.department,
+              roleId: data.roleId,
+              roleName: data.roleName,
+              status: data.status || 'active',
+              active: data.active !== undefined ? data.active : data.status === 'active',
+              requiresPasswordReset: data.requiresPasswordReset,
+              createdAt: data.createdAt,
+            };
+          }
+        }
+      }
+    } else {
+      const usernameSnap = await getDoc(doc(db, 'admin_usernames', normalizedUser));
+      if (usernameSnap.exists()) {
+        const uData = usernameSnap.data();
+        if (uData.uid) {
+          const userSnap = await getDoc(doc(db, 'admin_users', uData.uid));
+          if (userSnap.exists()) {
+            const fullData = userSnap.data();
+            return {
+              id: fullData.staffId || fullData.id || upperStaffId,
+              staffId: fullData.staffId || fullData.id || upperStaffId,
+              username: normalizedUser,
+              uid: uData.uid,
+              name: fullData.name,
+              email: fullData.email,
+              phone: fullData.phone,
+              department: fullData.department,
+              roleId: fullData.roleId,
+              roleName: fullData.roleName,
+              status: fullData.status || 'active',
+              active: fullData.active !== undefined ? fullData.active : fullData.status === 'active',
+              requiresPasswordReset: fullData.requiresPasswordReset,
+              createdAt: fullData.createdAt,
+            };
+          }
+        }
       }
     }
   } catch {}
 
   // 7. Cloud Firestore lookup by staffId
   try {
-    const qSnap = await getDocs(query(collection(db, 'admin_users'), where('staffId', '==', upperStaffId)));
-    if (!qSnap.empty) {
-      const data = qSnap.docs[0].data();
-      return {
-        id: upperStaffId,
-        staffId: upperStaffId,
-        username: data.username || normalizedUser,
-        uid: data.uid || qSnap.docs[0].id,
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        department: data.department,
-        roleId: data.roleId,
-        roleName: data.roleName,
-        status: data.status || 'active',
-        requiresPasswordReset: data.requiresPasswordReset,
-        createdAt: data.createdAt,
-      };
+    const adminDb = getAdminFirestore();
+    if (adminDb) {
+      const qSnap = await adminDb.collection('admin_users').where('staffId', '==', upperStaffId).limit(1).get();
+      if (!qSnap.empty) {
+        const snapDoc = qSnap.docs[0];
+        const data = snapDoc.data();
+        return {
+          id: upperStaffId,
+          staffId: upperStaffId,
+          username: data.username || normalizedUser,
+          uid: data.uid || snapDoc.id,
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          department: data.department,
+          roleId: data.roleId,
+          roleName: data.roleName,
+          status: data.status || 'active',
+          active: data.active !== undefined ? data.active : data.status === 'active',
+          requiresPasswordReset: data.requiresPasswordReset,
+          createdAt: data.createdAt,
+        };
+      }
+    } else {
+      const qSnap = await getDocs(query(collection(db, 'admin_users'), where('staffId', '==', upperStaffId)));
+      if (!qSnap.empty) {
+        const data = qSnap.docs[0].data();
+        return {
+          id: upperStaffId,
+          staffId: upperStaffId,
+          username: data.username || normalizedUser,
+          uid: data.uid || qSnap.docs[0].id,
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          department: data.department,
+          roleId: data.roleId,
+          roleName: data.roleName,
+          status: data.status || 'active',
+          active: data.active !== undefined ? data.active : data.status === 'active',
+          requiresPasswordReset: data.requiresPasswordReset,
+          createdAt: data.createdAt,
+        };
+      }
     }
   } catch {}
 
@@ -598,14 +710,27 @@ export async function getRoleAsync(roleId: string): Promise<AdminRole | null> {
 
   // 2. Authoritative Cloud Firestore lookup (/admin_roles/{roleId})
   try {
-    const roleSnap = await getDoc(doc(db, 'admin_roles', roleId));
-    if (roleSnap.exists()) {
-      const data = roleSnap.data() as AdminRole;
-      const store = readRbacStore();
-      store.customRoles = store.customRoles || {};
-      store.customRoles[roleId] = data;
-      writeRbacStore(store);
-      return data;
+    const adminDb = getAdminFirestore();
+    if (adminDb) {
+      const roleSnap = await adminDb.collection('admin_roles').doc(roleId).get();
+      if (roleSnap.exists) {
+        const data = roleSnap.data() as AdminRole;
+        const store = readRbacStore();
+        store.customRoles = store.customRoles || {};
+        store.customRoles[roleId] = data;
+        writeRbacStore(store);
+        return data;
+      }
+    } else {
+      const roleSnap = await getDoc(doc(db, 'admin_roles', roleId));
+      if (roleSnap.exists()) {
+        const data = roleSnap.data() as AdminRole;
+        const store = readRbacStore();
+        store.customRoles = store.customRoles || {};
+        store.customRoles[roleId] = data;
+        writeRbacStore(store);
+        return data;
+      }
     }
   } catch {}
 
@@ -663,8 +788,14 @@ export async function verifyFirebaseIdToken(
   }
 
   const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '';
+  const isLocalHost = !process.env.VERCEL && !process.env.AWS_BRANCH && (Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST) || Boolean(process.env.FIRESTORE_EMULATOR_HOST) || process.env.NODE_ENV !== 'production');
+  const authEmulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || (isLocalHost ? '127.0.0.1:9099' : undefined);
+  const lookupEndpoint = authEmulatorHost
+    ? `http://${authEmulatorHost}/identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey || 'emulator-api-key'}`
+    : `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`;
+
   try {
-    const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
+    const res = await fetch(lookupEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idToken: token }),
@@ -705,67 +836,45 @@ export async function verifyStaffPermission(
   requiredAction: PermissionAction
 ): Promise<VerificationResult> {
   const authHeader = request.headers.get('authorization') || '';
-  const internalSecretHeader = request.headers.get('x-kalajay-internal-secret') || '';
   let bearerToken = '';
   if (authHeader.startsWith('Bearer ')) {
     bearerToken = authHeader.slice(7).trim();
   }
 
-  const isInternalSecret =
-    Boolean(INTERNAL_SERVICE_SECRET) &&
-    (internalSecretHeader === INTERNAL_SERVICE_SECRET ||
-      bearerToken === INTERNAL_SERVICE_SECRET);
-
-  let staffUser: AdminUser | null = null;
-
-  if (isInternalSecret) {
-    // Trusted internal server/automation execution: resolve specified staff username or ID
-    const requestedUsername = (
-      request.headers.get('x-staff-username') ||
-      request.headers.get('x-username') ||
-      request.headers.get('x-staff-id') ||
-      body?.requestingUsername ||
-      body?.username ||
-      body?.requestingStaffId ||
-      body?.staffId ||
-      'soumya'
-    ).trim();
-    staffUser = await getStaffUser(requestedUsername);
-  } else if (bearerToken) {
-    // External Bearer token: Cryptographically verify with Google Identity Platform
-    const verifyRes = await verifyFirebaseIdToken(bearerToken);
-    if (!verifyRes.valid) {
-      return {
-        authorized: false,
-        status: 401,
-        error: `Authentication Rejected: ${verifyRes.error || 'Invalid or expired authentication token.'}`,
-        code: 'INVALID_TOKEN',
-      };
-    }
-
-    // Derive staff identity EXCLUSIVELY from verified token UID / email
-    // Client-supplied headers/body are completely ignored for identity resolution
-    staffUser = await getStaffUser(verifyRes.uid!);
-    if (!staffUser && verifyRes.email) {
-      staffUser = await getStaffUserByEmail(verifyRes.email);
-    }
-
-    if (!staffUser) {
-      // Authenticated account (e.g. customer) is NOT in the authorized staff registry
-      return {
-        authorized: false,
-        status: 403,
-        error: 'Access Denied: Authenticated account is not an authorized atelier staff member.',
-        code: 'NOT_STAFF_MEMBER',
-      };
-    }
-  } else {
-    // No Bearer token and no internal secret: Reject unauthenticated attempt
+  if (!bearerToken) {
     return {
       authorized: false,
       status: 401,
       error: 'Authentication Required: Valid cryptographic Authorization Bearer token is required.',
       code: 'UNAUTHENTICATED',
+    };
+  }
+
+  // External Bearer token: Cryptographically verify with Google Identity Platform
+  const verifyRes = await verifyFirebaseIdToken(bearerToken);
+  if (!verifyRes.valid) {
+    return {
+      authorized: false,
+      status: 401,
+      error: `Authentication Rejected: ${verifyRes.error || 'Invalid or expired authentication token.'}`,
+      code: 'INVALID_TOKEN',
+    };
+  }
+
+  // Derive staff identity EXCLUSIVELY from verified token UID / email
+  // Client-supplied headers/body are completely ignored for identity resolution
+  let staffUser: AdminUser | null = await getStaffUser(verifyRes.uid!);
+  if (!staffUser && verifyRes.email) {
+    staffUser = await getStaffUserByEmail(verifyRes.email);
+  }
+
+  if (!staffUser) {
+    // Authenticated account (e.g. customer) is NOT in the authorized staff registry
+    return {
+      authorized: false,
+      status: 403,
+      error: 'Access Denied: Authenticated account is not an authorized atelier staff member.',
+      code: 'NOT_STAFF_MEMBER',
     };
   }
 

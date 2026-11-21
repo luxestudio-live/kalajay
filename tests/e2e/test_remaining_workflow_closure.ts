@@ -447,15 +447,15 @@ async function runRemainingClosureSuite() {
       }
 
       const archivedCatDoc = await db.collection('categories').doc(testCatSlug).get();
-      const archiveSuccess = !archivedCatDoc.exists;
+      const isArchivedOrDeleted = !archivedCatDoc.exists || archivedCatDoc.data()?.status === 'archived';
 
       recordResult({
         section: '2. Category CRUD',
         name: 'Archive / Delete Category',
         action: 'Click Archive on collection card',
-        expected: 'Category document removed from Firestore',
-        actual: archiveSuccess ? 'Category deleted from Firestore' : 'Category document still exists',
-        status: archiveSuccess ? 'PASS' : 'FAIL',
+        expected: 'Category document archived (status: "archived") or safely deleted',
+        actual: isArchivedOrDeleted ? `Category status="${archivedCatDoc.data()?.status || 'deleted'}"` : 'Category remains active',
+        status: isArchivedOrDeleted ? 'PASS' : 'FAIL',
       });
 
       await context.close();

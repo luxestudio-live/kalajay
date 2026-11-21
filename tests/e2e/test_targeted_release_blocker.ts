@@ -66,12 +66,27 @@ async function createAdminContext(
     customToken = await getAuth().createCustomToken(uid);
   } catch {}
 
-  await page.addInitScript(({ e, s, t }) => {
+  let idToken = '';
+  try {
+    const exchangeRes = await fetch(
+      `http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=fake-api-key`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: customToken, returnSecureToken: true }),
+      }
+    );
+    const exchangeData = await exchangeRes.json();
+    idToken = exchangeData.idToken || '';
+  } catch {}
+
+  await page.addInitScript(({ e, s, t, idt }) => {
     sessionStorage.setItem('kalajay_staff_authorized', 'true');
     sessionStorage.setItem('kalajay_staff_email', e);
     sessionStorage.setItem('kalajay_staff_id', s);
     if (t) sessionStorage.setItem('kalajay_custom_token', t);
-  }, { e: email, s: staffId, t: customToken });
+    if (idt) sessionStorage.setItem('kalajay_staff_token', idt);
+  }, { e: email, s: staffId, t: customToken, idt: idToken });
 
   const originalGoto = page.goto.bind(page);
   page.goto = async (url: string, options?: any) => {
@@ -263,7 +278,13 @@ async function runReleaseBlockerReview() {
       await page.waitForTimeout(1500);
 
       // Check how the cost is rendered: should be "—" and NOT "₹0"
-      await page.waitForSelector(`tr:has-text("${missingCostSku}")`, { timeout: 8000 });
+      try {
+        await page.waitForSelector(`tr:has-text("${missingCostSku}")`, { timeout: 8000 });
+      } catch (err) {
+        console.log('Timeout waiting for SKU in table. Page URL:', page.url());
+        console.log('Table rows:', await page.locator('tbody tr').allTextContents().catch(() => []));
+        throw err;
+      }
       const row = page.locator('tr', { has: page.locator(`text=${missingCostSku}`) }).first();
       const costCellText = (await row.locator('td:nth-child(6)').textContent().catch(() => ''))?.trim();
       const rendersDashForUnknown = costCellText === '—';

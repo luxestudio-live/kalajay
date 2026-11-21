@@ -632,7 +632,7 @@ export async function getFirestoreInventory(): Promise<InventoryItem[]> {
     if (snapshot.empty) return [];
     const list: InventoryItem[] = [];
     snapshot.forEach((snap) => {
-      list.push(snap.data() as InventoryItem);
+      list.push({ id: snap.id, ...snap.data() } as InventoryItem);
     });
     return list;
   } catch (error) {

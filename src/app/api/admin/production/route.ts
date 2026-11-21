@@ -132,36 +132,40 @@ export async function POST(request: Request) {
         const woRef = adminDb.collection('work_orders').doc(woId);
         batch.set(woRef, newWorkOrder, { merge: true });
 
-        const reqRef = adminDb.collection('custom_requests').doc(String(customRequestId));
-        batch.set(
-          reqRef,
-          {
-            status: 'production_scheduled',
-            workOrderId: woId,
-            artisanAssigned: newWorkOrder.artisanName,
-            targetCompletion: (newWorkOrder as any).targetCompletion || newWorkOrder.targetDate,
-            updatedAt: new Date().toISOString(),
-          },
-          { merge: true }
-        );
+        const customReqUpdates = {
+          status: 'production_scheduled',
+          workOrderId: woId,
+          artisanAssigned: newWorkOrder.artisanName,
+          targetCompletion: (newWorkOrder as any).targetCompletion || newWorkOrder.targetDate,
+          updatedAt: new Date().toISOString(),
+        };
+
+        // Canonical collection: custom_enquiries (matching firestore.rules & storefront)
+        const reqRef = adminDb.collection('custom_enquiries').doc(String(customRequestId));
+        batch.set(reqRef, customReqUpdates, { merge: true });
+
+        // Compatibility mirror write to custom_requests
+        const legacyRef = adminDb.collection('custom_requests').doc(String(customRequestId));
+        batch.set(legacyRef, customReqUpdates, { merge: true });
 
         const auditRef = adminDb.collection('audit_logs').doc(auditRecord.id);
         batch.set(auditRef, auditRecord);
 
         await batch.commit();
       } else {
+        const customReqUpdates = {
+          status: 'production_scheduled',
+          workOrderId: woId,
+          artisanAssigned: newWorkOrder.artisanName,
+          targetCompletion: (newWorkOrder as any).targetCompletion || newWorkOrder.targetDate,
+          updatedAt: new Date().toISOString(),
+        };
+
         await setDoc(doc(db, 'work_orders', woId), newWorkOrder, { merge: true });
-        await setDoc(
-          doc(db, 'custom_requests', String(customRequestId)),
-          {
-            status: 'production_scheduled',
-            workOrderId: woId,
-            artisanAssigned: newWorkOrder.artisanName,
-            targetCompletion: (newWorkOrder as any).targetCompletion || newWorkOrder.targetDate,
-            updatedAt: new Date().toISOString(),
-          },
-          { merge: true }
-        );
+        await setDoc(doc(db, 'custom_enquiries', String(customRequestId)), customReqUpdates, { merge: true });
+        try {
+          await setDoc(doc(db, 'custom_requests', String(customRequestId)), customReqUpdates, { merge: true });
+        } catch {}
       }
 
       return NextResponse.json({

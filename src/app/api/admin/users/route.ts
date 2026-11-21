@@ -14,6 +14,7 @@ import {
   getStaffUser,
   BASELINE_STAFF_MAP,
 } from '@/lib/serverRbac';
+import { getAdminFirestore } from '@/lib/serverFirebaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
@@ -396,10 +397,22 @@ export async function POST(request: Request) {
     const action = body.action;
 
     // ------------------------------------------
-    // SUB-ACTION: Update Staff User
+    // SUB-ACTION: Update Staff User / Toggle Status
     // ------------------------------------------
-    if (action === 'update' || body.updates) {
-      const { targetStaffId, targetUsername, targetUid: explicitUid, updates } = body;
+    if (action === 'update' || action === 'toggle_status' || body.updates) {
+      let updates = body.updates || {};
+      if (action === 'toggle_status') {
+        const nextActive = body.active !== undefined ? Boolean(body.active) : false;
+        updates = {
+          ...updates,
+          active: nextActive,
+          status: nextActive ? 'active' : 'deactivated',
+        };
+      }
+
+      const targetStaffId = body.targetStaffId || body.targetUid || body.uid;
+      const targetUsername = body.targetUsername || body.username;
+      const explicitUid = body.targetUid || body.uid;
 
       const authCheck = await verifyStaffPermission(request, body, 'settings.users', 'manage_users');
       if (!authCheck.authorized) {
@@ -561,9 +574,24 @@ export async function POST(request: Request) {
       const nowIso = new Date().toISOString();
       const existingRecord = usersMap[targetUid] || existingTarget;
 
+      const nextActive =
+        updates?.active !== undefined
+          ? Boolean(updates.active)
+          : updates?.status
+          ? updates.status === 'active'
+          : existingRecord.active !== undefined
+          ? existingRecord.active
+          : existingRecord.status !== 'deactivated';
+
+      const nextStatus =
+        updates?.status ||
+        (updates?.active !== undefined ? (updates.active ? 'active' : 'deactivated') : existingRecord.status || 'active');
+
       const updatedUser = {
         ...existingRecord,
         ...(updates || {}),
+        active: nextActive,
+        status: nextStatus,
         username: newUsernameClean,
         staffId: targetStaffIdClean,
         id: targetStaffIdClean,
@@ -582,6 +610,7 @@ export async function POST(request: Request) {
           roleId: updatedUser.roleId,
           roleName: updatedUser.roleName,
           status: updatedUser.status,
+          active: updatedUser.active,
           requiresPasswordReset: updatedUser.requiresPasswordReset,
         };
       }
@@ -592,21 +621,41 @@ export async function POST(request: Request) {
       writeRbacStore(store);
 
       try {
-        await setDoc(doc(db, 'admin_users', targetUid), updatedUser, { merge: true });
-        await setDoc(
-          doc(db, 'users', targetUid),
-          {
-            username: newUsernameClean,
-            name: updatedUser.name,
-            phone: updatedUser.phone,
-            department: updatedUser.department,
-            staffRole: updatedUser.roleId,
-            status: updatedUser.status,
-            requiresPasswordReset: updatedUser.requiresPasswordReset,
-            updatedAt: nowIso,
-          },
-          { merge: true }
-        );
+        const adminDb = getAdminFirestore();
+        if (adminDb) {
+          await adminDb.collection('admin_users').doc(targetUid).set(updatedUser, { merge: true });
+          await adminDb.collection('users').doc(targetUid).set(
+            {
+              username: newUsernameClean,
+              name: updatedUser.name,
+              phone: updatedUser.phone,
+              department: updatedUser.department,
+              staffRole: updatedUser.roleId,
+              status: updatedUser.status,
+              active: updatedUser.active,
+              requiresPasswordReset: updatedUser.requiresPasswordReset,
+              updatedAt: nowIso,
+            },
+            { merge: true }
+          );
+        } else {
+          await setDoc(doc(db, 'admin_users', targetUid), updatedUser, { merge: true });
+          await setDoc(
+            doc(db, 'users', targetUid),
+            {
+              username: newUsernameClean,
+              name: updatedUser.name,
+              phone: updatedUser.phone,
+              department: updatedUser.department,
+              staffRole: updatedUser.roleId,
+              status: updatedUser.status,
+              active: updatedUser.active,
+              requiresPasswordReset: updatedUser.requiresPasswordReset,
+              updatedAt: nowIso,
+            },
+            { merge: true }
+          );
+        }
       } catch (fsErr) {
         console.warn('Firestore update sync warning:', fsErr);
       }
@@ -861,6 +910,7 @@ export async function POST(request: Request) {
         roleId: roleId.trim(),
         roleName: resolvedRoleName,
         status: (requestedStatus || 'active') as 'active' | 'deactivated',
+        active: (requestedStatus || 'active') === 'active',
         requiresPasswordReset: true,
         hasCompletedFirstLoginReset: false,
         createdAt: nowIso,
@@ -887,42 +937,79 @@ export async function POST(request: Request) {
         roleId: newStaffUser.roleId,
         roleName: newStaffUser.roleName,
         status: newStaffUser.status,
+        active: newStaffUser.active,
         requiresPasswordReset: true,
       };
       store.nextStaffNumber = nextStaffNum + 1;
       writeRbacStore(store);
 
       try {
-        await setDoc(
-          doc(db, 'admin_usernames', finalUsername),
-          {
-            uid: firebaseUid,
-            username: finalUsername,
-            staffId: newStaffId,
-            createdAt: nowIso,
-          },
-          { merge: true }
-        );
+        const adminDb = getAdminFirestore();
+        if (adminDb) {
+          await adminDb.collection('admin_usernames').doc(finalUsername).set(
+            {
+              uid: firebaseUid,
+              username: finalUsername,
+              staffId: newStaffId,
+              createdAt: nowIso,
+            },
+            { merge: true }
+          );
 
-        await setDoc(doc(db, 'admin_users', firebaseUid), newStaffUser, { merge: true });
-        await setDoc(
-          doc(db, 'users', firebaseUid),
-          {
-            id: firebaseUid,
-            staffId: newStaffId,
-            username: finalUsername,
-            name: newStaffUser.name,
-            email: cleanEmail,
-            phone: newStaffUser.phone,
-            department: newStaffUser.department,
-            role: roleId === 'role-super-admin' ? 'super_admin' : 'staff',
-            staffRole: roleId,
-            requiresPasswordReset: true,
-            hasCompletedFirstLoginReset: false,
-            updatedAt: nowIso,
-          },
-          { merge: true }
-        );
+          await adminDb.collection('admin_users').doc(firebaseUid).set(newStaffUser, { merge: true });
+          await adminDb.collection('users').doc(firebaseUid).set(
+            {
+              id: firebaseUid,
+              staffId: newStaffId,
+              username: finalUsername,
+              name: newStaffUser.name,
+              email: cleanEmail,
+              phone: newStaffUser.phone,
+              department: newStaffUser.department,
+              role: roleId === 'role-super-admin' ? 'super_admin' : 'staff',
+              staffRole: roleId,
+              status: newStaffUser.status,
+              active: newStaffUser.active,
+              requiresPasswordReset: true,
+              hasCompletedFirstLoginReset: false,
+              updatedAt: nowIso,
+            },
+            { merge: true }
+          );
+        } else {
+          await setDoc(
+            doc(db, 'admin_usernames', finalUsername),
+            {
+              uid: firebaseUid,
+              username: finalUsername,
+              staffId: newStaffId,
+              createdAt: nowIso,
+            },
+            { merge: true }
+          );
+
+          await setDoc(doc(db, 'admin_users', firebaseUid), newStaffUser, { merge: true });
+          await setDoc(
+            doc(db, 'users', firebaseUid),
+            {
+              id: firebaseUid,
+              staffId: newStaffId,
+              username: finalUsername,
+              name: newStaffUser.name,
+              email: cleanEmail,
+              phone: newStaffUser.phone,
+              department: newStaffUser.department,
+              role: roleId === 'role-super-admin' ? 'super_admin' : 'staff',
+              staffRole: roleId,
+              status: newStaffUser.status,
+              active: newStaffUser.active,
+              requiresPasswordReset: true,
+              hasCompletedFirstLoginReset: false,
+              updatedAt: nowIso,
+            },
+            { merge: true }
+          );
+        }
       } catch (fsErr) {
         console.warn('Firestore staff sync warning:', fsErr);
       }

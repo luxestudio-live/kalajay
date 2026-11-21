@@ -159,7 +159,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    if (!id || !['approved', 'archived', 'pending'].includes(status)) {
+    if (!id || !['approved', 'archived', 'pending', 'rejected'].includes(status)) {
       return NextResponse.json({ success: false, error: 'Invalid review update parameters.' }, { status: 400 });
     }
 

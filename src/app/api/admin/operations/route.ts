@@ -285,7 +285,12 @@ export async function POST(request: Request) {
     writeRbacStore(store);
 
     try {
-      await setDoc(doc(db, 'admin_roles', roleId), savedRole, { merge: true });
+      const adminDb = getAdminFirestore();
+      if (adminDb) {
+        await adminDb.collection('admin_roles').doc(roleId).set(savedRole, { merge: true });
+      } else {
+        await setDoc(doc(db, 'admin_roles', roleId), savedRole, { merge: true });
+      }
     } catch (fsErr) {
       console.warn('Firestore role sync warning:', fsErr);
     }
@@ -356,7 +361,12 @@ export async function DELETE(request: Request) {
     }
 
     try {
-      await deleteDoc(doc(db, 'admin_roles', roleId));
+      const adminDb = getAdminFirestore();
+      if (adminDb) {
+        await adminDb.collection('admin_roles').doc(roleId).delete();
+      } else {
+        await deleteDoc(doc(db, 'admin_roles', roleId));
+      }
     } catch (fsErr) {
       console.warn('Firestore role deletion warning:', fsErr);
     }

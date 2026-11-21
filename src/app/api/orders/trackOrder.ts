@@ -6,7 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { verifyFirebaseIdToken, INTERNAL_SERVICE_SECRET } from '@/lib/serverRbac';
+import { verifyFirebaseIdToken } from '@/lib/serverRbac';
 import { getAdminFirestore } from '@/lib/serverFirebaseAdmin';
 
 // Immutable set of static showroom showcase references ONLY
@@ -216,8 +216,9 @@ function cleanDigits(val: string): string {
  * Computes deterministic guest order access token
  */
 function generateGuestAccessToken(orderId: string, customerEmail: string): string {
+  const trackingSecret = process.env.ORDER_TRACKING_SECRET || process.env.NEXTAUTH_SECRET || 'kalajay_guest_order_tracking_salt_2026';
   return crypto
-    .createHmac('sha256', INTERNAL_SERVICE_SECRET)
+    .createHmac('sha256', trackingSecret)
     .update(`${orderId}:${customerEmail.toLowerCase().trim()}`)
     .digest('hex')
     .substring(0, 24);

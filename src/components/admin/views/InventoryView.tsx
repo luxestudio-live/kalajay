@@ -131,11 +131,13 @@ export default function InventoryView() {
     return inventory.find(i => i.sku === selectedSku) || inventory[0];
   }, [inventory, selectedSku]);
 
-  // Filtered inventory
+  // Filtered inventory with null-safe defensive checks
   const filteredItems = inventory.filter(item => {
-    const matchesSearch =
-      item.name.toLowerCase().includes(search.toLowerCase()) ||
-      item.sku.toLowerCase().includes(search.toLowerCase());
+    if (!item) return false;
+    const nameStr = (item.name || item.sku || '').toLowerCase();
+    const skuStr = (item.sku || '').toLowerCase();
+    const searchLower = (search || '').toLowerCase();
+    const matchesSearch = nameStr.includes(searchLower) || skuStr.includes(searchLower);
     const matchesLoc = locationFilter === 'All' || item.location === locationFilter;
     const matchesType = typeFilter === 'All' || item.type === typeFilter;
     const isLowOnly = activeTab === 'low_stock' ? item.status === 'low_stock' || item.status === 'out_of_stock' : true;
