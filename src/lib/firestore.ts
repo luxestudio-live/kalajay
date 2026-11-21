@@ -106,7 +106,10 @@ export async function getFirestoreProducts(includeDrafts = false): Promise<Produ
           productsRef,
           where('status', 'in', ['published', 'active']),
           where('archived', '==', false),
-          where('isActive', '==', true)
+          where('isActive', '==', true),
+          where('active', '==', true),
+          where('isDraft', '==', false),
+          where('published', '==', true)
         );
     const snapshot = await getDocs(q);
     if (snapshot.empty) return [];
@@ -145,6 +148,21 @@ export async function saveFirestoreProduct(product: Product): Promise<void> {
     const id = product.id || product.code;
     const productRef = doc(db, 'products', id);
     const cleanData = JSON.parse(JSON.stringify(product));
+
+    // Harmonize canonical publication flags to prevent conflicting states in Firestore
+    const isExplicitlyPublished = (cleanData.status === 'published' || cleanData.inStock === true) &&
+      cleanData.archived !== true &&
+      cleanData.isDraft !== true;
+
+    if (isExplicitlyPublished) {
+      cleanData.status = 'published';
+      cleanData.isActive = true;
+      cleanData.active = true;
+      cleanData.archived = false;
+      cleanData.isDraft = false;
+      cleanData.published = true;
+    }
+
     await setDoc(productRef, {
       ...cleanData,
       updatedAt: serverTimestamp(),

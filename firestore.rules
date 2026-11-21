@@ -154,10 +154,15 @@ service cloud.firestore {
       // Administrators can list all products (drafts, archived, published) for catalogue management.
       // Anonymous public storefront visitors MUST query explicitly published, non-archived pieces.
       // Unconstrained queries over the entire collection containing mixed statuses are rejected.
+      // Every constraint enforced by isPublicProduct() is strictly mirrored here so that collection
+      // queries cannot expose any product that direct document reads would reject.
       allow list: if isAdmin() || (
         resource.data.status in ['published', 'active'] &&
         resource.data.archived == false &&
-        resource.data.isActive == true
+        resource.data.isActive == true &&
+        resource.data.active == true &&
+        resource.data.isDraft == false &&
+        resource.data.published == true
       );
       allow create: if isStoreManagerOrSuperAdmin() && isValidProduct(request.resource.data);
       allow update: if isStoreManagerOrSuperAdmin() && isValidProduct(request.resource.data);

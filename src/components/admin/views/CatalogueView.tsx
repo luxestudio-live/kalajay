@@ -352,6 +352,8 @@ export default function CatalogueView() {
       isActive: newProduct.inStock,
       active: newProduct.inStock,
       archived: false,
+      isDraft: !newProduct.inStock,
+      published: Boolean(newProduct.inStock),
       artisanTitle: newProduct.artisanTitle,
       artisanNote: newProduct.artisanNote,
       origin: newProduct.origin,
@@ -393,6 +395,8 @@ export default function CatalogueView() {
       isActive: editingProduct.inStock,
       active: editingProduct.inStock,
       archived: false,
+      isDraft: !editingProduct.inStock,
+      published: Boolean(editingProduct.inStock),
     };
     setProducts(prev => prev.map(p => (p.id === updated.id ? updated : p)));
     setEditProductModalOpen(false);
