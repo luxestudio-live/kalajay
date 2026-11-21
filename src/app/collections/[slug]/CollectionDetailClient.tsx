@@ -24,21 +24,30 @@ export default function CollectionDetailClient({ slug: propSlug }: CollectionDet
 
   useEffect(() => {
     let isMounted = true;
-    Promise.all([getFirestoreCategories(), getFirestoreProducts()]).then(([liveCats, liveProds]) => {
+
+    getFirestoreCategories().then((liveCats) => {
       if (!isMounted) return;
       if (liveCats && liveCats.length > 0) {
-        const matchingCat = liveCats.find(c => c.slug === slug);
+        const matchingCat = liveCats.find(c => 
+          c.slug === slug || 
+          c.name?.toLowerCase() === slug.replace(/-/g, ' ').toLowerCase() ||
+          c.slug === slug.replace(/-/g, '')
+        );
         if (matchingCat) setCollection(matchingCat);
-      }
-      if (liveProds && liveProds.length > 0) {
-        const codeSet = new Set(liveProds.map(p => p.code));
-        const combined = [...liveProds, ...PRODUCTS.filter(p => !codeSet.has(p.code))];
-        setProductsList(combined);
       }
       setIsLiveLoaded(true);
     }).catch(() => {
       if (isMounted) setIsLiveLoaded(true);
     });
+
+    getFirestoreProducts().then((liveProds) => {
+      if (!isMounted) return;
+      if (liveProds && liveProds.length > 0) {
+        const codeSet = new Set(liveProds.map(p => p.code));
+        const combined = [...liveProds, ...PRODUCTS.filter(p => !codeSet.has(p.code))];
+        setProductsList(combined);
+      }
+    }).catch(() => {});
 
     return () => {
       isMounted = false;
@@ -49,21 +58,8 @@ export default function CollectionDetailClient({ slug: propSlug }: CollectionDet
   const [addedId, setAddedId] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<string>('featured');
 
-  if (!collection) {
-    if (isLiveLoaded) {
-      return notFound();
-    }
-    return (
-      <div className="bg-canvas min-h-screen flex items-center justify-center py-24">
-        <div className="text-center space-y-4">
-          <div className="w-8 h-8 border-2 border-rosewood border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="font-serif text-lg text-plum">Consulting Atelier Curations...</p>
-        </div>
-      </div>
-    );
-  }
-
   const products = useMemo(() => {
+    if (!collection) return [];
     const list = productsList.filter(
       p =>
         (p.category === collection.name || p.categorySlug === collection.slug) &&
@@ -82,6 +78,20 @@ export default function CollectionDetailClient({ slug: propSlug }: CollectionDet
         return [...list].sort((a, b) => (b.isBestSeller ? 1 : 0) - (a.isBestSeller ? 1 : 0));
     }
   }, [productsList, collection, sortOrder]);
+
+  if (!collection) {
+    if (isLiveLoaded) {
+      return notFound();
+    }
+    return (
+      <div className="bg-canvas min-h-screen flex items-center justify-center py-24">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-2 border-rosewood border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="font-serif text-lg text-plum">Consulting Atelier Curations...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleQuickAdd = (product: Product, e: React.MouseEvent) => {
     e.preventDefault();

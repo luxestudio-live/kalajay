@@ -52,6 +52,7 @@ export default function OrdersView() {
   const [stateName, setStateName] = useState('');
   const [pincode, setPincode] = useState('');
   const [payMethod, setPayMethod] = useState<AdminOrder['paymentMethod']>('UPI Instant');
+  const [payStatus, setPayStatus] = useState<AdminOrder['paymentStatus']>('paid');
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -96,7 +97,7 @@ export default function OrdersView() {
       shipping: 0,
       tax,
       total,
-      paymentStatus: 'paid',
+      paymentStatus: payStatus,
       paymentMethod: payMethod,
       fulfillmentStatus: 'unfulfilled',
       shippingAddress: {
@@ -351,7 +352,7 @@ export default function OrdersView() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block font-semibold mb-1 text-[#372921]">Phone / WhatsApp</label>
                 <input
@@ -374,6 +375,18 @@ export default function OrdersView() {
                   <option value="WhatsApp Direct">WhatsApp Concierge Settlement</option>
                   <option value="Credit/Debit Card">Credit/Debit Card (POS)</option>
                   <option value="NetBanking">NetBanking RTGS/NEFT</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1 text-[#372921]">Payment Status</label>
+                <select
+                  value={payStatus}
+                  onChange={e => setPayStatus(e.target.value as any)}
+                  className="w-full bg-[#FAF8F5] border border-[#DED3C5] rounded-lg p-2.5 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                >
+                  <option value="paid">Paid (Payment Received)</option>
+                  <option value="unpaid">Unpaid (Pending Concierge / RTGS)</option>
                 </select>
               </div>
             </div>
@@ -688,6 +701,8 @@ export default function OrdersView() {
                       <option value="quality_checked">Quality Inspected &amp; Wax-Sealed (Mumbai)</option>
                       <option value="shipped">Dispatched &amp; In Transit</option>
                       <option value="delivered">Delivered to Patron</option>
+                      <option value="cancelled">Cancelled &amp; Restocked</option>
+                      <option value="rto">Return to Origin (RTO)</option>
                     </select>
                   </div>
                   <div>

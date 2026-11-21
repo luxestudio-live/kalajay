@@ -400,7 +400,7 @@ export default function InventoryView() {
                       {item.available} {item.unit}
                     </td>
                     <td className="py-3 px-4 text-right font-mono text-[#372921]">
-                      ₹{item.unitCost.toLocaleString('en-IN')}
+                      ₹{(item.unitCost || 0).toLocaleString('en-IN')}
                     </td>
                     <td className="py-3 px-4">
                       <span

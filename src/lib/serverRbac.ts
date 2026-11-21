@@ -712,8 +712,9 @@ export async function verifyStaffPermission(
   }
 
   const isInternalSecret =
-    internalSecretHeader === INTERNAL_SERVICE_SECRET ||
-    bearerToken === INTERNAL_SERVICE_SECRET;
+    Boolean(INTERNAL_SERVICE_SECRET) &&
+    (internalSecretHeader === INTERNAL_SERVICE_SECRET ||
+      bearerToken === INTERNAL_SERVICE_SECRET);
 
   let staffUser: AdminUser | null = null;
 

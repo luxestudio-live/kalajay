@@ -123,8 +123,11 @@ export async function saveFirestoreProduct(product: Product): Promise<void> {
     if (!db || !db.type) return;
     const id = product.id || product.code;
     const productRef = doc(db, 'products', id);
+    const cleanData = Object.fromEntries(
+      Object.entries(product).filter(([_, v]) => v !== undefined)
+    );
     await setDoc(productRef, {
-      ...product,
+      ...cleanData,
       updatedAt: serverTimestamp(),
     }, { merge: true });
   } catch (error) {
@@ -150,7 +153,14 @@ export async function getFirestoreCategories(): Promise<Collection[]> {
     if (snapshot.empty) return [];
     const list: Collection[] = [];
     snapshot.forEach((snap) => {
-      list.push(snap.data() as Collection);
+      const d = snap.data();
+      list.push({
+        slug: d.slug || snap.id,
+        name: d.name || snap.id,
+        description: d.description || '',
+        image: d.image || '/products/bag1.png',
+        ...d,
+      } as Collection);
     });
     return list;
   } catch (error) {
@@ -164,12 +174,25 @@ export async function saveFirestoreCategory(category: Collection): Promise<void>
     if (!db || !db.type) return;
     const id = category.slug;
     const catRef = doc(db, 'categories', id);
+    const cleanData = Object.fromEntries(
+      Object.entries(category).filter(([_, v]) => v !== undefined)
+    );
     await setDoc(catRef, {
-      ...category,
+      ...cleanData,
       updatedAt: serverTimestamp(),
     }, { merge: true });
   } catch (error) {
     console.error('Error saving category to Firestore:', error);
+  }
+}
+
+export async function deleteFirestoreCategory(slug: string): Promise<void> {
+  try {
+    if (!db || !db.type) return;
+    const catRef = doc(db, 'categories', slug);
+    await deleteDoc(catRef);
+  } catch (error) {
+    console.error('Error deleting category from Firestore:', error);
   }
 }
 

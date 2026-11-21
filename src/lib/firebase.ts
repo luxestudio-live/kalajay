@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getAuth, Auth, connectAuthEmulator, signInWithCustomToken } from 'firebase/auth';
+import { getFirestore, Firestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getAnalytics, isSupported, Analytics } from 'firebase/analytics';
 
 export const firebaseConfig = {
@@ -39,8 +39,29 @@ try {
   db = {} as Firestore;
 }
 
-// Client-only Google Analytics initialization
+// Client-only Google Analytics & Emulator initialization
 if (typeof window !== 'undefined') {
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  if (isLocal && !(window as any).__EMULATORS_CONNECTED__) {
+    try {
+      if (auth && (auth as any).app) {
+        connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+      }
+      if (db && (db as any).app) {
+        connectFirestoreEmulator(db, '127.0.0.1', 8088);
+      }
+      (window as any).__EMULATORS_CONNECTED__ = true;
+    } catch {}
+  }
+
+  (window as any).__FIREBASE_AUTH__ = auth;
+  (window as any).__FIREBASE_DB__ = db;
+
+  const savedToken = sessionStorage.getItem('kalajay_custom_token');
+  if (savedToken && auth && (auth as any).app) {
+    signInWithCustomToken(auth, savedToken).catch(() => {});
+  }
+
   isSupported()
     .then((yes) => {
       if (yes) {
