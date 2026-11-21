@@ -63,15 +63,6 @@ service cloud.firestore {
       );
     }
 
-    // Inventory & Atelier Operations Staff (Inventory ERP, Stock Adjustments)
-    function isInventoryStaffOrAdmin() {
-      return isStoreManagerOrSuperAdmin() || (
-        isAdmin() && (
-          getAdminData().role in ['inventory_manager', 'production_head', 'fulfilment_agent'] ||
-          getAdminData().roleId in ['role-inventory-manager', 'role-production-head', 'role-production-manager', 'role-fulfilment-agent']
-        )
-      );
-    }
 
     // -------------------------------------------------------------
     // Data Validation Helpers
@@ -122,12 +113,19 @@ service cloud.firestore {
 
     // -------------------------------------------------------------
     // 1. Products Catalogue (/products/{productId})
-    // Storefront visitors have public read access to browse the catalogue.
+    // Storefront visitors have public read access to active, published pieces ONLY.
+    // Anonymous visitors and patrons CANNOT access unpublished, draft, or archived products.
+    // Verified Administrators (isAdmin()) can read all products (including drafts & archives).
     // Writes are restricted to Store Managers and Super Admins.
-    // Restricted staff (e.g., inventory clerks) CANNOT modify product listings.
     // -------------------------------------------------------------
     match /products/{productId} {
-      allow read: if true;
+      allow read: if isAdmin() || (
+        (!('status' in resource.data) || (resource.data.status != 'archived' && resource.data.status != 'draft' && resource.data.status != 'inactive')) &&
+        (!('isActive' in resource.data) || resource.data.isActive == true) &&
+        (!('active' in resource.data) || resource.data.active == true) &&
+        (!('isDraft' in resource.data) || resource.data.isDraft == false) &&
+        (!('archived' in resource.data) || resource.data.archived == false)
+      );
       allow create: if isStoreManagerOrSuperAdmin() && isValidProduct(request.resource.data);
       allow update: if isStoreManagerOrSuperAdmin() && isValidProduct(request.resource.data);
       allow delete: if isStoreManagerOrSuperAdmin();
@@ -144,14 +142,15 @@ service cloud.firestore {
 
     // -------------------------------------------------------------
     // 3. CMS & Homepage Rails (/cms/{docId})
-    // Public read for published storefront content (banners, faqs, policies, pages, published featured products).
+    // Public read for explicitly approved published storefront content:
+    // (banners, faqs, policies, homepage_sections, pages, media_assets, featured_products).
     // Operational configuration (e.g. production_stages) and draft documents (e.g. featured_products_draft
     // or status: 'draft') are strictly staff-only (isAdmin()).
     // Write restricted to Store Managers & Super Admins.
     // -------------------------------------------------------------
     match /cms/{docId} {
       allow read: if isAdmin() || (
-        !(docId in ['production_stages']) &&
+        docId in ['banners', 'faqs', 'policies', 'homepage_sections', 'pages', 'media_assets', 'featured_products'] &&
         !docId.matches('.*_draft$') &&
         (!('status' in resource.data) || resource.data.status == 'published')
       );
@@ -165,19 +164,19 @@ service cloud.firestore {
     // keeping procurement costs (unitCost), supplier identities, BOM allocations,
     // and raw materials completely confidential.
     // Storefront availability is projected via the /api/products/availability server endpoint.
-    // Write: Strictly restricted to Root Super Admin to prevent direct staff client SDK writes
-    // from bypassing stock transactions, reservations, or audit logging.
-    // Regular staff mutations MUST proceed via authoritative server routes (/api/admin/operations).
+    // Write: ZERO DIRECT CLIENT MUTATIONS (allow write: if false;).
+    // Eliminates client SDK write access, including Root Admin exceptions.
+    // All inventory mutations MUST proceed via authoritative server routes (/api/admin/operations).
     // -------------------------------------------------------------
     match /inventory/{sku} {
       allow read: if isAdmin();
-      allow write: if isRootAdmin();
+      allow write: if false;
     }
 
-    // Stock adjustments audit trail - Strictly Root Admin write, Staff read
+    // Stock adjustments audit trail - Strictly read-only for Staff, zero direct client mutations
     match /stock_adjustments/{adjId} {
       allow read: if isAdmin();
-      allow write: if isRootAdmin();
+      allow write: if false;
     }
 
     // -------------------------------------------------------------
@@ -204,24 +203,22 @@ service cloud.firestore {
 
     // -------------------------------------------------------------
     // 7. Orders (/orders/{orderId})
-    // Creation: ZERO DIRECT CLIENT CREATION (Requirement 2).
-    // All orders, including guest orders, MUST be created through the trusted
-    // /api/orders/create backend API to enforce authoritative pricing, 3% GST,
-    // inventory reservation, and payment status initialization.
-    // Read: Restricted to the authenticated patron owner OR Admin.
-    // Update: Strictly restricted to trusted Root Admin / backend update operations.
+    // Creation & Mutation: ZERO DIRECT CLIENT CREATION OR MUTATION (allow write: if false;).
+    // All orders, online and offline, MUST be created or updated through trusted backend APIs
+    // (/api/orders/create, /api/admin/orders) to enforce authoritative pricing, 3% GST,
+    // inventory reservation, payment status initialization, and audit logging.
+    // Eliminates client SDK write access, including Root Admin exceptions.
+    // Read: Restricted to the authenticated patron owner (with verified email match or UID) OR Admin.
     // Delete: Disallowed (audit trail protection).
     // -------------------------------------------------------------
     match /orders/{orderId} {
-      allow create: if isRootAdmin();
       allow read: if (
         isAuthenticated() && (
           resource.data.userId == request.auth.uid ||
-          (request.auth.token.email != null && resource.data.customerEmail == request.auth.token.email)
+          (request.auth.token.email != null && request.auth.token.email_verified == true && resource.data.customerEmail == request.auth.token.email)
         )
       ) || isAdmin();
-      allow update: if isRootAdmin();
-      allow delete: if false;
+      allow write: if false;
     }
 
     // -------------------------------------------------------------
@@ -246,65 +243,96 @@ service cloud.firestore {
 
     // -------------------------------------------------------------
     // 10. Support Tickets (/support_tickets/{ticketId})
-    // Create: Anyone can create a support ticket with valid schema.
-    // Read: Ticket creator (by email/userId match) OR Admin.
-    // Update: Admin can reply/resolve; Creator can APPEND messages only (Requirement 6).
-    // Cannot edit or remove previous messages, alter staff replies, change ownership,
-    // or modify ticket status.
-    // Delete: Disallowed for clients (Admin only).
+    // Create: Guests and patrons can create tickets with valid schema.
+    // Strict Identity Binding:
+    // - Authenticated users MUST bind userId to their own request.auth.uid (cannot spoof another customer UID).
+    // - Unauthenticated guests CANNOT claim any registered customer UID (userId must be null/absent/empty/'guest').
+    // - Initial status must be 'open' or 'pending'; staff fields (assignedStaff, internalNotes) are forbidden.
+    // - Initial message sender cannot claim 'concierge'.
+    // Read: Ticket creator (by verified email or matching userId) OR Admin.
+    // Update: Admin can reply/resolve; Creator can APPEND messages only.
+    // - Cannot tamper with status, ownership, customerName, or email.
+    // - Appended messages must have sender == 'customer' (cannot spoof concierge staff replies).
+    // Delete: Strictly disallowed for all clients (allow delete: if false;).
     // -------------------------------------------------------------
     match /support_tickets/{ticketId} {
-      allow create: if isValidSupportTicket(request.resource.data);
+      allow create: if isValidSupportTicket(request.resource.data) &&
+                       (!('status' in request.resource.data) || request.resource.data.status in ['open', 'new', 'pending']) &&
+                       (!('internalNotes' in request.resource.data)) &&
+                       (!('staffNotes' in request.resource.data)) &&
+                       (!('assignedStaff' in request.resource.data)) &&
+                       (
+                         (isAuthenticated() && (!('userId' in request.resource.data) || request.resource.data.userId == request.auth.uid)) ||
+                         (!isAuthenticated() && (!('userId' in request.resource.data) || request.resource.data.userId in [null, '', 'guest']))
+                       ) &&
+                       (
+                         !(request.resource.data.messages[0] is map) ||
+                         !('sender' in request.resource.data.messages[0]) ||
+                         request.resource.data.messages[0].sender == 'customer'
+                       );
       allow read: if (
         isAuthenticated() && (
           resource.data.userId == request.auth.uid ||
-          (request.auth.token.email != null && resource.data.email == request.auth.token.email)
+          (request.auth.token.email != null && request.auth.token.email_verified == true && resource.data.email == request.auth.token.email)
         )
       ) || isAdmin();
       allow update: if isAdmin() || (
         isAuthenticated() &&
-        (resource.data.userId == request.auth.uid || resource.data.email == request.auth.token.email) &&
+        (
+          resource.data.userId == request.auth.uid ||
+          (request.auth.token.email != null && request.auth.token.email_verified == true && resource.data.email == request.auth.token.email)
+        ) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['messages', 'updatedAt']) &&
         request.resource.data.messages.size() == resource.data.messages.size() + 1 &&
         request.resource.data.messages.hasAll(resource.data.messages) &&
         request.resource.data.userId == resource.data.userId &&
         request.resource.data.status == resource.data.status &&
+        request.resource.data.email == resource.data.email &&
+        (!('customerName' in resource.data) || request.resource.data.customerName == resource.data.customerName) &&
+        (
+          !(request.resource.data.messages[request.resource.data.messages.size() - 1] is map) ||
+          !('sender' in request.resource.data.messages[request.resource.data.messages.size() - 1]) ||
+          request.resource.data.messages[request.resource.data.messages.size() - 1].sender == 'customer'
+        ) &&
         request.resource.data.messages.size() <= 50
       );
-      allow delete: if isAdmin();
+      allow delete: if false;
     }
 
     // -------------------------------------------------------------
     // 11. Security Audit Logs (/audit_logs/{logId})
-    // Read restricted to Administrators; writes strictly restricted to Root Super Admin.
+    // Read: Verified Administrators only.
+    // Write: ZERO DIRECT CLIENT MUTATIONS (allow write: if false;).
+    // Audit records are created exclusively via server transactions.
     // -------------------------------------------------------------
     match /audit_logs/{logId} {
       allow read: if isAdmin();
-      allow write: if isRootAdmin();
+      allow write: if false;
     }
 
     // -------------------------------------------------------------
     // 11a. Atelier Work Orders (/work_orders/{workOrderId})
     // Read: Verified Active Administrators & Atelier Staff.
-    // Client SDK Write: Strictly restricted to Root Admin.
-    // Standard staff mutations MUST proceed via /api/admin/work-orders
-    // to guarantee atomic inquiry status updates and audit logging.
+    // Write: ZERO DIRECT CLIENT MUTATIONS (allow write: if false;).
+    // All work order mutations (creation, scheduling, stage advances)
+    // MUST proceed via authoritative server API (/api/admin/production).
     // -------------------------------------------------------------
     match /work_orders/{workOrderId} {
       allow read: if isAdmin();
-      allow write: if isRootAdmin();
+      allow write: if false;
     }
 
     // -------------------------------------------------------------
     // 11b. Offline Orders (/offline_orders/{orderId})
     // Read: Verified Active Administrators.
-    // Client SDK Write: Strictly restricted to Root Admin.
-    // Standard staff offline sales MUST proceed via /api/admin/offline-orders
-    // to guarantee atomic Firestore transaction, inventory decrement, and audit trail.
+    // Write: ZERO DIRECT CLIENT MUTATIONS (allow write: if false;).
+    // All offline studio sales MUST proceed via authoritative server API
+    // (/api/admin/orders) to guarantee atomic Firestore transaction,
+    // inventory decrement, and audit trail.
     // -------------------------------------------------------------
     match /offline_orders/{orderId} {
       allow read: if isAdmin();
-      allow write: if isRootAdmin();
+      allow write: if false;
     }
 
     // -------------------------------------------------------------
@@ -322,13 +350,15 @@ service cloud.firestore {
 
     // -------------------------------------------------------------
     // 11d. Store & Operational Settings (/settings/{settingId})
-    // Read: Public read restricted to 'store' document for checkout parameters;
-    // other internal configuration documents require verified administrator.
-    // Write: Strictly restricted to Store Managers & Root Admin.
+    // Read: Strictly restricted to verified Active Administrators (isAdmin()).
+    // Anonymous visitors and patrons cannot inspect internal settings documents.
+    // Checkout logistics parameters are resolved dynamically server-side (createOrder.ts).
+    // Write: ZERO DIRECT CLIENT MUTATIONS (allow write: if false;).
+    // Setting updates proceed via authoritative server API (/api/admin/operations).
     // -------------------------------------------------------------
     match /settings/{settingId} {
-      allow read: if settingId == 'store' || isAdmin();
-      allow write: if isStoreManagerOrSuperAdmin();
+      allow read: if isAdmin();
+      allow write: if false;
     }
 
     // -------------------------------------------------------------
@@ -350,13 +380,18 @@ service cloud.firestore {
 
     // -------------------------------------------------------------
     // 11f. Patron Product Reviews (/reviews/{reviewId})
-    // Read: Public can ONLY read approved reviews. Admins can read all.
+    // Read: Strictly restricted to verified Active Administrators (isAdmin()).
+    // Direct Client SDK reads are BLOCKED for anonymous visitors and customers
+    // to prevent exposure of customer email, authorEmail, or private review metadata.
+    // Public reviews are projected securely via the sanitized /api/reviews endpoint.
     // Create: Public submission strictly forced to status: 'pending'.
-    // Enforces rating bounds [1..5], length constraints, and anti-spam validation.
+    // Enforces rating bounds [1..5], length constraints, anti-spam validation.
+    // Self-asserting verifiedBuyer == true is STRICTLY PROHIBITED (must be false or absent).
+    // Staff-only fields (staffNotes, internalNotes, moderatedBy) are STRICTLY PROHIBITED.
     // Moderation (Update/Delete): Strictly restricted to Store Managers & Root Admin.
     // -------------------------------------------------------------
     match /reviews/{reviewId} {
-      allow read: if (resource != null && resource.data.status == 'approved') || isAdmin();
+      allow read: if isAdmin();
       allow create: if request.resource.data.rating is number &&
                        request.resource.data.rating >= 1 && request.resource.data.rating <= 5 &&
                        request.resource.data.productId is string && request.resource.data.productId.size() <= 100 &&
@@ -366,6 +401,10 @@ service cloud.firestore {
                        request.resource.data.comment.size() >= 5 &&
                        request.resource.data.comment.size() <= 1500 &&
                        request.resource.data.status == 'pending' &&
+                       (!('verifiedBuyer' in request.resource.data) || request.resource.data.verifiedBuyer == false) &&
+                       (!('staffNotes' in request.resource.data)) &&
+                       (!('internalNotes' in request.resource.data)) &&
+                       (!('moderatedBy' in request.resource.data)) &&
                        request.resource.data.keys().hasOnly([
                          'id', 'patron', 'authorName', 'email', 'authorEmail',
                          'productId', 'productSlug', 'product', 'productName',

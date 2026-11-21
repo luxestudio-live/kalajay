@@ -343,7 +343,7 @@ export async function GET(request: Request) {
       if (verifyRes.valid) {
         if (
           (verifyRes.uid && foundOrder.userId && verifyRes.uid === foundOrder.userId) ||
-          (verifyRes.email && foundOrder.customerEmail && verifyRes.email.toLowerCase() === foundOrder.customerEmail.toLowerCase())
+          (verifyRes.email && verifyRes.emailVerified === true && foundOrder.customerEmail && verifyRes.email.toLowerCase() === foundOrder.customerEmail.toLowerCase())
         ) {
           isVerifiedOwner = true;
         }

@@ -109,87 +109,106 @@ export async function POST(request: Request) {
 
     // Scenario 1: Atomic Bespoke Order Scheduling
     if (customRequestId && workOrder) {
-      // 1. Idempotency Check: Prevent duplicate work order generation on network/UI retries
-      if (adminDb) {
-        const canonicalEnquiryRef = adminDb.collection('custom_enquiries').doc(String(customRequestId));
-        const enquirySnap = await canonicalEnquiryRef.get();
-        if (enquirySnap.exists) {
-          const data = enquirySnap.data();
-          if (data?.workOrderId && data?.status === 'production_scheduled') {
-            return NextResponse.json({
-              success: true,
-              workOrderId: data.workOrderId,
-              idempotent: true,
-              message: `Bespoke commission #${customRequestId} was already scheduled under Work Order ${data.workOrderId}.`,
-            });
-          }
-        }
-      }
+      // Deterministic work order ID guarantees uniqueness and prevents race condition duplication
+      const deterministicWoId =
+        workOrder.id ||
+        `WO-BESPOKE-${String(customRequestId).replace(/[^a-zA-Z0-9_-]/g, '')}`;
 
-      const woId = workOrder.id || `WO-BESPOKE-${Date.now().toString().slice(-6)}`;
       const newWorkOrder: WorkOrder = {
         ...workOrder,
-        id: woId,
+        id: deterministicWoId,
         stage: workOrder.stage || 'loom_queued',
         qcPassed: workOrder.qcPassed || false,
       };
 
       const auditRecord = {
-        id: `aud-${Date.now()}`,
+        id: `aud-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         userId: authCheck.staffUser?.staffId || authCheck.staffUser?.id || 'KJ-ADM-001',
         userName: authCheck.staffUser?.name || 'Staff User',
         action: 'SCHEDULE_BESPOKE_LOOM_RUN',
         module: 'production',
-        details: `Scheduled bespoke loom run ${woId} for Custom Request #${customRequestId} (${newWorkOrder.artisanName}, ${newWorkOrder.loomId})`,
+        details: `Scheduled bespoke loom run ${deterministicWoId} for Custom Request #${customRequestId} (${newWorkOrder.artisanName}, ${newWorkOrder.loomId})`,
         timestamp: new Date().toISOString(),
       };
 
       if (adminDb) {
-        const batch = adminDb.batch();
-        const woRef = adminDb.collection('work_orders').doc(woId);
-        batch.set(woRef, newWorkOrder, { merge: true });
+        const transactionResult = await adminDb.runTransaction(async (tx) => {
+          const reqRef = adminDb.collection('custom_enquiries').doc(String(customRequestId));
+          const legacyRef = adminDb.collection('custom_requests').doc(String(customRequestId));
+          const woRef = adminDb.collection('work_orders').doc(deterministicWoId);
 
-        const customReqUpdates = {
-          status: 'production_scheduled',
-          workOrderId: woId,
-          artisanAssigned: newWorkOrder.artisanName,
-          targetCompletion: (newWorkOrder as any).targetCompletion || newWorkOrder.targetDate,
-          updatedAt: new Date().toISOString(),
-        };
+          const enquirySnap = await tx.get(reqRef);
+          if (enquirySnap.exists) {
+            const data = enquirySnap.data();
+            if (data?.workOrderId && data?.status === 'production_scheduled') {
+              return {
+                alreadyScheduled: true,
+                workOrderId: data.workOrderId,
+                message: `Bespoke commission #${customRequestId} was already scheduled under Work Order ${data.workOrderId}.`,
+              };
+            }
+          }
 
-        // Canonical collection: custom_enquiries (matching firestore.rules & storefront)
-        const reqRef = adminDb.collection('custom_enquiries').doc(String(customRequestId));
-        batch.set(reqRef, customReqUpdates, { merge: true });
+          // Verify that work order document does not already exist
+          const woSnap = await tx.get(woRef);
+          if (woSnap.exists) {
+            return {
+              alreadyScheduled: true,
+              workOrderId: deterministicWoId,
+              message: `Bespoke work order ${deterministicWoId} already exists in production ledger.`,
+            };
+          }
 
-        // Compatibility mirror write to custom_requests
-        const legacyRef = adminDb.collection('custom_requests').doc(String(customRequestId));
-        batch.set(legacyRef, customReqUpdates, { merge: true });
+          const customReqUpdates = {
+            status: 'production_scheduled',
+            workOrderId: deterministicWoId,
+            artisanAssigned: newWorkOrder.artisanName,
+            targetCompletion: (newWorkOrder as any).targetCompletion || newWorkOrder.targetDate,
+            updatedAt: new Date().toISOString(),
+          };
 
-        const auditRef = adminDb.collection('audit_logs').doc(auditRecord.id);
-        batch.set(auditRef, auditRecord);
+          // Atomic writes within the transaction
+          tx.set(woRef, newWorkOrder, { merge: true });
+          tx.set(reqRef, customReqUpdates, { merge: true });
+          tx.set(legacyRef, customReqUpdates, { merge: true });
 
-        await batch.commit();
+          const auditRef = adminDb.collection('audit_logs').doc(auditRecord.id);
+          tx.set(auditRef, auditRecord);
+
+          return {
+            alreadyScheduled: false,
+            workOrderId: deterministicWoId,
+            message: `Bespoke work order ${deterministicWoId} scheduled successfully.`,
+          };
+        });
+
+        return NextResponse.json({
+          success: true,
+          workOrderId: transactionResult.workOrderId,
+          idempotent: transactionResult.alreadyScheduled,
+          message: transactionResult.message,
+        });
       } else {
         const customReqUpdates = {
           status: 'production_scheduled',
-          workOrderId: woId,
+          workOrderId: deterministicWoId,
           artisanAssigned: newWorkOrder.artisanName,
           targetCompletion: (newWorkOrder as any).targetCompletion || newWorkOrder.targetDate,
           updatedAt: new Date().toISOString(),
         };
 
-        await setDoc(doc(db, 'work_orders', woId), newWorkOrder, { merge: true });
+        await setDoc(doc(db, 'work_orders', deterministicWoId), newWorkOrder, { merge: true });
         await setDoc(doc(db, 'custom_enquiries', String(customRequestId)), customReqUpdates, { merge: true });
         try {
           await setDoc(doc(db, 'custom_requests', String(customRequestId)), customReqUpdates, { merge: true });
         } catch {}
-      }
 
-      return NextResponse.json({
-        success: true,
-        workOrderId: woId,
-        message: `Bespoke work order ${woId} scheduled successfully.`,
-      });
+        return NextResponse.json({
+          success: true,
+          workOrderId: deterministicWoId,
+          message: `Bespoke work order ${deterministicWoId} scheduled successfully.`,
+        });
+      }
     }
 
     // Scenario 2: Advancing Work Order Stage / QC

@@ -34,21 +34,19 @@ export async function GET(request: Request) {
 
     if (all) {
       // Security: Viewing all reviews (including pending/rejected & email addresses) requires authenticated staff
-      const authHeader = request.headers.get('authorization') || '';
-      const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
-      const authRes = token ? await verifyFirebaseIdToken(token) : { valid: false };
-
-      if (!authRes.valid) {
+      const authCheck = await verifyStaffPermission(request, null, 'catalogue.products', 'view');
+      if (!authCheck.authorized) {
         return NextResponse.json(
-          { success: false, error: 'Unauthorized: Staff credentials required to view unmoderated reviews.' },
-          { status: 401 }
+          { success: false, error: authCheck.error || 'Unauthorized: Staff credentials required to view unmoderated reviews.', code: authCheck.code },
+          { status: authCheck.status || 401 }
         );
       }
 
       return NextResponse.json({ success: true, reviews: memoryReviews });
     }
 
-    // Public Storefront PDP Display: Approved reviews ONLY, with patron email stripped for privacy protection
+    // Public Storefront PDP Display: Sanitized public projection of approved reviews ONLY
+    // Patron email, authorEmail, and private review metadata are strictly omitted
     const approvedReviews = memoryReviews
       .filter(r => {
         if (r.status !== 'approved') return false;
@@ -58,9 +56,20 @@ export async function GET(request: Request) {
         return false;
       })
       .map(r => {
-        // Redact patron email from public client responses
-        const { email, ...publicSafeReview } = r;
-        return publicSafeReview;
+        const raw = r as any;
+        return {
+          id: raw.id,
+          patron: raw.patron || raw.authorName || 'Patron',
+          product: raw.product || 'Handcrafted Creation',
+          productId: raw.productId || '',
+          productSlug: raw.productSlug || '',
+          rating: Number(raw.rating) || 5,
+          headline: raw.headline || '',
+          comment: raw.comment || '',
+          date: raw.date || raw.createdAt || '',
+          status: 'approved' as const,
+          verifiedBuyer: Boolean(raw.verifiedBuyer),
+        };
       });
 
     return NextResponse.json({ success: true, reviews: approvedReviews });

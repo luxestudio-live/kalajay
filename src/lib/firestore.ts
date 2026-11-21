@@ -860,6 +860,14 @@ export async function getFirestoreWorkOrders(): Promise<WorkOrder[]> {
 
 export async function saveFirestoreWorkOrder(order: WorkOrder): Promise<void> {
   try {
+    if (typeof window !== 'undefined') {
+      const res = await adminFetch('/api/admin/production', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workOrder: order }),
+      });
+      if (res.ok) return;
+    }
     if (!db || !db.type) return;
     const ref = doc(db, 'work_orders', order.id);
     await setDoc(ref, {
@@ -948,6 +956,14 @@ export async function getFirestoreOfflineOrders(): Promise<OfflineOrder[]> {
 
 export async function saveFirestoreOfflineOrder(order: OfflineOrder): Promise<void> {
   try {
+    if (typeof window !== 'undefined') {
+      const res = await adminFetch('/api/admin/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'offline', orderData: order }),
+      });
+      if (res.ok) return;
+    }
     if (!db || !db.type) return;
     const ref = doc(db, 'offline_orders', order.id);
     await setDoc(ref, {
@@ -995,6 +1011,14 @@ export async function getFirestoreStoreSettings(): Promise<StoreSettingsDoc | nu
 
 export async function saveFirestoreStoreSettings(settings: Partial<StoreSettingsDoc>): Promise<void> {
   try {
+    if (typeof window !== 'undefined') {
+      const res = await adminFetch('/api/admin/operations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'store_settings_save', settings }),
+      });
+      if (res.ok) return;
+    }
     if (!db || !db.type) return;
     const ref = doc(db, 'settings', 'store');
     await setDoc(ref, {

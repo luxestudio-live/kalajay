@@ -194,6 +194,57 @@ export async function POST(request: Request) {
     }
 
     // ------------------------------------------
+    // ACTION 0C: Store Settings Save (Identity & Logistics)
+    // ------------------------------------------
+    if (action === 'store_settings_save') {
+      const { settings } = body;
+      if (!settings || typeof settings !== 'object') {
+        return NextResponse.json(
+          { success: false, error: 'Mandatory field missing: settings object is required.' },
+          { status: 400 }
+        );
+      }
+
+      const authCheck = await verifyStaffPermission(request, body, 'settings.store', 'edit');
+      if (!authCheck.authorized) {
+        return NextResponse.json(
+          { success: false, error: authCheck.error, code: authCheck.code },
+          { status: authCheck.status }
+        );
+      }
+
+      const adminDb = getAdminFirestore();
+      if (adminDb) {
+        const storeRef = adminDb.collection('settings').doc('store');
+        await storeRef.set({
+          ...settings,
+          updatedAt: new Date().toISOString(),
+        }, { merge: true });
+
+        const auditLogRecord = {
+          id: `aud-store-${Date.now()}`,
+          userId: authCheck.staffUser?.staffId || authCheck.staffUser?.id || 'KJ-ADM-001',
+          userName: authCheck.staffUser?.name || 'Staff User',
+          action: 'UPDATE_STORE_IDENTITY',
+          module: 'settings',
+          details: `Updated store identity & logistics settings in /settings/store per authorized staff operation.`,
+          timestamp: new Date().toISOString(),
+        };
+        await adminDb.collection('audit_logs').doc(auditLogRecord.id).set(auditLogRecord);
+      } else {
+        await setDoc(doc(db, 'settings', 'store'), {
+          ...settings,
+          updatedAt: new Date().toISOString(),
+        }, { merge: true });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Store settings saved successfully.',
+      });
+    }
+
+    // ------------------------------------------
     // ACTION 1: Delete Inventory SKU
     // ------------------------------------------
     if (action === 'inventory_delete' || (body.sku && !body.role && !body.patronId && !action)) {
