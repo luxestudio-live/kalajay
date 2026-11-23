@@ -852,6 +852,59 @@ export async function processPendingNotificationOutbox(options?: {
 }
 
 /**
+ * Timing-safe string comparison to protect against timing side-channel attacks.
+ */
+export function safeSecretCompare(supplied: string, expected: string): boolean {
+  if (!supplied || !expected) return false;
+  const bufSupplied = Buffer.from(supplied, 'utf-8');
+  const bufExpected = Buffer.from(expected, 'utf-8');
+  if (bufSupplied.length !== bufExpected.length) return false;
+  return crypto.timingSafeEqual(bufSupplied, bufExpected);
+}
+
+/**
+ * Strictly authenticates cron requests for automatic notification outbox sweeping.
+ * Fails closed if CRON_SECRET is missing, empty, or whitespace.
+ * Standalone headers such as x-vercel-cron: 1 are strictly rejected without a valid secret.
+ */
+export function verifyCronAuthorization(request: Request): { authorized: boolean; reason?: string } {
+  const cronSecret = (process.env.CRON_SECRET || '').trim();
+
+  // Fail closed if server has not configured a nonempty CRON_SECRET
+  if (!cronSecret) {
+    return {
+      authorized: false,
+      reason: 'CRON_SECRET is not configured on the server. Recovery endpoint is closed.',
+    };
+  }
+
+  // Extract candidate secret from Authorization: Bearer <token> or x-cron-secret
+  const authHeader = (request.headers.get('authorization') || '').trim();
+  const bearerToken = authHeader.toLowerCase().startsWith('bearer ')
+    ? authHeader.slice(7).trim()
+    : '';
+  const customSecret = (request.headers.get('x-cron-secret') || '').trim();
+
+  const suppliedSecret = bearerToken || customSecret;
+
+  if (!suppliedSecret) {
+    return {
+      authorized: false,
+      reason: 'Missing required CRON_SECRET bearer token or x-cron-secret header.',
+    };
+  }
+
+  if (!safeSecretCompare(suppliedSecret, cronSecret)) {
+    return {
+      authorized: false,
+      reason: 'Invalid CRON_SECRET credential supplied.',
+    };
+  }
+
+  return { authorized: true };
+}
+
+/**
  * Resets in-memory and disk outbox stores (used by test suites).
  */
 export function clearNotificationOutbox(): void {

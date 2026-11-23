@@ -1,42 +1,10 @@
 import { NextResponse } from 'next/server';
-import { processPendingNotificationOutbox } from '@/lib/orderEmailDispatcher';
+import {
+  processPendingNotificationOutbox,
+  verifyCronAuthorization,
+} from '@/lib/orderEmailDispatcher';
 
 export const dynamic = 'force-dynamic';
-
-/**
- * Validates that the cron trigger request is authentic and authorized.
- * Supports:
- * 1. Bearer token matching CRON_SECRET
- * 2. x-cron-secret header matching CRON_SECRET
- * 3. Platform cron signatures (e.g. Vercel Cron x-vercel-cron: 1)
- */
-function verifyCronAuthorization(request: Request): { authorized: boolean; reason?: string } {
-  const cronSecret = process.env.CRON_SECRET;
-  const authHeader = request.headers.get('authorization') || '';
-  const customSecretHeader = request.headers.get('x-cron-secret') || '';
-  const isVercelCron = request.headers.get('x-vercel-cron') === '1';
-
-  // 1. If CRON_SECRET is configured, strictly enforce cryptographic match
-  if (cronSecret) {
-    const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
-    if (bearerToken === cronSecret || customSecretHeader === cronSecret) {
-      return { authorized: true };
-    }
-    return { authorized: false, reason: 'Invalid or missing CRON_SECRET authorization token.' };
-  }
-
-  // 2. Vercel Cron header verification if secret is omitted
-  if (isVercelCron) {
-    return { authorized: true };
-  }
-
-  // 3. Development / Sandbox fallback
-  if (process.env.NODE_ENV !== 'production') {
-    return { authorized: true };
-  }
-
-  return { authorized: false, reason: 'CRON_SECRET must be configured in production environment.' };
-}
 
 async function handleSweep(request: Request) {
   try {
