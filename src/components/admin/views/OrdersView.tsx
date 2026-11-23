@@ -716,6 +716,7 @@ export default function OrdersView() {
                       <option value="in_loom">In Atelier Loom (Bihar)</option>
                       <option value="quality_checked">Quality Inspected &amp; Wax-Sealed (Mumbai)</option>
                       <option value="shipped">Dispatched &amp; In Transit</option>
+                      <option value="out_for_delivery">Out for Delivery (Kalajay Concierge Fleet)</option>
                       <option value="delivered">Delivered to Patron</option>
                       <option value="cancelled">Cancelled &amp; Restocked</option>
                       <option value="rto">Return to Origin (RTO)</option>

@@ -402,8 +402,12 @@ export async function POST(request: Request) {
           dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'quality_checked' }).catch(() => {});
         } else if (fulfillmentStatus === 'shipped') {
           dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'shipped' }).catch(() => {});
+        } else if (fulfillmentStatus === 'out_for_delivery') {
+          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'out_for_delivery' }).catch(() => {});
         } else if (fulfillmentStatus === 'delivered') {
           dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'delivered' }).catch(() => {});
+        } else if (fulfillmentStatus === 'rto') {
+          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'rto' }).catch(() => {});
         } else if (fulfillmentStatus === 'cancelled') {
           dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'cancelled' }).catch(() => {});
         }

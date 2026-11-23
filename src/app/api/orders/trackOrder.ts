@@ -458,7 +458,11 @@ export async function GET(request: Request) {
         city: foundOrder.shippingAddress?.city || 'India',
         state: foundOrder.shippingAddress?.state || '',
       },
-      timeline,
+      timeline: (timeline || []).map((step: any) => ({
+        title: step.title,
+        timestamp: step.timestamp,
+        note: isVerifiedOwner ? step.note : (step.note && !step.note.includes('Reconciled via') ? step.note : undefined),
+      })),
       artisanNote: foundOrder.artisanNote || 'Handcrafted on Bihar artisan loom with tensioned crystal fiber.',
       courier: foundOrder.courier || 'Kalajay In-House Direct Dispatch',
       courierType: isInternalAwb ? 'internal' : 'commercial',

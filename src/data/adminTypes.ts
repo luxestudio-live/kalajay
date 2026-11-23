@@ -214,6 +214,7 @@ export interface AdminOrder {
     | 'in_loom'
     | 'quality_checked'
     | 'shipped'
+    | 'out_for_delivery'
     | 'delivered'
     | 'rto'
     | 'cancelled';

@@ -26,7 +26,9 @@ export type OrderLifecycleEvent =
   | 'in_loom'
   | 'quality_checked'
   | 'shipped'
+  | 'out_for_delivery'
   | 'delivered'
+  | 'rto'
   | 'cancelled'
   | 'refunded';
 
@@ -168,6 +170,17 @@ export function getEventCopy(event: OrderLifecycleEvent, orderId: string): {
         actionText: 'Track Courier Consignment',
         actionUrlPath: `/track?orderId=${orderId}`,
       };
+    case 'out_for_delivery':
+      return {
+        subject: `Out for Delivery: Your Kalajay Heirloom is Arriving Today`,
+        badge: 'Out for Delivery · In-House Fleet',
+        badgeColor: '#0284C7',
+        heading: 'Scheduled Handover Today',
+        narrative:
+          'Your Kalajay handcrafted creation is with our in-house delivery concierge and out for delivery today. Our driver-partner will present the sealed parcel at your designated destination.',
+        actionText: 'Track Delivery Concierge',
+        actionUrlPath: `/track?orderId=${orderId}`,
+      };
     case 'delivered':
       return {
         subject: `Delivered: Welcome Your Kalajay Creation`,
@@ -178,6 +191,17 @@ export function getEventCopy(event: OrderLifecycleEvent, orderId: string): {
           'Your Kalajay handcrafted creation has been safely delivered. We hope this piece brings enduring joy, beauty, and thoughtful craftsmanship to your personal collection.',
         actionText: 'Review Your Handcrafted Piece',
         actionUrlPath: `/account?tab=orders`,
+      };
+    case 'rto':
+      return {
+        subject: `Delivery Notice / Return to Origin: Order #${orderId}`,
+        badge: 'Return to Origin · Undelivered',
+        badgeColor: '#E11D48',
+        heading: 'Undelivered Parcel Notice',
+        narrative:
+          'Our delivery team was unable to complete handover at the designated destination. Your parcel has been securely rerouted back to our Worli Flagship Studio for inspection and rescheduling.',
+        actionText: 'Contact Concierge',
+        actionUrlPath: `/contact`,
       };
     case 'cancelled':
       return {
