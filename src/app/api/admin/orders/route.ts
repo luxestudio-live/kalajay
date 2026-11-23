@@ -385,31 +385,35 @@ export async function POST(request: Request) {
     // Trigger lifecycle email notifications on milestone transitions
     try {
       const mergedOrder = { ...existing, ...updates, id: orderId };
+      const transitionKey = updates.updatedAt
+        ? new Date(updates.updatedAt).getTime().toString()
+        : Date.now().toString();
+
       if (paymentStatus) {
         if (paymentStatus === 'paid') {
-          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'payment_success' }).catch(() => {});
+          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'payment_success', transitionKey }).catch(() => {});
         } else if (paymentStatus === 'failed') {
-          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'payment_failed' }).catch(() => {});
+          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'payment_failed', transitionKey }).catch(() => {});
         } else if (paymentStatus === 'refunded') {
-          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'refunded' }).catch(() => {});
+          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'refunded', transitionKey }).catch(() => {});
         }
       }
 
       if (fulfillmentStatus) {
         if (fulfillmentStatus === 'in_loom') {
-          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'in_loom' }).catch(() => {});
+          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'in_loom', transitionKey }).catch(() => {});
         } else if (fulfillmentStatus === 'quality_checked') {
-          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'quality_checked' }).catch(() => {});
+          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'quality_checked', transitionKey }).catch(() => {});
         } else if (fulfillmentStatus === 'shipped') {
-          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'shipped' }).catch(() => {});
+          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'shipped', transitionKey }).catch(() => {});
         } else if (fulfillmentStatus === 'out_for_delivery') {
-          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'out_for_delivery' }).catch(() => {});
+          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'out_for_delivery', transitionKey }).catch(() => {});
         } else if (fulfillmentStatus === 'delivered') {
-          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'delivered' }).catch(() => {});
+          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'delivered', transitionKey }).catch(() => {});
         } else if (fulfillmentStatus === 'rto') {
-          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'rto' }).catch(() => {});
+          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'rto', transitionKey }).catch(() => {});
         } else if (fulfillmentStatus === 'cancelled') {
-          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'cancelled' }).catch(() => {});
+          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'cancelled', transitionKey }).catch(() => {});
         }
       }
     } catch (notifErr) {

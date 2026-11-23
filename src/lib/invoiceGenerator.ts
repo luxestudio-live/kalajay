@@ -4,17 +4,23 @@
  *
  * Statutory Compliance:
  * - Section 31 of the Central Goods and Services Tax (CGST) Act, 2017
- * - Rule 46 of the CGST Rules, 2017 (Tax Invoice Details)
- * - Harmonized System of Nomenclature (HSN): 56090090 / 70181000
+ * - Rule 46 of the CGST Rules, 2017 (Tax Invoice Specifications)
+ * - Harmonized System of Nomenclature (HSN): 56090090 / 70181000 / 42022200
+ *
+ * Notice on Statutory Registration:
+ * Official seller tax registration and legal identity details are subject to
+ * formal verification and signoff by the client and certified chartered accountant
+ * [STATUS: PENDING CLIENT/ACCOUNTANT APPROVAL].
  */
 
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { PDFDocument, StandardFonts, rgb, PDFPage, PDFFont } from 'pdf-lib';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { getAdminFirestore } from '@/lib/serverFirebaseAdmin';
-import { SEED_OFFLINE_ORDERS } from '@/data/adminSeedData';
+import { SEED_OFFLINE_ORDERS, SEED_TAX_SLABS } from '@/data/adminSeedData';
 
 export interface InvoiceSellerDetails {
   entityName: string;
@@ -26,8 +32,13 @@ export interface InvoiceSellerDetails {
   contactPhone: string;
   contactEmail: string;
   website: string;
+  approvalStatus: 'VERIFIED' | 'PENDING_CLIENT_ACCOUNTANT_APPROVAL';
 }
 
+/**
+ * Authoritative Seller Identity from Maison Master Ledger
+ * Marked as PENDING_CLIENT_ACCOUNTANT_APPROVAL until formal CA signoff.
+ */
 export const KALAJAY_SELLER_DETAILS: InvoiceSellerDetails = {
   entityName: 'KALAJAY Handcrafted Creations LLP',
   address: 'Worli Sea Face, Mumbai 400018, Maharashtra, India',
@@ -38,6 +49,7 @@ export const KALAJAY_SELLER_DETAILS: InvoiceSellerDetails = {
   contactPhone: '+91 97405 40847',
   contactEmail: 'support@kalajay.in',
   website: 'https://www.kalajay.in',
+  approvalStatus: 'PENDING_CLIENT_ACCOUNTANT_APPROVAL',
 };
 
 export interface InvoiceItem {
@@ -55,6 +67,7 @@ export interface InvoiceItem {
 
 export interface PreparedInvoiceData {
   invoiceNumber: string;
+  fiscalYear: string;
   invoiceDate: string;
   orderId: string;
   orderDate: string;
@@ -100,6 +113,25 @@ export interface PreparedInvoiceData {
 }
 
 /**
+ * Derives Indian Financial Year string from an ISO date string.
+ * Indian FY starts April 1st and ends March 31st.
+ * E.g., Nov 2026 -> FY 2026-27 ("26-27")
+ */
+export function getIndianFiscalYear(dateStr?: string): { fiscalYear: string; code: string } {
+  const d = dateStr ? new Date(dateStr) : new Date();
+  const year = isNaN(d.getFullYear()) ? 2026 : d.getFullYear();
+  const month = isNaN(d.getMonth()) ? 10 : d.getMonth(); // 0-indexed: 3 = April
+  const startYear = month >= 3 ? year : year - 1;
+  const endYear = startYear + 1;
+  const startShort = String(startYear).slice(-2);
+  const endShort = String(endYear).slice(-2);
+  return {
+    fiscalYear: `FY ${startYear}-${startShort === endShort ? endYear : endShort}`,
+    code: `${startShort}${endShort}`,
+  };
+}
+
+/**
  * Derives a stable, deterministic invoice number for an order.
  * - Offline studio sales retain their registered invoiceNumber (e.g. INV-OFF-2026-042)
  * - Online e-commerce orders generate stable INV-2026-{orderIdNumeric}
@@ -113,6 +145,97 @@ export function getStableInvoiceNumber(order: any): string {
   return `INV-2026-${suffix}`;
 }
 
+function getInvoiceTokenSecret(): string {
+  return (
+    process.env.ORDER_TRACKING_SECRET ||
+    process.env.NEXTAUTH_SECRET ||
+    'kalajay_guest_order_tracking_salt_2026'
+  );
+}
+
+/**
+ * Generates an expiring cryptographic guest token for invoice access (default: 48 hours).
+ * Format: {expiresAtEpochMs}.{hmacSignature24}
+ */
+export function generateExpiringGuestInvoiceToken(
+  orderId: string,
+  customerEmail: string,
+  expiresInHours = 48
+): string {
+  const exp = Date.now() + expiresInHours * 60 * 60 * 1000;
+  const payload = `${orderId.trim().toUpperCase()}:${customerEmail.toLowerCase().trim()}:${exp}`;
+  const sig = crypto
+    .createHmac('sha256', getInvoiceTokenSecret())
+    .update(payload)
+    .digest('hex')
+    .substring(0, 24);
+  return `${exp}.${sig}`;
+}
+
+/**
+ * Verifies guest invoice access token.
+ * Validates expiration timestamp and cryptographic HMAC signature.
+ */
+export function verifyGuestInvoiceToken(
+  suppliedToken: string,
+  orderId: string,
+  customerEmail: string,
+  orderCreatedAt?: string
+): { authorized: boolean; reason?: string } {
+  if (!suppliedToken || !customerEmail) {
+    return { authorized: false, reason: 'Missing token or email' };
+  }
+
+  const cleanOrder = orderId.trim().toUpperCase();
+  const cleanEmail = customerEmail.toLowerCase().trim();
+  const secret = getInvoiceTokenSecret();
+
+  // 1. Expiring Token Format: {exp}.{sig}
+  if (suppliedToken.includes('.')) {
+    const [expStr, sig] = suppliedToken.split('.');
+    const exp = Number(expStr);
+
+    if (isNaN(exp) || !sig) {
+      return { authorized: false, reason: 'Malformed token structure' };
+    }
+
+    if (Date.now() > exp) {
+      return { authorized: false, reason: 'Invoice access link has expired. Please sign in or request a refreshed token.' };
+    }
+
+    const expectedSig = crypto
+      .createHmac('sha256', secret)
+      .update(`${cleanOrder}:${cleanEmail}:${exp}`)
+      .digest('hex')
+      .substring(0, 24);
+
+    if (sig === expectedSig) {
+      return { authorized: true };
+    }
+    return { authorized: false, reason: 'Invalid signature on guest token' };
+  }
+
+  // 2. Legacy / Static HMAC Token (backwards-compatible with 7 days grace window)
+  const legacyExpected = crypto
+    .createHmac('sha256', secret)
+    .update(`${cleanOrder}:${cleanEmail}`)
+    .digest('hex')
+    .substring(0, 24);
+
+  if (suppliedToken === legacyExpected) {
+    if (orderCreatedAt) {
+      const orderAgeMs = Date.now() - new Date(orderCreatedAt).getTime();
+      const maxAgeMs = 7 * 24 * 60 * 60 * 1000;
+      if (!isNaN(orderAgeMs) && orderAgeMs > maxAgeMs) {
+        return { authorized: false, reason: 'Legacy link expired' };
+      }
+    }
+    return { authorized: true };
+  }
+
+  return { authorized: false, reason: 'Signature mismatch' };
+}
+
 /**
  * Prepares compliant financial snapshot from an immutable order record.
  */
@@ -121,6 +244,7 @@ export function prepareInvoiceData(order: any): PreparedInvoiceData {
   const orderId = order.id || `KJ-${Date.now().toString().slice(-4)}`;
   const orderDate = order.createdAt ? new Date(order.createdAt).toISOString() : new Date().toISOString();
   const invoiceDate = order.invoiceDate || orderDate;
+  const fy = getIndianFiscalYear(invoiceDate);
 
   // Buyer coordinates
   const shipping = order.shippingAddress || {};
@@ -142,6 +266,19 @@ export function prepareInvoiceData(order: any): PreparedInvoiceData {
     const qty = Number(it.quantity) || 1;
     const unitPrice = Number(it.price) || 0;
     const itemTotal = Number(it.total) || unitPrice * qty;
+    const derivedVariantLabel =
+      it.variantLabel ||
+      (it.selectedVariant && typeof it.selectedVariant === 'object'
+        ? Object.entries(it.selectedVariant)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(' · ')
+        : undefined) ||
+      (it.attributes && typeof it.attributes === 'object'
+        ? Object.entries(it.attributes)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(' · ')
+        : undefined);
+
     return {
       productId: it.productId || it.sku || 'KJ-PROD',
       name: it.name || 'Handcrafted Luxury Creation',
@@ -150,7 +287,7 @@ export function prepareInvoiceData(order: any): PreparedInvoiceData {
       quantity: qty,
       unitPrice,
       total: itemTotal,
-      variantLabel: it.variantLabel || undefined,
+      variantLabel: derivedVariantLabel,
       attributes: it.attributes && typeof it.attributes === 'object' ? it.attributes : undefined,
       image: it.image || undefined,
     };
@@ -176,13 +313,11 @@ export function prepareInvoiceData(order: any): PreparedInvoiceData {
 
   if (totalTax > 0) {
     if (isMaharashtra) {
-      // Intra-state: 50% CGST, 50% SGST
       cgstRate = 1.5;
       sgstRate = 1.5;
       cgstAmount = Math.round((totalTax / 2) * 100) / 100;
       sgstAmount = Math.round((totalTax - cgstAmount) * 100) / 100;
     } else {
-      // Inter-state: 100% IGST
       igstRate = 3.0;
       igstAmount = totalTax;
     }
@@ -201,6 +336,7 @@ export function prepareInvoiceData(order: any): PreparedInvoiceData {
 
   return {
     invoiceNumber,
+    fiscalYear: fy.fiscalYear,
     invoiceDate,
     orderId,
     orderDate,
@@ -224,7 +360,7 @@ export function prepareInvoiceData(order: any): PreparedInvoiceData {
     },
     fulfillment: {
       status: order.fulfillmentStatus || 'unfulfilled',
-      courier: order.courier,
+      courier: order.courier || 'Kalajay In-House Direct Dispatch',
       trackingAwb: order.trackingAwb,
     },
     items,
@@ -247,7 +383,462 @@ export function prepareInvoiceData(order: any): PreparedInvoiceData {
 }
 
 /**
- * Generates high-fidelity, printable, A4-compliant HTML markup with embedded CSS.
+ * Generates genuine, vector-crisp, A4 PDF bytes using pdf-lib.
+ * Returns Uint8Array of valid %PDF-1.7 bytes.
+ */
+export async function generateInvoicePdf(order: any): Promise<Uint8Array> {
+  const inv = prepareInvoiceData(order);
+  const doc = await PDFDocument.create();
+
+  // Metadata
+  doc.setTitle(`${inv.payment.documentType} - ${inv.invoiceNumber}`);
+  doc.setAuthor(inv.seller.entityName);
+  doc.setSubject(`GST Tax Invoice for Order #${inv.orderId}`);
+  doc.setKeywords(['Kalajay', 'Tax Invoice', 'Handcrafted', 'Luxury', 'GST', inv.invoiceNumber]);
+  doc.setCreationDate(new Date(inv.invoiceDate));
+
+  // Fonts
+  const fontRegular = await doc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const fontSerif = await doc.embedFont(StandardFonts.TimesRomanBold);
+
+  // Standard A4 dimensions in PostScript points: 595.28 x 841.89 pt
+  const A4_WIDTH = 595.28;
+  const A4_HEIGHT = 841.89;
+
+  let page = doc.addPage([A4_WIDTH, A4_HEIGHT]);
+  const marginX = 36;
+  const contentWidth = A4_WIDTH - marginX * 2; // 523.28 pt
+
+  // Colors
+  const cBronze = rgb(0.62, 0.33, 0.19); // #9E5430
+  const cGold = rgb(0.83, 0.69, 0.22); // #D4AF37
+  const cInk = rgb(0.22, 0.16, 0.13); // #372921
+  const cMuted = rgb(0.46, 0.41, 0.37); // #76695F
+  const cBorder = rgb(0.9, 0.86, 0.82); // #EAE2D8
+  const cCardBg = rgb(0.98, 0.97, 0.96); // #FAF8F5
+  const cGreen = rgb(0.06, 0.46, 0.43); // #0F766E
+  const cAmber = rgb(0.71, 0.33, 0.04); // #B45309
+  const cIndigo = rgb(0.26, 0.22, 0.79); // #4338CA
+  const cRed = rgb(0.73, 0.11, 0.11); // #B91C1C
+
+  const statusColor =
+    inv.payment.status === 'paid'
+      ? cGreen
+      : inv.payment.status === 'pending'
+      ? cAmber
+      : inv.payment.status === 'refunded'
+      ? cIndigo
+      : cRed;
+
+  // 1. Top Luxury Gold Bar
+  page.drawRectangle({
+    x: 0,
+    y: A4_HEIGHT - 5,
+    width: A4_WIDTH,
+    height: 5,
+    color: cBronze,
+  });
+
+  // 2. Header: Letterhead & Invoice Metadata
+  page.drawText('KALAJAY', {
+    x: marginX,
+    y: A4_HEIGHT - 40,
+    size: 22,
+    font: fontSerif,
+    color: cInk,
+  });
+
+  page.drawText(inv.seller.entityName.toUpperCase(), {
+    x: marginX,
+    y: A4_HEIGHT - 54,
+    size: 8,
+    font: fontBold,
+    color: cBronze,
+  });
+
+  const sellerLines = [
+    inv.seller.address,
+    `GSTIN: ${inv.seller.gstin} | State: ${inv.seller.stateName} (Code: ${inv.seller.stateCode}) | PAN: ${inv.seller.pan}`,
+    `Concierge: ${inv.seller.contactPhone} | Support: ${inv.seller.contactEmail}`,
+  ];
+  let sY = A4_HEIGHT - 67;
+  for (const line of sellerLines) {
+    page.drawText(line, {
+      x: marginX,
+      y: sY,
+      size: 7.5,
+      font: fontRegular,
+      color: cMuted,
+    });
+    sY -= 11;
+  }
+
+  // Right Side - Invoice Box
+  const badgeWidth = 180;
+  const badgeX = A4_WIDTH - marginX - badgeWidth;
+  page.drawRectangle({
+    x: badgeX,
+    y: A4_HEIGHT - 42,
+    width: badgeWidth,
+    height: 18,
+    color: statusColor,
+  });
+  page.drawText(inv.payment.documentType, {
+    x: badgeX + 8,
+    y: A4_HEIGHT - 35,
+    size: 8.5,
+    font: fontBold,
+    color: rgb(1, 1, 1),
+  });
+
+  page.drawText(inv.invoiceNumber, {
+    x: badgeX,
+    y: A4_HEIGHT - 58,
+    size: 13,
+    font: fontBold,
+    color: cInk,
+  });
+
+  const formattedDate = new Date(inv.invoiceDate).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+  page.drawText(`Date of Issue: ${formattedDate} (${inv.fiscalYear})`, {
+    x: badgeX,
+    y: A4_HEIGHT - 70,
+    size: 8,
+    font: fontRegular,
+    color: cMuted,
+  });
+
+  page.drawText(`Order Reference: #${inv.orderId}`, {
+    x: badgeX,
+    y: A4_HEIGHT - 81,
+    size: 8,
+    font: fontRegular,
+    color: cMuted,
+  });
+
+  page.drawText('Original for Recipient', {
+    x: badgeX,
+    y: A4_HEIGHT - 92,
+    size: 7.5,
+    font: fontBold,
+    color: cBronze,
+  });
+
+  // 3. Coordinates Panel (Billed to Patron & Tax/Supply Logistics)
+  const panelY = A4_HEIGHT - 172;
+  const panelHeight = 68;
+  page.drawRectangle({
+    x: marginX,
+    y: panelY,
+    width: contentWidth,
+    height: panelHeight,
+    color: cCardBg,
+    borderColor: cBorder,
+    borderWidth: 1,
+  });
+
+  // Left Column - Patron Coordinates
+  page.drawText('BILLED & SHIPPED TO (PATRON)', {
+    x: marginX + 12,
+    y: panelY + panelHeight - 14,
+    size: 7.5,
+    font: fontBold,
+    color: cBronze,
+  });
+  page.drawText(inv.buyer.name, {
+    x: marginX + 12,
+    y: panelY + panelHeight - 27,
+    size: 10,
+    font: fontBold,
+    color: cInk,
+  });
+  page.drawText(`${inv.buyer.addressLine}, ${inv.buyer.city}, ${inv.buyer.state} - ${inv.buyer.pincode}`, {
+    x: marginX + 12,
+    y: panelY + panelHeight - 40,
+    size: 8,
+    font: fontRegular,
+    color: cMuted,
+  });
+  page.drawText(`Email: ${inv.buyer.email} | Mobile: ${inv.buyer.phone}`, {
+    x: marginX + 12,
+    y: panelY + panelHeight - 52,
+    size: 8,
+    font: fontRegular,
+    color: cMuted,
+  });
+
+  // Right Column - Place of Supply & Payment
+  const rColX = marginX + contentWidth / 2 + 10;
+  page.drawText('TAXATION & DISPATCH LOGISTICS', {
+    x: rColX,
+    y: panelY + panelHeight - 14,
+    size: 7.5,
+    font: fontBold,
+    color: cBronze,
+  });
+  page.drawText(`Place of Supply: ${inv.buyer.placeOfSupply}`, {
+    x: rColX,
+    y: panelY + panelHeight - 27,
+    size: 8,
+    font: fontRegular,
+    color: cInk,
+  });
+  page.drawText(`Payment Method: ${inv.payment.method} | Status: ${inv.payment.status.toUpperCase()}`, {
+    x: rColX,
+    y: panelY + panelHeight - 40,
+    size: 8,
+    font: fontRegular,
+    color: cMuted,
+  });
+  page.drawText(`Logistics Fleet: ${inv.fulfillment.courier}${inv.fulfillment.trackingAwb ? ` (AWB: ${inv.fulfillment.trackingAwb})` : ''}`, {
+    x: rColX,
+    y: panelY + panelHeight - 52,
+    size: 8,
+    font: fontRegular,
+    color: cMuted,
+  });
+
+  // 4. Line Items Table
+  let curY = panelY - 20;
+
+  // Table Header
+  const colX = {
+    desc: marginX + 8,
+    hsn: marginX + 270,
+    qty: marginX + 340,
+    rate: marginX + 410,
+    total: marginX + 475,
+  };
+
+  page.drawRectangle({
+    x: marginX,
+    y: curY - 14,
+    width: contentWidth,
+    height: 18,
+    color: cCardBg,
+    borderColor: cBorder,
+    borderWidth: 1,
+  });
+
+  page.drawText('HANDCRAFTED CREATION & SPECIFICATION', { x: colX.desc, y: curY - 10, size: 7.5, font: fontBold, color: cMuted });
+  page.drawText('HSN', { x: colX.hsn, y: curY - 10, size: 7.5, font: fontBold, color: cMuted });
+  page.drawText('QTY', { x: colX.qty, y: curY - 10, size: 7.5, font: fontBold, color: cMuted });
+  page.drawText('UNIT RATE', { x: colX.rate, y: curY - 10, size: 7.5, font: fontBold, color: cMuted });
+  page.drawText('TOTAL (INR)', { x: colX.total, y: curY - 10, size: 7.5, font: fontBold, color: cMuted });
+
+  curY -= 22;
+
+  // Render Items
+  for (const item of inv.items) {
+    // If running low on page space, add page
+    if (curY < 180) {
+      page = doc.addPage([A4_WIDTH, A4_HEIGHT]);
+      curY = A4_HEIGHT - 50;
+    }
+
+    const variantStr = item.attributes && Object.keys(item.attributes).length > 0
+      ? Object.entries(item.attributes).map(([k, v]) => `${k}: ${v}`).join(' · ')
+      : item.variantLabel || '';
+
+    page.drawText(item.name.substring(0, 48), {
+      x: colX.desc,
+      y: curY,
+      size: 9,
+      font: fontBold,
+      color: cInk,
+    });
+
+    page.drawText(item.hsnCode, {
+      x: colX.hsn,
+      y: curY,
+      size: 8,
+      font: fontRegular,
+      color: cMuted,
+    });
+
+    page.drawText(String(item.quantity), {
+      x: colX.qty + 6,
+      y: curY,
+      size: 8.5,
+      font: fontRegular,
+      color: cInk,
+    });
+
+    page.drawText(`Rs. ${item.unitPrice.toLocaleString('en-IN')}`, {
+      x: colX.rate,
+      y: curY,
+      size: 8.5,
+      font: fontRegular,
+      color: cInk,
+    });
+
+    page.drawText(`Rs. ${item.total.toLocaleString('en-IN')}`, {
+      x: colX.total,
+      y: curY,
+      size: 9,
+      font: fontBold,
+      color: cInk,
+    });
+
+    curY -= 12;
+
+    page.drawText(`SKU: ${item.sku}${variantStr ? ` | ${variantStr}` : ''}`, {
+      x: colX.desc,
+      y: curY,
+      size: 7.5,
+      font: fontRegular,
+      color: cBronze,
+    });
+
+    curY -= 12;
+
+    // Row divider
+    page.drawLine({
+      start: { x: marginX, y: curY + 4 },
+      end: { x: marginX + contentWidth, y: curY + 4 },
+      color: rgb(0.94, 0.92, 0.89),
+      thickness: 0.5,
+    });
+    curY -= 4;
+  }
+
+  // 5. Financials Totals Box (Right Aligned)
+  const totalsBoxWidth = 240;
+  const totalsBoxX = A4_WIDTH - marginX - totalsBoxWidth;
+  const totalsBoxHeight = 105;
+  const totalsBoxY = curY - totalsBoxHeight;
+
+  page.drawRectangle({
+    x: totalsBoxX,
+    y: totalsBoxY,
+    width: totalsBoxWidth,
+    height: totalsBoxHeight,
+    color: cCardBg,
+    borderColor: cBorder,
+    borderWidth: 1,
+  });
+
+  const finRows = [
+    { label: 'Items Subtotal:', val: `Rs. ${inv.financials.subtotal.toLocaleString('en-IN')}` },
+    ...(inv.financials.discount > 0 ? [{ label: 'Atelier Discount:', val: `- Rs. ${inv.financials.discount.toLocaleString('en-IN')}` }] : []),
+    { label: 'Insured Shipping:', val: inv.financials.shipping === 0 ? 'Complimentary' : `Rs. ${inv.financials.shipping.toLocaleString('en-IN')}` },
+    { label: 'Taxable Value (Excl. Tax):', val: `Rs. ${inv.financials.taxableAmount.toLocaleString('en-IN')}` },
+    ...(!inv.financials.isInterState
+      ? [
+          { label: `CGST (${inv.financials.cgstRate.toFixed(1)}%):`, val: `Rs. ${inv.financials.cgstAmount.toFixed(2)}` },
+          { label: `SGST (${inv.financials.sgstRate.toFixed(1)}%):`, val: `Rs. ${inv.financials.sgstAmount.toFixed(2)}` },
+        ]
+      : [{ label: `IGST (${inv.financials.igstRate.toFixed(1)}%):`, val: `Rs. ${inv.financials.igstAmount.toFixed(2)}` }]),
+  ];
+
+  let fY = totalsBoxY + totalsBoxHeight - 14;
+  for (const r of finRows) {
+    page.drawText(r.label, { x: totalsBoxX + 10, y: fY, size: 7.5, font: fontRegular, color: cMuted });
+    page.drawText(r.val, { x: totalsBoxX + totalsBoxWidth - 85, y: fY, size: 7.5, font: fontRegular, color: cInk });
+    fY -= 11.5;
+  }
+
+  // Grand Total Line
+  page.drawLine({
+    start: { x: totalsBoxX + 6, y: totalsBoxY + 22 },
+    end: { x: totalsBoxX + totalsBoxWidth - 6, y: totalsBoxY + 22 },
+    color: cBronze,
+    thickness: 1,
+  });
+
+  page.drawText('GRAND TOTAL:', {
+    x: totalsBoxX + 10,
+    y: totalsBoxY + 9,
+    size: 9.5,
+    font: fontBold,
+    color: cInk,
+  });
+  page.drawText(`Rs. ${inv.financials.totalPayable.toLocaleString('en-IN')}`, {
+    x: totalsBoxX + totalsBoxWidth - 95,
+    y: totalsBoxY + 8,
+    size: 11,
+    font: fontBold,
+    color: cBronze,
+  });
+
+  // 6. Statutory Declaration & Authentication Block (Bottom of page)
+  const footY = 40;
+  page.drawLine({
+    start: { x: marginX, y: footY + 45 },
+    end: { x: marginX + contentWidth, y: footY + 45 },
+    color: cBorder,
+    thickness: 0.8,
+  });
+
+  page.drawText('STATUTORY DECLARATION & WARRANTY', {
+    x: marginX,
+    y: footY + 34,
+    size: 7,
+    font: fontBold,
+    color: cInk,
+  });
+
+  const legalNotes = [
+    'We declare that this invoice shows the actual price of the handcrafted goods described and that all particulars are true and correct.',
+    'Each bead and pearl is hand-tensioned on artisan looms. Covered under Kalajay Lifetime Restringing Warranty.',
+    'Governed by Indian Law and Subject to Mumbai Jurisdiction. Retained under Section 36 of the CGST Act, 2017.',
+  ];
+  let lY = footY + 23;
+  for (const note of legalNotes) {
+    page.drawText(note, {
+      x: marginX,
+      y: lY,
+      size: 6.8,
+      font: fontRegular,
+      color: cMuted,
+    });
+    lY -= 9;
+  }
+
+  // Signature Block
+  const sigX = A4_WIDTH - marginX - 160;
+  page.drawText(`For ${inv.seller.entityName}`, {
+    x: sigX,
+    y: footY + 34,
+    size: 7.5,
+    font: fontBold,
+    color: cInk,
+  });
+
+  page.drawRectangle({
+    x: sigX,
+    y: footY + 10,
+    width: 155,
+    height: 18,
+    color: cCardBg,
+    borderColor: cBorder,
+    borderWidth: 0.8,
+  });
+  page.drawText('Digitally Authenticated / Authorized Signatory', {
+    x: sigX + 6,
+    y: footY + 15,
+    size: 6.8,
+    font: fontBold,
+    color: cBronze,
+  });
+  page.drawText('Computer Generated Tax Invoice', {
+    x: sigX + 25,
+    y: footY + 1,
+    size: 6.5,
+    font: fontRegular,
+    color: cMuted,
+  });
+
+  return await doc.save();
+}
+
+/**
+ * Generates high-fidelity, printable HTML markup (for browser preview & printing).
  */
 export function renderInvoiceHtml(order: any, options: { autoPrint?: boolean } = {}): string {
   const inv = prepareInvoiceData(order);
@@ -364,7 +955,6 @@ export function renderInvoiceHtml(order: any, options: { autoPrint?: boolean } =
       position: relative;
     }
 
-    /* Luxury Gold Top Ribbon */
     .invoice-card::before {
       content: "";
       position: absolute;
@@ -626,22 +1216,18 @@ export function renderInvoiceHtml(order: any, options: { autoPrint?: boolean } =
         background-color: #FFFFFF !important;
         padding: 0 !important;
       }
-
       .no-print {
         display: none !important;
       }
-
       .invoice-card {
         border: none !important;
         box-shadow: none !important;
         padding: 0 !important;
         max-width: 100% !important;
       }
-
       .invoice-card::before {
         display: none !important;
       }
-
       @page {
         size: A4;
         margin: 15mm 15mm 15mm 15mm;
@@ -659,34 +1245,33 @@ export function renderInvoiceHtml(order: any, options: { autoPrint?: boolean } =
         <polyline points="14 2 14 8 20 8"></polyline>
         <line x1="16" y1="13" x2="8" y2="13"></line>
         <line x1="16" y1="17" x2="8" y2="17"></line>
-        <polyline points="10 9 9 9 8 9"></polyline>
       </svg>
       <span>Official Tax Document Preview</span>
     </div>
     <div class="toolbar-actions">
       <button type="button" class="btn btn-secondary" onclick="window.close()">Close</button>
-      <button type="button" class="btn btn-primary" onclick="window.print()">
+      <a href="?format=pdf&download=1" class="btn btn-primary">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="6 9 6 2 18 2 18 9"></polyline>
-          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-          <rect x="6" y="14" width="12" height="8"></rect>
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
         </svg>
-        <span>Print or Save as PDF</span>
+        <span>Download Official PDF</span>
+      </a>
+      <button type="button" class="btn btn-secondary" onclick="window.print()">
+        <span>Print Document</span>
       </button>
     </div>
   </div>
 
-  <!-- A4 Printable Invoice Card -->
   <div class="invoice-card">
-
-    <!-- Header & Letterhead -->
     <div class="header">
       <div>
         <h1 class="brand-title">KALAJAY</h1>
         <span class="brand-sub">${inv.seller.entityName}</span>
         <div class="seller-meta">
           ${inv.seller.address}<br>
-          GSTIN: <strong>${inv.seller.gstin}</strong> | State: ${inv.seller.stateName} (Code: ${inv.seller.stateCode})<br>
+          GSTIN: <strong>${inv.seller.gstin}</strong> | State: ${inv.seller.stateName} (Code: ${inv.seller.stateCode}) | PAN: ${inv.seller.pan}<br>
           Concierge WhatsApp: ${inv.seller.contactPhone} | Support: ${inv.seller.contactEmail}
         </div>
       </div>
@@ -694,13 +1279,12 @@ export function renderInvoiceHtml(order: any, options: { autoPrint?: boolean } =
       <div class="invoice-badge-box">
         <span class="doc-type-badge">${inv.payment.documentType}</span>
         <span class="inv-number">${inv.invoiceNumber}</span>
-        <div class="inv-meta-line">Date of Issue: <strong>${formattedDate}</strong></div>
+        <div class="inv-meta-line">Date of Issue: <strong>${formattedDate}</strong> (${inv.fiscalYear})</div>
         <div class="inv-meta-line">Order Ref: <strong>#${inv.orderId}</strong></div>
         <div class="inv-meta-line" style="color: #9E5430; font-weight: 600;">Original for Recipient</div>
       </div>
     </div>
 
-    <!-- Coordinates Grid -->
     <div class="coordinates-grid">
       <div>
         <div class="coord-col-title">Billed &amp; Shipped To (Patron)</div>
@@ -722,7 +1306,6 @@ export function renderInvoiceHtml(order: any, options: { autoPrint?: boolean } =
       </div>
     </div>
 
-    <!-- Items Table -->
     <table class="items-table">
       <thead>
         <tr>
@@ -748,76 +1331,73 @@ export function renderInvoiceHtml(order: any, options: { autoPrint?: boolean } =
             </td>
             <td style="text-align: center;" class="mono-cell" style="color: #9E5430;">${it.hsnCode}</td>
             <td style="text-align: center;" class="mono-cell">${it.quantity}</td>
-            <td style="text-align: right;" class="num-cell">₹${it.unitPrice.toLocaleString('en-IN')}</td>
-            <td style="text-align: right; font-weight: 700; color: #372921;" class="num-cell">₹${it.total.toLocaleString('en-IN')}</td>
+            <td style="text-align: right;" class="num-cell">Rs. ${it.unitPrice.toLocaleString('en-IN')}</td>
+            <td style="text-align: right; font-weight: 700; color: #372921;" class="num-cell">Rs. ${it.total.toLocaleString('en-IN')}</td>
           </tr>
           `;
         }).join('')}
       </tbody>
     </table>
 
-    <!-- Totals & Tax Calculation Breakdown -->
     <div class="totals-wrapper">
       <div class="totals-box">
         <div class="totals-row">
           <span>Items Subtotal:</span>
-          <span class="num-cell">₹${inv.financials.subtotal.toLocaleString('en-IN')}</span>
+          <span class="num-cell">Rs. ${inv.financials.subtotal.toLocaleString('en-IN')}</span>
         </div>
 
         ${inv.financials.discount > 0 ? `
         <div class="totals-row discount-row">
           <span>Voucher / Atelier Discount:</span>
-          <span class="num-cell">- ₹${inv.financials.discount.toLocaleString('en-IN')}</span>
+          <span class="num-cell">- Rs. ${inv.financials.discount.toLocaleString('en-IN')}</span>
         </div>
         ` : ''}
 
         <div class="totals-row">
           <span>Shipping &amp; Insured Transit:</span>
-          <span class="num-cell">${inv.financials.shipping === 0 ? 'Complimentary' : `₹${inv.financials.shipping.toLocaleString('en-IN')}`}</span>
+          <span class="num-cell">${inv.financials.shipping === 0 ? 'Complimentary' : `Rs. ${inv.financials.shipping.toLocaleString('en-IN')}`}</span>
         </div>
 
         <div class="totals-row" style="border-top: 1px solid #EAE2D8; padding-top: 6px;">
           <span>Taxable Value (Excl. GST):</span>
-          <span class="num-cell">₹${inv.financials.taxableAmount.toLocaleString('en-IN')}</span>
+          <span class="num-cell">Rs. ${inv.financials.taxableAmount.toLocaleString('en-IN')}</span>
         </div>
 
         ${!inv.financials.isInterState ? `
         <div class="totals-row">
           <span>CGST (${inv.financials.cgstRate.toFixed(1)}%):</span>
-          <span class="mono-cell">₹${inv.financials.cgstAmount.toFixed(2)}</span>
+          <span class="mono-cell">Rs. ${inv.financials.cgstAmount.toFixed(2)}</span>
         </div>
         <div class="totals-row">
           <span>SGST (${inv.financials.sgstRate.toFixed(1)}%):</span>
-          <span class="mono-cell">₹${inv.financials.sgstAmount.toFixed(2)}</span>
+          <span class="mono-cell">Rs. ${inv.financials.sgstAmount.toFixed(2)}</span>
         </div>
         ` : `
         <div class="totals-row">
           <span>IGST (${inv.financials.igstRate.toFixed(1)}%):</span>
-          <span class="mono-cell">₹${inv.financials.igstAmount.toFixed(2)}</span>
+          <span class="mono-cell">Rs. ${inv.financials.igstAmount.toFixed(2)}</span>
         </div>
         `}
 
         <div class="totals-row grand-total">
           <span>Grand Total:</span>
-          <span class="grand-total-val">₹${inv.financials.totalPayable.toLocaleString('en-IN')}</span>
+          <span class="grand-total-val">Rs. ${inv.financials.totalPayable.toLocaleString('en-IN')}</span>
         </div>
       </div>
     </div>
 
-    <!-- Statutory Legal & Authenticity Declarations -->
     <div class="footer-section">
       <div>
         <span class="footer-heading">Statutory Declaration &amp; Artisan Warranty</span>
         <p>
           We declare that this invoice shows the actual price of the handcrafted luxury goods described and that all particulars are true and correct.
-          Hand-strung with tensioned glass beads and freshwater pearls by certified Kalajay master artisans.
           Covered under Kalajay Atelier Lifetime Restringing Warranty.
-          Subject to Mumbai Jurisdiction.
+          Subject to Mumbai Jurisdiction. Retained pursuant to Section 36 of the CGST Act, 2017.
         </p>
       </div>
 
       <div class="auth-stamp">
-        <span class="footer-heading">For KALAJAY Handcrafted Creations LLP</span>
+        <span class="footer-heading">For ${inv.seller.entityName}</span>
         <div class="signature-box">
           Digitally Authenticated<br>
           Authorized Signatory
@@ -825,7 +1405,6 @@ export function renderInvoiceHtml(order: any, options: { autoPrint?: boolean } =
         <span style="font-size: 9.5px; color: #9E5430; margin-top: 4px;">Computer Generated Tax Invoice</span>
       </div>
     </div>
-
   </div>
 
   ${options.autoPrint ? `
@@ -842,11 +1421,7 @@ export function renderInvoiceHtml(order: any, options: { autoPrint?: boolean } =
 }
 
 /**
- * Authoritatively retrieves order data by ID from all potential sources:
- * 1. Admin Firestore
- * 2. Client Firestore
- * 3. Durable local cache store
- * 4. Offline orders seed data
+ * Authoritatively retrieves order data by ID from all potential sources.
  */
 export async function fetchOrderAuthoritatively(orderId: string): Promise<any | null> {
   const cleanId = (orderId || '').trim().toUpperCase();

@@ -529,6 +529,15 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------
+    // 20. Durable Notification Outbox (/notification_outbox/{notificationId})
+    // Server-authoritative transactional email outbox.
+    // Closed against all direct client access to protect customer emails and delivery state.
+    // -------------------------------------------------------------
+    match /notification_outbox/{notificationId} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------
     // Default Deny
     // -------------------------------------------------------------
     match /{document=**} {

@@ -2,21 +2,31 @@
  * KALAJAY HANDCRAFTED LUXURIES
  * Server-Authoritative Transactional Order Lifecycle Email Dispatcher
  *
- * Supported Lifecycle Events:
- * 1. order_placed       -> "Kalajay Atelier: Order #[orderId] Received & Craft Logged"
- * 2. payment_success    -> "Payment Confirmed: Your Kalajay Heirloom is Entering the Looms"
- * 3. payment_failed     -> "Payment Notice: Order #[orderId] Incomplete"
- * 4. in_loom            -> "Looms in Motion: Your Custom Kalajay Piece is Being Hand-Strung"
- * 5. quality_checked    -> "Atelier Seal: Your Kalajay Creation has Passed Master Inspection"
- * 6. shipped            -> "In Transit: Your Kalajay Order #[orderId] is En Route"
- * 7. delivered          -> "Delivered: Welcome Your Kalajay Creation"
- * 8. cancelled          -> "Cancellation Notice: Order #[orderId]"
- * 9. refunded           -> "Refund Completed: Order #[orderId]"
+ * Supported Order Lifecycle Milestones:
+ * 1.  order_placed       -> "Kalajay Atelier: Order #[orderId] Received & Craft Logged"
+ * 2.  payment_success    -> "Payment Confirmed: Your Kalajay Heirloom is Entering the Looms"
+ * 3.  payment_failed     -> "Payment Notice: Order #[orderId] Incomplete"
+ * 4.  in_loom            -> "Looms in Motion: Your Custom Kalajay Piece is Being Hand-Strung"
+ * 5.  quality_checked    -> "Atelier Seal: Your Kalajay Creation has Passed Master Inspection"
+ * 6.  shipped            -> "In Transit: Your Kalajay Order #[orderId] is En Route"
+ * 7.  out_for_delivery   -> "Out for Delivery: Your Kalajay Heirloom is Arriving Today"
+ * 8.  delivered          -> "Delivered: Welcome Your Kalajay Creation"
+ * 9.  rto                -> "Delivery Notice / Return to Origin: Order #[orderId]"
+ * 10. cancelled          -> "Cancellation Notice: Order #[orderId]"
+ * 11. refunded           -> "Refund Completed: Order #[orderId]"
+ *
+ * Architecture:
+ * - Durable Firestore Outbox (/notification_outbox/{id}) with local disk mirror
+ * - Concurrency lease locking against worker race conditions
+ * - Status differentiation: queued | claiming | provider_accepted | delivered | failed | sandbox_mocked | skipped
+ * - Safe retries without order state corruption
+ * - Decoupled non-blocking execution
  */
 
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { getAdminFirestore } from '@/lib/serverFirebaseAdmin';
 import { KALAJAY_SELLER_DETAILS, getStableInvoiceNumber } from '@/lib/invoiceGenerator';
 
 export type OrderLifecycleEvent =
@@ -32,36 +42,53 @@ export type OrderLifecycleEvent =
   | 'cancelled'
   | 'refunded';
 
-export interface EmailDispatchRecord {
-  id: string;
+export type NotificationDeliveryStatus =
+  | 'queued'
+  | 'claiming'
+  | 'provider_accepted'
+  | 'delivered'
+  | 'failed'
+  | 'sandbox_mocked'
+  | 'skipped';
+
+export interface NotificationOutboxItem {
+  id: string; // e.g. notif_${orderId}_${event}_${timestamp}
   orderId: string;
   event: OrderLifecycleEvent;
   to: string;
+  customerName: string;
   subject: string;
-  dispatchedAt: string;
+  status: NotificationDeliveryStatus;
   mode: 'live' | 'sandbox';
-  provider?: string;
-  status: 'sent' | 'sandbox_logged' | 'failed' | 'deduplicated';
-  error?: string;
+  provider: 'resend' | 'sendgrid' | 'sandbox-logger';
+  providerMessageId?: string;
+  attempts: number;
+  lastAttemptAt?: string;
+  lastError?: string;
+  claimedBy?: string;
+  claimedAt?: number;
+  createdAt: string;
+  updatedAt: string;
   previewSnippet: string;
+  isDeduplicated?: boolean;
 }
 
-// In-memory register for immediate de-duplication
-const dispatchedCache = new Map<string, EmailDispatchRecord>();
+// In-memory register for zero-latency lookups
+const inMemoryOutbox = new Map<string, NotificationOutboxItem>();
 
-function getEmailAuditStorePath(): string {
+function getOutboxDiskPath(): string {
   const cacheDir = path.join(process.cwd(), '.next', 'cache');
   if (!fs.existsSync(cacheDir)) {
     try {
       fs.mkdirSync(cacheDir, { recursive: true });
     } catch {}
   }
-  return path.join(cacheDir, 'kalajay_dispatched_emails.json');
+  return path.join(cacheDir, 'kalajay_notification_outbox.json');
 }
 
-export function readEmailAuditStore(): Record<string, EmailDispatchRecord> {
+export function readDiskOutbox(): Record<string, NotificationOutboxItem> {
   try {
-    const p = getEmailAuditStorePath();
+    const p = getOutboxDiskPath();
     if (fs.existsSync(p)) {
       return JSON.parse(fs.readFileSync(p, 'utf-8'));
     }
@@ -69,11 +96,74 @@ export function readEmailAuditStore(): Record<string, EmailDispatchRecord> {
   return {};
 }
 
-function writeEmailAuditStore(data: Record<string, EmailDispatchRecord>) {
+function writeDiskOutbox(data: Record<string, NotificationOutboxItem>) {
   try {
-    const p = getEmailAuditStorePath();
+    const p = getOutboxDiskPath();
     fs.writeFileSync(p, JSON.stringify(data, null, 2), 'utf-8');
   } catch {}
+}
+
+function cleanPayload<T extends Record<string, any>>(obj: T): Partial<T> {
+  const clean: any = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined) {
+      clean[k] = v;
+    }
+  }
+  return clean;
+}
+
+/**
+ * Persists an outbox item to Firestore and disk mirror.
+ */
+async function saveOutboxItem(item: NotificationOutboxItem): Promise<void> {
+  inMemoryOutbox.set(item.id, item);
+
+  // 1. Local disk store
+  const store = readDiskOutbox();
+  store[item.id] = item;
+  writeDiskOutbox(store);
+
+  // 2. Authoritative Firestore /notification_outbox via Admin SDK
+  try {
+    const adminDb = getAdminFirestore();
+    if (adminDb) {
+      const payload = cleanPayload(item);
+      await adminDb.collection('notification_outbox').doc(item.id).set(payload, { merge: true });
+      return;
+    }
+  } catch (err) {
+    // Non-blocking log
+  }
+}
+
+/**
+ * Loads an outbox item by ID from memory, Firestore, or disk mirror.
+ */
+export async function getOutboxItem(id: string): Promise<NotificationOutboxItem | null> {
+  if (inMemoryOutbox.has(id)) {
+    return inMemoryOutbox.get(id)!;
+  }
+
+  try {
+    const adminDb = getAdminFirestore();
+    if (adminDb) {
+      const snap = await adminDb.collection('notification_outbox').doc(id).get();
+      if (snap.exists) {
+        const data = snap.data() as NotificationOutboxItem;
+        inMemoryOutbox.set(id, data);
+        return data;
+      }
+    }
+  } catch {}
+
+  const disk = readDiskOutbox();
+  if (disk[id]) {
+    inMemoryOutbox.set(id, disk[id]);
+    return disk[id];
+  }
+
+  return null;
 }
 
 /**
@@ -166,8 +256,8 @@ export function getEventCopy(event: OrderLifecycleEvent, orderId: string): {
         badgeColor: '#1D4ED8',
         heading: 'Your Heirloom Has Departed the Atelier',
         narrative:
-          'Your package has been handed over for insured express transit. It travels in reinforced temperature-neutral packaging to preserve the tension and luster of each handcrafted component.',
-        actionText: 'Track Courier Consignment',
+          'Your package has been handed over for insured express transit via Kalajay in-house logistics fleet. It travels in reinforced temperature-neutral packaging to preserve the tension and luster of each handcrafted component.',
+        actionText: 'Track Consignment',
         actionUrlPath: `/track?orderId=${orderId}`,
       };
     case 'out_for_delivery':
@@ -231,7 +321,7 @@ export function getEventCopy(event: OrderLifecycleEvent, orderId: string): {
 }
 
 /**
- * Builds the responsive luxury HTML email template.
+ * Builds responsive luxury HTML email template.
  */
 export function buildOrderEmailHtml(params: {
   order: any;
@@ -273,241 +363,62 @@ export function buildOrderEmailHtml(params: {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${copy.subject}</title>
   <style>
-    body {
-      background-color: #F7F5F0;
-      color: #372921;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      -webkit-font-smoothing: antialiased;
-    }
-    .wrapper {
-      width: 100%;
-      background-color: #F7F5F0;
-      padding: 32px 16px;
-    }
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background-color: #FFFFFF;
-      border: 1px solid #EAE2D8;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 4px 20px rgba(55, 41, 33, 0.05);
-    }
-    .top-gold-bar {
-      height: 4px;
-      background: linear-gradient(90deg, #9E5430 0%, #D4AF37 50%, #9E5430 100%);
-    }
-    .header {
-      padding: 32px 32px 20px 32px;
-      text-align: center;
-      border-bottom: 1px solid #F3EDE6;
-    }
-    .brand-name {
-      font-family: Georgia, 'Times New Roman', serif;
-      font-size: 26px;
-      letter-spacing: 0.15em;
-      color: #372921;
-      margin: 0;
-      font-weight: 700;
-    }
-    .brand-tagline {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.2em;
-      color: #9E5430;
-      margin-top: 4px;
-      font-weight: 600;
-    }
-    .body-content {
-      padding: 32px;
-    }
-    .badge {
-      display: inline-block;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      padding: 5px 12px;
-      border-radius: 20px;
-      color: #FFFFFF;
-      background-color: ${copy.badgeColor};
-      margin-bottom: 16px;
-    }
-    .heading {
-      font-family: Georgia, 'Times New Roman', serif;
-      font-size: 20px;
-      color: #372921;
-      margin: 0 0 12px 0;
-      font-weight: 600;
-      line-height: 1.35;
-    }
-    .salutation {
-      font-size: 14px;
-      color: #5C4D44;
-      line-height: 1.6;
-      margin-bottom: 16px;
-    }
-    .narrative-box {
-      background-color: #FAF8F5;
-      border-left: 3px solid #9E5430;
-      padding: 14px 18px;
-      border-radius: 0 8px 8px 0;
-      font-size: 13.5px;
-      color: #4A3E37;
-      line-height: 1.6;
-      margin-bottom: 24px;
-    }
-    .order-meta-card {
-      background: #FFFFFF;
-      border: 1px solid #EAE2D8;
-      border-radius: 8px;
-      padding: 16px;
-      margin-bottom: 24px;
-    }
-    .order-meta-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 12.5px;
-      color: #76695F;
-      padding: 4px 0;
-    }
-    .order-meta-val {
-      font-weight: 600;
-      color: #372921;
-    }
-    .items-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 24px;
-    }
-    .items-table th {
-      font-size: 10.5px;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: #76695F;
-      padding: 10px 8px;
-      border-bottom: 1px solid #EAE2D8;
-      text-align: left;
-    }
-    .items-table td {
-      padding: 12px 8px;
-      border-bottom: 1px solid #F3EDE6;
-      font-size: 13px;
-      vertical-align: top;
-    }
-    .item-title {
-      font-weight: 600;
-      color: #372921;
-      display: block;
-    }
-    .item-variant {
-      display: block;
-      font-size: 11px;
-      color: #8C7C71;
-      margin-top: 3px;
-    }
-    .financials-box {
-      width: 100%;
-      margin-bottom: 24px;
-    }
-    .fin-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 13px;
-      color: #76695F;
-      padding: 4px 0;
-    }
-    .fin-row.total-row {
-      border-top: 2px solid #9E5430;
-      margin-top: 8px;
-      padding-top: 10px;
-      font-size: 15px;
-      font-weight: 700;
-      color: #372921;
-    }
-    .cta-wrapper {
-      text-align: center;
-      padding: 16px 0 24px 0;
-    }
-    .cta-button {
-      display: inline-block;
-      background-color: #9E5430;
-      color: #FFFFFF !important;
-      text-decoration: none;
-      font-size: 13px;
-      font-weight: 600;
-      padding: 12px 28px;
-      border-radius: 8px;
-      letter-spacing: 0.03em;
-    }
-    .invoice-link {
-      display: block;
-      margin-top: 12px;
-      font-size: 12px;
-      color: #9E5430;
-      text-decoration: underline;
-    }
-    .tracking-info-box {
-      background: #F0FDF4;
-      border: 1px solid #BBF7D0;
-      border-radius: 8px;
-      padding: 14px;
-      margin-bottom: 24px;
-      font-size: 12.5px;
-      color: #166534;
-    }
-    .footer {
-      background-color: #FAF8F5;
-      border-top: 1px solid #EAE2D8;
-      padding: 24px 32px;
-      font-size: 11px;
-      color: #8C7C71;
-      line-height: 1.6;
-      text-align: center;
-    }
-    .footer-brand {
-      font-weight: 700;
-      color: #372921;
-      margin-bottom: 4px;
-    }
+    body { background-color: #F7F5F0; color: #372921; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
+    .wrapper { width: 100%; background-color: #F7F5F0; padding: 32px 16px; box-sizing: border-box; }
+    .container { max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border: 1px solid #EAE2D8; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(55, 41, 33, 0.05); }
+    .top-gold-bar { height: 4px; background: linear-gradient(90deg, #9E5430 0%, #D4AF37 50%, #9E5430 100%); }
+    .header { padding: 32px 32px 20px 32px; text-align: center; border-bottom: 1px solid #F3EDE6; }
+    .brand-name { font-family: Georgia, 'Times New Roman', serif; font-size: 26px; letter-spacing: 0.15em; color: #372921; margin: 0; font-weight: 700; }
+    .brand-tagline { font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: #9E5430; margin-top: 4px; font-weight: 600; }
+    .body-content { padding: 32px; }
+    .badge { display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 5px 12px; border-radius: 20px; color: #FFFFFF; background-color: ${copy.badgeColor}; margin-bottom: 16px; }
+    .heading { font-family: Georgia, 'Times New Roman', serif; font-size: 20px; color: #372921; margin: 0 0 12px 0; font-weight: 600; line-height: 1.35; }
+    .salutation { font-size: 14px; color: #5C4D44; line-height: 1.6; margin-bottom: 16px; }
+    .narrative-box { background-color: #FAF8F5; border-left: 3px solid #9E5430; padding: 14px 18px; border-radius: 0 8px 8px 0; font-size: 13.5px; color: #4A3E37; line-height: 1.6; margin-bottom: 24px; }
+    .order-meta-card { background: #FFFFFF; border: 1px solid #EAE2D8; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
+    .order-meta-row { display: flex; justify-content: space-between; font-size: 12.5px; color: #76695F; padding: 4px 0; }
+    .order-meta-val { font-weight: 600; color: #372921; }
+    .items-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    .items-table th { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.1em; color: #76695F; padding: 10px 8px; border-bottom: 1px solid #EAE2D8; text-align: left; }
+    .items-table td { padding: 12px 8px; border-bottom: 1px solid #F3EDE6; font-size: 13px; vertical-align: top; }
+    .item-title { font-weight: 600; color: #372921; display: block; }
+    .item-variant { display: block; font-size: 11px; color: #8C7C71; margin-top: 3px; }
+    .financials-box { width: 100%; margin-bottom: 24px; }
+    .fin-row { display: flex; justify-content: space-between; font-size: 13px; color: #76695F; padding: 4px 0; }
+    .fin-row.total-row { border-top: 2px solid #9E5430; margin-top: 8px; padding-top: 10px; font-size: 15px; font-weight: 700; color: #372921; }
+    .cta-wrapper { text-align: center; padding: 16px 0 24px 0; }
+    .cta-button { display: inline-block; background-color: #9E5430; color: #FFFFFF !important; text-decoration: none; font-size: 13px; font-weight: 600; padding: 12px 28px; border-radius: 8px; letter-spacing: 0.03em; }
+    .invoice-link { display: block; margin-top: 12px; font-size: 12px; color: #9E5430; text-decoration: underline; }
+    .tracking-info-box { background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; padding: 14px; margin-bottom: 24px; font-size: 12.5px; color: #166534; }
+    .footer { background-color: #FAF8F5; border-top: 1px solid #EAE2D8; padding: 24px 32px; font-size: 11px; color: #8C7C71; line-height: 1.6; text-align: center; }
+    .footer-brand { font-weight: 700; color: #372921; margin-bottom: 4px; }
   </style>
 </head>
 <body>
   <div class="wrapper">
     <div class="container">
       <div class="top-gold-bar"></div>
-
-      <!-- Header -->
       <div class="header">
         <h1 class="brand-name">KALAJAY</h1>
         <div class="brand-tagline">Handcrafted Luxuries · Worli Atelier</div>
       </div>
-
-      <!-- Body Content -->
       <div class="body-content">
         <div class="badge">${copy.badge}</div>
         <h2 class="heading">${copy.heading}</h2>
-
         <div class="salutation">
           Dear ${patronName},<br><br>
           Thank you for entrusting Kalajay with your curated collection. Here is the latest status of your handcrafted order:
         </div>
-
-        <div class="narrative-box">
-          ${copy.narrative}
-        </div>
+        <div class="narrative-box">${copy.narrative}</div>
 
         ${order.trackingAwb ? `
         <div class="tracking-info-box">
-          <strong>Courier Dispatch Details:</strong><br>
-          Carrier: ${order.courier || 'Express Atelier Logistics'}<br>
-          Air Waybill (AWB): <code style="font-weight: bold;">${order.trackingAwb}</code>
+          <strong>Internal Logistics Consignment:</strong><br>
+          Fleet: ${order.courier || 'Kalajay In-House Direct Dispatch'}<br>
+          Consignment Reference: <code style="font-weight: bold;">${order.trackingAwb}</code>
         </div>
         ` : ''}
 
-        <!-- Order Summary Card -->
         <div class="order-meta-card">
           <div class="order-meta-row">
             <span>Order Reference:</span>
@@ -529,7 +440,6 @@ export function buildOrderEmailHtml(params: {
           ` : ''}
         </div>
 
-        <!-- Items Table -->
         ${items.length > 0 ? `
         <table class="items-table">
           <thead>
@@ -551,7 +461,7 @@ export function buildOrderEmailHtml(params: {
                   ${variantStr ? `<span class="item-variant">${variantStr}</span>` : ''}
                 </td>
                 <td style="text-align: center;">${it.quantity || 1}</td>
-                <td style="text-align: right; font-weight: 600;">₹${Number(it.total || it.price * (it.quantity || 1)).toLocaleString('en-IN')}</td>
+                <td style="text-align: right; font-weight: 600;">Rs. ${Number(it.total || it.price * (it.quantity || 1)).toLocaleString('en-IN')}</td>
               </tr>
               `;
             }).join('')}
@@ -559,42 +469,39 @@ export function buildOrderEmailHtml(params: {
         </table>
         ` : ''}
 
-        <!-- Financial Summary -->
         <div class="financials-box">
           <div class="fin-row">
             <span>Items Subtotal:</span>
-            <span>₹${subtotal.toLocaleString('en-IN')}</span>
+            <span>Rs. ${subtotal.toLocaleString('en-IN')}</span>
           </div>
           ${discount > 0 ? `
           <div class="fin-row" style="color: #0F766E;">
             <span>Atelier Discount:</span>
-            <span>- ₹${discount.toLocaleString('en-IN')}</span>
+            <span>- Rs. ${discount.toLocaleString('en-IN')}</span>
           </div>
           ` : ''}
           <div class="fin-row">
             <span>Shipping:</span>
-            <span>${shippingFee === 0 ? 'Complimentary' : `₹${shippingFee.toLocaleString('en-IN')}`}</span>
+            <span>${shippingFee === 0 ? 'Complimentary' : `Rs. ${shippingFee.toLocaleString('en-IN')}`}</span>
           </div>
           ${tax > 0 ? `
           <div class="fin-row">
             <span>GST Included:</span>
-            <span>₹${tax.toLocaleString('en-IN')}</span>
+            <span>Rs. ${tax.toLocaleString('en-IN')}</span>
           </div>
           ` : ''}
           <div class="fin-row total-row">
             <span>Order Total:</span>
-            <span style="color: #9E5430;">₹${total.toLocaleString('en-IN')}</span>
+            <span style="color: #9E5430;">Rs. ${total.toLocaleString('en-IN')}</span>
           </div>
         </div>
 
-        <!-- Call to Action -->
         <div class="cta-wrapper">
           <a href="${actionFullUrl}" class="cta-button" target="_blank">${copy.actionText}</a>
-          <a href="${invoiceDownloadUrl}" class="invoice-link" target="_blank">Download Official GST Tax Invoice (${invNumber})</a>
+          <a href="${invoiceDownloadUrl}" class="invoice-link" target="_blank">Download Official PDF Tax Invoice (${invNumber})</a>
         </div>
       </div>
 
-      <!-- Footer -->
       <div class="footer">
         <div class="footer-brand">${KALAJAY_SELLER_DETAILS.entityName}</div>
         <div>${KALAJAY_SELLER_DETAILS.address}</div>
@@ -603,86 +510,132 @@ export function buildOrderEmailHtml(params: {
           WhatsApp Concierge: ${KALAJAY_SELLER_DETAILS.contactPhone} &middot; Email: ${KALAJAY_SELLER_DETAILS.contactEmail}
         </div>
         <div style="margin-top: 10px; font-size: 10px; color: #A89C92;">
-          This is an official transactional message regarding your order. To protect your patron privacy, financial records are retained under Section 36 of the CGST Act, 2017.
+          Official transactional notification. Retained pursuant to Section 36 of the CGST Act, 2017.
         </div>
       </div>
-
     </div>
   </div>
 </body>
 </html>`;
 
-  return {
-    subject: copy.subject,
-    html,
-  };
+  return { subject: copy.subject, html };
 }
 
 /**
- * Authoritatively dispatches an order lifecycle notification with built-in de-duplication.
- * Safe & resilient: will NEVER throw or abort caller transaction on transport failure.
+ * Builds a durable transition ID for the notification outbox.
+ * Distinguishes initial events from sequential repeated milestones.
+ */
+export function buildOutboxNotificationId(
+  orderId: string,
+  event: OrderLifecycleEvent,
+  transitionKey?: string
+): string {
+  const cleanId = orderId.trim().toUpperCase();
+  if (['order_placed', 'payment_success', 'payment_failed'].includes(event)) {
+    return `notif_${cleanId}_${event}`;
+  }
+  const suffix = transitionKey ? `_${transitionKey}` : '';
+  return `notif_${cleanId}_${event}${suffix}`;
+}
+
+/**
+ * Authoritatively dispatches an order lifecycle notification through the Durable Outbox.
+ * Non-blocking, concurrency-safe, with accurate provider state reflection.
  */
 export async function dispatchOrderLifecycleNotification(params: {
   order: any;
   event: OrderLifecycleEvent;
+  transitionKey?: string;
   forceResend?: boolean;
-}): Promise<EmailDispatchRecord> {
-  const { order, event, forceResend } = params;
+}): Promise<NotificationOutboxItem> {
+  const { order, event, transitionKey, forceResend } = params;
   const orderId = order.id || `KJ-${Date.now().toString().slice(-4)}`;
   const to = (order.customerEmail || '').trim().toLowerCase();
+  const customerName = order.customerName || 'Honoured Patron';
+  const outboxId = buildOutboxNotificationId(orderId, event, transitionKey);
 
-  // Deduplication key
-  const dedupeKey = `${orderId}:${event}`;
-
-  // 1. Check in-memory and durable cache
-  if (!forceResend) {
-    if (dispatchedCache.has(dedupeKey)) {
-      const cached = dispatchedCache.get(dedupeKey)!;
+  // 1. Check existing outbox state
+  const existing = await getOutboxItem(outboxId);
+  if (existing && !forceResend) {
+    // If already successfully accepted by provider or delivered, do NOT duplicate
+    if (existing.status === 'provider_accepted' || existing.status === 'delivered') {
       return {
-        ...cached,
-        status: 'deduplicated',
+        ...existing,
+        isDeduplicated: true,
       };
     }
-    const diskStore = readEmailAuditStore();
-    if (diskStore[dedupeKey]) {
-      const recorded = diskStore[dedupeKey];
-      dispatchedCache.set(dedupeKey, recorded);
+
+    // Concurrency lease check: if another worker claimed within 60s, yield
+    if (existing.status === 'claiming' && existing.claimedAt && Date.now() - existing.claimedAt < 60000) {
       return {
-        ...recorded,
-        status: 'deduplicated',
+        ...existing,
+        isDeduplicated: true,
       };
     }
   }
 
-  // If no recipient email, log warning and exit safely
+  // 2. Validate recipient email
   if (!to || !to.includes('@')) {
-    const skipRecord: EmailDispatchRecord = {
-      id: `eml-skip-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    const skippedItem: NotificationOutboxItem = {
+      id: outboxId,
       orderId,
       event,
       to: to || 'missing@kalajay.in',
+      customerName,
       subject: `Order #${orderId} Notification Skipped (No Email)`,
-      dispatchedAt: new Date().toISOString(),
+      status: 'skipped',
       mode: 'sandbox',
-      status: 'failed',
-      error: 'Missing or invalid customerEmail on order snapshot.',
+      provider: 'sandbox-logger',
+      attempts: 0,
+      lastError: 'Missing or invalid customerEmail on order snapshot.',
+      createdAt: existing?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       previewSnippet: 'Skipped dispatch due to missing recipient email.',
     };
-    return skipRecord;
+    await saveOutboxItem(skippedItem);
+    return skippedItem;
   }
 
+  // 3. Concurrency Lock: Claim outbox slot
+  const workerId = `worker_${process.pid}_${Math.random().toString(36).substring(2, 7)}`;
+  const claimedItem: NotificationOutboxItem = {
+    ...(existing || {
+      id: outboxId,
+      orderId,
+      event,
+      to,
+      customerName,
+      subject: '',
+      attempts: 0,
+      createdAt: new Date().toISOString(),
+      previewSnippet: '',
+      mode: 'sandbox',
+      provider: 'sandbox-logger',
+    }),
+    status: 'claiming',
+    claimedBy: workerId,
+    claimedAt: Date.now(),
+    updatedAt: new Date().toISOString(),
+  };
+  await saveOutboxItem(claimedItem);
+
+  // 4. Compile HTML Template
   try {
     const guestToken = generateGuestAccessToken(orderId, to);
     const { subject, html } = buildOrderEmailHtml({ order, event, guestToken });
     const previewSnippet = `[${event.toUpperCase()}] ${subject} -> To: ${to}`;
 
-    let status: EmailDispatchRecord['status'] = 'sandbox_logged';
-    let mode: EmailDispatchRecord['mode'] = 'sandbox';
-    let provider: string | undefined = undefined;
+    let deliveryStatus: NotificationDeliveryStatus = 'sandbox_mocked';
+    let mode: NotificationOutboxItem['mode'] = 'sandbox';
+    let providerName: NotificationOutboxItem['provider'] = 'sandbox-logger';
+    let providerMessageId: string | undefined = undefined;
+    let sendError: string | undefined = undefined;
 
-    // 2. Provider Delivery Integration (Resend or SendGrid) if configured
-    if (process.env.RESEND_API_KEY && process.env.NODE_ENV === 'production') {
+    // 5. Live Provider Dispatch (Resend) if configured
+    if (process.env.RESEND_API_KEY) {
       try {
+        mode = 'live';
+        providerName = 'resend';
         const res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
@@ -696,60 +649,102 @@ export async function dispatchOrderLifecycleNotification(params: {
             html,
           }),
         });
+
         if (res.ok) {
-          status = 'sent';
-          mode = 'live';
-          provider = 'resend';
+          const resData = await res.json().catch(() => ({}));
+          // Accurately reflect provider acceptance (NOT premature 'delivered')
+          deliveryStatus = 'provider_accepted';
+          providerMessageId = resData.id || `resend_${Date.now()}`;
+        } else {
+          deliveryStatus = 'failed';
+          const errData = await res.json().catch(() => ({}));
+          sendError = errData.message || `Provider returned HTTP ${res.status}`;
         }
-      } catch (provErr: any) {
-        console.warn('Live email provider send failed, falling back to sandbox audit:', provErr?.message);
+      } catch (networkErr: any) {
+        deliveryStatus = 'failed';
+        sendError = networkErr?.message || 'Network transport exception';
       }
+    } else {
+      // Sandbox mode: explicitly marked as sandbox_mocked (NEVER sent or provider_accepted)
+      deliveryStatus = 'sandbox_mocked';
+      mode = 'sandbox';
+      providerName = 'sandbox-logger';
     }
 
-    const record: EmailDispatchRecord = {
-      id: `eml-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    const finalRecord: NotificationOutboxItem = {
+      id: outboxId,
       orderId,
       event,
       to,
+      customerName,
       subject,
-      dispatchedAt: new Date().toISOString(),
+      status: deliveryStatus,
       mode,
-      provider: provider || 'internal-sandbox',
-      status,
+      provider: providerName,
+      providerMessageId,
+      attempts: (existing?.attempts || 0) + 1,
+      lastAttemptAt: new Date().toISOString(),
+      lastError: sendError,
+      createdAt: existing?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       previewSnippet,
     };
 
-    // Store in memory & durable audit
-    dispatchedCache.set(dedupeKey, record);
-    const store = readEmailAuditStore();
-    store[dedupeKey] = record;
-    writeEmailAuditStore(store);
-
-    return record;
-  } catch (err: any) {
-    console.error(`Email dispatch error for order ${orderId} (${event}):`, err);
-    return {
-      id: `eml-err-${Date.now()}`,
+    await saveOutboxItem(finalRecord);
+    return finalRecord;
+  } catch (compileErr: any) {
+    const failedRecord: NotificationOutboxItem = {
+      id: outboxId,
       orderId,
       event,
       to,
-      subject: `Error dispatching ${event}`,
-      dispatchedAt: new Date().toISOString(),
-      mode: 'sandbox',
+      customerName,
+      subject: `Error compiling ${event}`,
       status: 'failed',
-      error: err?.message || 'Unknown email template compilation error',
-      previewSnippet: 'Failure during email dispatch.',
+      mode: 'sandbox',
+      provider: 'sandbox-logger',
+      attempts: (existing?.attempts || 0) + 1,
+      lastAttemptAt: new Date().toISOString(),
+      lastError: compileErr?.message || 'Template compilation error',
+      createdAt: existing?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      previewSnippet: 'Failure during notification compilation.',
     };
+    await saveOutboxItem(failedRecord);
+    return failedRecord;
   }
 }
 
 /**
- * Resets the in-memory and durable dispatch cache (for test suites).
+ * Retries a failed notification outbox item safely without altering order status.
  */
-export function clearDispatchedEmails(): void {
-  dispatchedCache.clear();
+export async function retryNotificationOutboxItem(
+  outboxId: string,
+  orderSnapshot: any
+): Promise<NotificationOutboxItem | null> {
+  const item = await getOutboxItem(outboxId);
+  if (!item) return null;
+
+  // If already accepted by provider, do not re-send
+  if (item.status === 'provider_accepted' || item.status === 'delivered') {
+    return item;
+  }
+
+  return dispatchOrderLifecycleNotification({
+    order: orderSnapshot,
+    event: item.event,
+    transitionKey: outboxId.split(`_${item.event}_`)[1] || undefined,
+    forceResend: true,
+  });
+}
+
+/**
+ * Resets in-memory and disk outbox stores (used by test suites).
+ */
+export function clearNotificationOutbox(): void {
+  inMemoryOutbox.clear();
   try {
-    const p = getEmailAuditStorePath();
+    const p = getOutboxDiskPath();
     if (fs.existsSync(p)) {
       fs.unlinkSync(p);
     }

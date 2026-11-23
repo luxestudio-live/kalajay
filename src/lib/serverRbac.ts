@@ -3,7 +3,7 @@ import path from 'path';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { SEED_ROLES } from '@/data/adminPermissions';
-import { AdminRole, AdminUser, PermissionAction } from '@/data/adminTypes';
+import type { AdminRole, AdminUser, PermissionAction } from '@/data/adminTypes';
 import { getAdminFirestore } from '@/lib/serverFirebaseAdmin';
 
 // Internal service secret is deprecated and removed to enforce strict cryptographic token verification

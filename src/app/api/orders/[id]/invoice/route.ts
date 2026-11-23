@@ -1,29 +1,14 @@
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
 import { verifyFirebaseIdToken, verifyStaffPermission } from '@/lib/serverRbac';
 import {
   fetchOrderAuthoritatively,
   prepareInvoiceData,
   renderInvoiceHtml,
+  generateInvoicePdf,
+  verifyGuestInvoiceToken,
 } from '@/lib/invoiceGenerator';
 
 export const dynamic = 'force-dynamic';
-
-function cleanDigits(val: string): string {
-  return (val || '').replace(/\D/g, '');
-}
-
-function generateGuestAccessToken(orderId: string, customerEmail: string): string {
-  const trackingSecret =
-    process.env.ORDER_TRACKING_SECRET ||
-    process.env.NEXTAUTH_SECRET ||
-    'kalajay_guest_order_tracking_salt_2026';
-  return crypto
-    .createHmac('sha256', trackingSecret)
-    .update(`${orderId}:${customerEmail.toLowerCase().trim()}`)
-    .digest('hex')
-    .substring(0, 24);
-}
 
 export async function GET(
   request: Request,
@@ -54,12 +39,11 @@ export async function GET(
     let isAuthorized = false;
     let authRole = 'anonymous';
 
-    // A. Staff / Administrator Verification
+    // A. Staff / Administrator Verification (Google Identity Platform RBAC)
     const authHeader = request.headers.get('authorization') || '';
     if (authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7).trim();
 
-      // Check staff permissions first
       const staffCheck = await verifyStaffPermission(request, {}, 'orders.invoices', 'view');
       if (staffCheck.authorized) {
         isAuthorized = true;
@@ -70,7 +54,7 @@ export async function GET(
           isAuthorized = true;
           authRole = 'staff';
         } else {
-          // Check if token belongs to the customer who placed the order
+          // Check if token belongs to the patron who placed the order
           const customerCheck = await verifyFirebaseIdToken(token);
           if (customerCheck.valid) {
             const uidMatch = customerCheck.uid && order.userId && customerCheck.uid === order.userId;
@@ -89,7 +73,7 @@ export async function GET(
       }
     }
 
-    // B. Guest Cryptographic Token Verification
+    // B. Expiring Cryptographic Guest Token Verification
     const suppliedToken = (
       searchParams.get('token') ||
       searchParams.get('key') ||
@@ -98,50 +82,14 @@ export async function GET(
     ).trim();
 
     if (!isAuthorized && suppliedToken && order.customerEmail) {
-      const expectedToken = generateGuestAccessToken(orderId, order.customerEmail);
-      if (
-        suppliedToken === expectedToken ||
-        (order.guestAccessToken && suppliedToken === order.guestAccessToken)
-      ) {
+      const tokenRes = verifyGuestInvoiceToken(suppliedToken, orderId, order.customerEmail, order.createdAt);
+      if (tokenRes.authorized) {
         isAuthorized = true;
         authRole = 'guest_token';
       }
     }
 
-    // C. Guest Multi-Factor Verification (Email + Pincode OR Email + Full Phone)
-    const queryEmail = (
-      searchParams.get('email') ||
-      request.headers.get('x-verify-email') ||
-      ''
-    ).trim().toLowerCase();
-    const queryPincode = (
-      searchParams.get('pincode') ||
-      request.headers.get('x-verify-pincode') ||
-      ''
-    ).trim();
-    const queryPhone = cleanDigits(
-      searchParams.get('phone') ||
-      request.headers.get('x-verify-phone') ||
-      ''
-    );
-
-    if (!isAuthorized && queryEmail && order.customerEmail) {
-      const emailMatches = queryEmail === order.customerEmail.toLowerCase().trim();
-      if (emailMatches) {
-        const orderPincode = (order.shippingAddress?.pincode || '').trim();
-        const orderPhone = cleanDigits(order.customerPhone || order.shippingAddress?.phone || '');
-
-        const pincodeMatches = queryPincode && orderPincode && queryPincode === orderPincode;
-        const phoneMatches = queryPhone && queryPhone.length >= 10 && orderPhone.endsWith(queryPhone.slice(-10));
-
-        if (pincodeMatches || phoneMatches) {
-          isAuthorized = true;
-          authRole = 'guest_mfa';
-        }
-      }
-    }
-
-    // D. Static Showroom Showcase Records (KJ-8924, KJ-7710, KJ-6502)
+    // C. Static Showroom Showcase Records (KJ-8924, KJ-7710, KJ-6502)
     if (!isAuthorized && order.isStaticShowroomDemo && ['KJ-8924', 'KJ-7710', 'KJ-6502'].includes(orderId)) {
       isAuthorized = true;
       authRole = 'showroom_demo';
@@ -152,16 +100,17 @@ export async function GET(
       return NextResponse.json(
         {
           success: false,
-          error: 'Access Denied: You are not authorized to view or download this tax invoice. Please sign in with the ordering patron account or provide the secure order access token.',
+          error: 'Access Denied: You are not authorized to view or download this tax invoice. Please sign in with the ordering patron account or provide a valid, non-expired guest access token.',
           code: 'INVOICE_UNAUTHORIZED',
         },
         { status: 403 }
       );
     }
 
-    // 3. Response Generation
+    // 3. Document Preparation & Format Resolution
     const format = (searchParams.get('format') || '').toLowerCase();
     const isDownload = searchParams.get('download') === '1' || searchParams.get('download') === 'true';
+    const isPreview = searchParams.get('preview') === '1' || searchParams.get('preview') === 'true';
     const autoPrint = searchParams.get('print') === '1' || searchParams.get('print') === 'true';
 
     // JSON format for ERP / API integrations
@@ -174,25 +123,42 @@ export async function GET(
       });
     }
 
-    // High-Fidelity Printable / Downloadable HTML
-    const invoiceHtml = renderInvoiceHtml(order, { autoPrint });
+    // HTML format (for in-browser preview / modal print preview)
+    if (format === 'html' || isPreview) {
+      const invoiceHtml = renderInvoiceHtml(order, { autoPrint });
+      const invData = prepareInvoiceData(order);
+      return new Response(invoiceHtml, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'X-Invoice-Number': invData.invoiceNumber,
+          'X-Invoice-Role': authRole,
+          'Cache-Control': 'private, no-cache, no-store, must-revalidate',
+        },
+      });
+    }
+
+    // Default & Download: Real Vector A4 PDF Generation via pdf-lib
+    const pdfBytes = await generateInvoicePdf(order);
     const invData = prepareInvoiceData(order);
-    const filename = `${invData.invoiceNumber}.html`;
+    const pdfFilename = `${invData.invoiceNumber}.pdf`;
 
     const headers: Record<string, string> = {
-      'Content-Type': 'text/html; charset=utf-8',
+      'Content-Type': 'application/pdf',
+      'Content-Length': String(pdfBytes.byteLength),
       'X-Invoice-Number': invData.invoiceNumber,
       'X-Invoice-Role': authRole,
+      'X-Invoice-FY': invData.fiscalYear,
       'Cache-Control': 'private, no-cache, no-store, must-revalidate',
     };
 
-    if (isDownload) {
-      headers['Content-Disposition'] = `attachment; filename="${filename}"`;
+    if (isDownload || !isPreview) {
+      headers['Content-Disposition'] = `attachment; filename="${pdfFilename}"`;
     } else {
-      headers['Content-Disposition'] = `inline; filename="${filename}"`;
+      headers['Content-Disposition'] = `inline; filename="${pdfFilename}"`;
     }
 
-    return new Response(invoiceHtml, {
+    return new Response(Buffer.from(pdfBytes), {
       status: 200,
       headers,
     });

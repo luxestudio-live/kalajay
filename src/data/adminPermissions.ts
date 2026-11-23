@@ -1,4 +1,4 @@
-import { ModulePermissionDef, AdminRole, PermissionAction } from './adminTypes';
+import type { ModulePermissionDef, AdminRole, PermissionAction } from './adminTypes';
 
 export const ADMIN_MODULE_DEFINITIONS: ModulePermissionDef[] = [
   {
