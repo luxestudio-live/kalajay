@@ -767,7 +767,7 @@ export interface VerificationResult {
   code?: string;
 }
 
-const tokenVerificationCache = new Map<string, { uid: string; email: string; emailVerified: boolean; expiresAt: number }>();
+export const tokenVerificationCache = new Map<string, { uid: string; email: string; emailVerified: boolean; expiresAt: number }>();
 
 export async function verifyFirebaseIdToken(
   token: string

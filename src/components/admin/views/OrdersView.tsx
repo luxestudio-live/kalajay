@@ -41,6 +41,40 @@ export default function OrdersView() {
   const [paymentBankRef, setPaymentBankRef] = useState('');
   const [paymentJustification, setPaymentJustification] = useState('');
 
+  // Manual Shipping & Fulfillment State
+  const [shippingMethod, setShippingMethod] = useState<'in_house' | 'third_party_courier' | 'local_delivery' | 'other'>('third_party_courier');
+  const [courierName, setCourierName] = useState('');
+  const [trackingAwb, setTrackingAwb] = useState('');
+  const [trackingUrl, setTrackingUrl] = useState('');
+  const [expectedDispatchDate, setExpectedDispatchDate] = useState('');
+  const [dispatchDate, setDispatchDate] = useState('');
+  const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState('');
+  const [actualDeliveryDate, setActualDeliveryDate] = useState('');
+  const [customerShippingNote, setCustomerShippingNote] = useState('');
+  const [internalStaffNote, setInternalStaffNote] = useState('');
+  const [deliveryAttemptCount, setDeliveryAttemptCount] = useState<number>(0);
+  const [deliveryFailureReason, setDeliveryFailureReason] = useState('');
+  const [podReference, setPodReference] = useState('');
+
+  const openOrderDrawer = (order: AdminOrder) => {
+    setSelectedOrder(order);
+    setStatusToUpdate(order.fulfillmentStatus);
+    setStatusNote('');
+    setShippingMethod(order.shippingMethod || (order.courier?.toLowerCase().includes('in-house') ? 'in_house' : 'third_party_courier'));
+    setCourierName(order.courier || '');
+    setTrackingAwb(order.trackingAwb || '');
+    setTrackingUrl(order.trackingUrl || '');
+    setExpectedDispatchDate(order.expectedDispatchDate || '');
+    setDispatchDate(order.dispatchDate || '');
+    setEstimatedDeliveryDate(order.estimatedDeliveryDate || '');
+    setActualDeliveryDate(order.actualDeliveryDate || '');
+    setCustomerShippingNote(order.customerShippingNote || '');
+    setInternalStaffNote(order.internalStaffNote || '');
+    setDeliveryAttemptCount(order.deliveryAttemptCount ?? 0);
+    setDeliveryFailureReason(order.deliveryFailureReason || '');
+    setPodReference(order.podReference || '');
+  };
+
   // Manual Order Builder State
   const [custName, setCustName] = useState('');
   const [custEmail, setCustEmail] = useState('');
@@ -247,7 +281,7 @@ export default function OrdersView() {
                   {filteredOrders.map(order => (
                     <tr
                       key={order.id}
-                      onClick={() => setSelectedOrder(order)}
+                      onClick={() => openOrderDrawer(order)}
                       className="hover:bg-[#FFFCF7] transition-colors cursor-pointer"
                     >
                       <td className="py-3 px-4">
@@ -295,8 +329,7 @@ export default function OrdersView() {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedOrder(order);
-                            setStatusToUpdate(order.fulfillmentStatus);
+                            openOrderDrawer(order);
                           }}
                           className="px-2.5 py-1 rounded bg-[#F7F3EC] hover:bg-[#EAE2D8] text-[#372921] font-semibold text-[11px] inline-flex items-center gap-1 cursor-pointer"
                         >
@@ -716,27 +749,169 @@ export default function OrdersView() {
                       <option value="in_loom">In Atelier Loom (Bihar)</option>
                       <option value="quality_checked">Quality Inspected &amp; Wax-Sealed (Mumbai)</option>
                       <option value="shipped">Dispatched &amp; In Transit</option>
-                      <option value="out_for_delivery">Out for Delivery (Kalajay Concierge Fleet)</option>
+                      <option value="out_for_delivery">Out for Delivery (Concierge / Partner)</option>
                       <option value="delivered">Delivered to Patron</option>
+                      <option value="delivery_attempt_failed">Delivery Attempt Failed (Reschedule)</option>
                       <option value="cancelled">Cancelled &amp; Restocked</option>
                       <option value="rto">Return to Origin (RTO)</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#372921] mb-1">Artisan Note / Courier AWB</label>
+                    <label className="block text-[11px] font-semibold text-[#372921] mb-1">Milestone Transition Note</label>
                     <input
                       type="text"
-                      placeholder="e.g. Dispatched via In-House Direct, AWB: KLJ-..."
+                      placeholder="e.g. Inspected, sealed, and handed to dispatch"
                       value={statusNote}
                       onChange={(e) => setStatusNote(e.target.value)}
                       className="w-full bg-white border border-[#DED3C5] rounded-lg px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
                     />
                   </div>
                 </div>
+
+                {/* Manual Shipping & Logistics Details */}
+                <div className="pt-2 border-t border-[#DED3C5]/60 space-y-3">
+                  <span className="font-bold uppercase tracking-wider text-[10.5px] text-[#9E5430] block">
+                    Manual Shipping &amp; Logistics Management
+                  </span>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#372921] mb-1">Shipping Method</label>
+                      <select
+                        value={shippingMethod}
+                        onChange={(e) => setShippingMethod(e.target.value as any)}
+                        className="w-full bg-white border border-[#DED3C5] rounded-lg px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                      >
+                        <option value="third_party_courier">Commercial Courier (Blue Dart, Delhivery, DTDC, etc.)</option>
+                        <option value="in_house">Kalajay In-House Delivery Team</option>
+                        <option value="local_delivery">Local White-Glove Concierge Handover</option>
+                        <option value="other">Other Transport / Self Pickup</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#372921] mb-1">Courier / Carrier Partner</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Blue Dart, Delhivery, DTDC, In-House Team"
+                        value={courierName}
+                        onChange={(e) => setCourierName(e.target.value)}
+                        className="w-full bg-white border border-[#DED3C5] rounded-lg px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#372921] mb-1">
+                        Tracking / AWB Number <span className="text-[#76695F] font-normal">(Optional for In-House)</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 7829103982 or leave empty"
+                        value={trackingAwb}
+                        onChange={(e) => setTrackingAwb(e.target.value)}
+                        className="w-full bg-white border border-[#DED3C5] rounded-lg px-3 py-2 text-xs text-[#372921] font-mono focus:outline-none focus:border-[#9E5430]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#372921] mb-1">Carrier Tracking Portal URL</label>
+                      <input
+                        type="url"
+                        placeholder="https://www.carrier.com/track/..."
+                        value={trackingUrl}
+                        onChange={(e) => setTrackingUrl(e.target.value)}
+                        className="w-full bg-white border border-[#DED3C5] rounded-lg px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#372921] mb-1">Dispatch Date</label>
+                      <input
+                        type="date"
+                        value={dispatchDate}
+                        onChange={(e) => setDispatchDate(e.target.value)}
+                        className="w-full bg-white border border-[#DED3C5] rounded-lg px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#372921] mb-1">Estimated Delivery Date</label>
+                      <input
+                        type="date"
+                        value={estimatedDeliveryDate}
+                        onChange={(e) => setEstimatedDeliveryDate(e.target.value)}
+                        className="w-full bg-white border border-[#DED3C5] rounded-lg px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#372921] mb-1">Delivery Attempt Count</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={deliveryAttemptCount}
+                        onChange={(e) => setDeliveryAttemptCount(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                        className="w-full bg-white border border-[#DED3C5] rounded-lg px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#372921] mb-1">Proof of Delivery (POD) Ref</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Signed by recipient / Security gate ack"
+                        value={podReference}
+                        onChange={(e) => setPodReference(e.target.value)}
+                        className="w-full bg-white border border-[#DED3C5] rounded-lg px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] font-semibold text-[#372921] mb-1">
+                        Customer Shipping Note <span className="text-[#15803D] font-normal">(Visible to Customer on Tracking &amp; Emails)</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Parcel sealed with wax medallion. Handover scheduled between 2 PM - 5 PM."
+                        value={customerShippingNote}
+                        onChange={(e) => setCustomerShippingNote(e.target.value)}
+                        className="w-full bg-white border border-[#DED3C5] rounded-lg px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] font-semibold text-[#372921] mb-1">
+                        Internal Staff Note <span className="text-[#B91C1C] font-normal">(Confidential / Private Staff Audit Only)</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Special high-value packaging verified by head artisan; driver contacted guard."
+                        value={internalStaffNote}
+                        onChange={(e) => setInternalStaffNote(e.target.value)}
+                        className="w-full bg-white border border-[#DED3C5] rounded-lg px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 <button
                   type="button"
                   onClick={() => {
                     if (!selectedOrder) return;
+
+                    // URL Validation for trackingUrl
+                    if (trackingUrl.trim()) {
+                      try {
+                        const parsed = new URL(trackingUrl.trim());
+                        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+                          showToast('Validation Error: Tracking URL must use http:// or https://');
+                          return;
+                        }
+                      } catch {
+                        showToast('Validation Error: Tracking URL must be a valid HTTP or HTTPS URL.');
+                        return;
+                      }
+                    }
 
                     // Payment Safeguard: Block fulfillment/dispatch of unpaid orders (Requirement 5)
                     const isUnpaid = selectedOrder.paymentStatus !== 'paid' && !markPaymentReceived;
@@ -773,9 +948,35 @@ export default function OrdersView() {
                     } : undefined;
 
                     const nextPaymentStatus = markPaymentReceived ? 'paid' : undefined;
-                    updateOrderStatus(selectedOrder.id, statusToUpdate, statusNote || undefined, nextPaymentStatus, reconciliationData);
+
+                    const shipmentData: Partial<AdminOrder> = {
+                      shippingMethod,
+                      courier: courierName.trim() || undefined,
+                      trackingAwb: trackingAwb.trim() || undefined,
+                      trackingUrl: trackingUrl.trim() || undefined,
+                      expectedDispatchDate: expectedDispatchDate || undefined,
+                      dispatchDate: dispatchDate || undefined,
+                      estimatedDeliveryDate: estimatedDeliveryDate || undefined,
+                      actualDeliveryDate: actualDeliveryDate || undefined,
+                      customerShippingNote: customerShippingNote.trim() || undefined,
+                      internalStaffNote: internalStaffNote.trim() || undefined,
+                      deliveryAttemptCount: Number(deliveryAttemptCount) || 0,
+                      deliveryFailureReason: deliveryFailureReason.trim() || undefined,
+                      podReference: podReference.trim() || undefined,
+                    };
+
+                    updateOrderStatus(
+                      selectedOrder.id,
+                      statusToUpdate,
+                      statusNote || customerShippingNote || undefined,
+                      nextPaymentStatus,
+                      reconciliationData,
+                      shipmentData
+                    );
+
                     setSelectedOrder(prev => prev ? {
                       ...prev,
+                      ...shipmentData,
                       fulfillmentStatus: statusToUpdate,
                       ...(nextPaymentStatus ? { paymentStatus: nextPaymentStatus } : {}),
                       timeline: [
@@ -783,11 +984,11 @@ export default function OrdersView() {
                         {
                           title: `Fulfillment Status: ${statusToUpdate.toUpperCase()}${nextPaymentStatus ? ' (Payment Confirmed)' : ''}`,
                           timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
-                          note: statusNote || undefined,
+                          note: customerShippingNote || statusNote || undefined,
                         }
                       ]
                     } : null);
-                    showToast(`Order #${selectedOrder.id} status updated to ${statusToUpdate.replace('_', ' ')}.`);
+                    showToast(`Order #${selectedOrder.id} status & shipment updated.`);
                     setStatusNote('');
                     setMarkPaymentReceived(false);
                     setPaymentBankRef('');
@@ -795,7 +996,7 @@ export default function OrdersView() {
                   }}
                   className="w-full py-2 bg-[#9E5430] hover:bg-[#874427] text-white rounded-lg text-xs font-semibold transition-colors shadow-xs cursor-pointer"
                 >
-                  Apply Status Transition
+                  Apply Status &amp; Shipment Update
                 </button>
               </div>
 

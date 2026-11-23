@@ -287,7 +287,55 @@ export async function getPatronOrders(uid: string): Promise<Order[]> {
     const snapshot = await getDocs(q);
     const orders: Order[] = [];
     snapshot.forEach((docSnap) => {
-      orders.push({ id: docSnap.id, ...docSnap.data() } as Order);
+      const data = docSnap.data() || {};
+      const mappedStatus: Order['status'] =
+        data.fulfillmentStatus === 'delivered'
+          ? 'Delivered'
+          : data.fulfillmentStatus === 'shipped' || data.fulfillmentStatus === 'out_for_delivery'
+          ? 'In Transit'
+          : data.fulfillmentStatus === 'quality_checked'
+          ? 'Wax-Sealed in Mumbai'
+          : data.status || 'Hand-Stringing in Bihar';
+
+      // Sanitize timeline steps for customer visibility (omit staff internal notes and staff IDs)
+      const rawTimeline = Array.isArray(data.timeline) ? data.timeline : [];
+      const sanitizedSteps = rawTimeline.map((step: any, idx: number) => {
+        let note = step.note;
+        if (note && (note.includes('Updated by') || note.includes('Reconciled via') || (data.internalStaffNote && note.includes(data.internalStaffNote)))) {
+          note = undefined;
+        }
+        return {
+          title: step.title || `Milestone ${idx + 1}`,
+          date: step.timestamp ? step.timestamp.slice(0, 10) : 'Recent',
+          completed: true,
+          current: idx === rawTimeline.length - 1,
+          location: 'Atelier Operations',
+          description: note || '',
+        };
+      });
+
+      orders.push({
+        id: docSnap.id,
+        date: data.createdAt ? data.createdAt.slice(0, 10) : 'Recent',
+        totalAmount: data.total || data.totalAmount || 0,
+        status: mappedStatus,
+        fulfillmentStatus: data.fulfillmentStatus,
+        estimatedDelivery: data.estimatedDeliveryDate || data.estimatedDelivery,
+        dispatchDate: data.dispatchDate,
+        actualDeliveryDate: data.actualDeliveryDate,
+        paymentMethod: data.paymentMethod || 'UPI Instant',
+        deliveryAddress: data.shippingAddress || data.deliveryAddress || {},
+        items: data.items || [],
+        trackingSteps: sanitizedSteps.length > 0 ? sanitizedSteps : (data.trackingSteps || []),
+        artisanName: data.artisanName || 'Sunita Devi',
+        artisanLocation: data.artisanLocation || 'Madhubani, Bihar',
+        artisanNote: data.artisanNote || 'Handcrafted on Bihar artisan loom.',
+        awbNumber: data.trackingAwb || data.awbNumber || '',
+        courier: data.courier,
+        trackingUrl: data.trackingUrl,
+        customerShippingNote: data.customerShippingNote,
+        deliveryAttemptCount: data.deliveryAttemptCount,
+      } as Order);
     });
     return orders;
   } catch (error) {
@@ -361,8 +409,21 @@ export async function updateFirestoreOrderStatus(
           orderId,
           fulfillmentStatus: updates.fulfillmentStatus,
           paymentStatus: updates.paymentStatus,
+          shippingMethod: updates.shippingMethod,
           trackingAwb: updates.trackingAwb,
           courier: updates.courier,
+          trackingUrl: updates.trackingUrl,
+          expectedDispatchDate: updates.expectedDispatchDate,
+          dispatchDate: updates.dispatchDate,
+          estimatedDeliveryDate: updates.estimatedDeliveryDate,
+          outForDeliveryDate: updates.outForDeliveryDate,
+          actualDeliveryDate: updates.actualDeliveryDate,
+          customerShippingNote: updates.customerShippingNote,
+          internalStaffNote: updates.internalStaffNote,
+          deliveryAttemptCount: updates.deliveryAttemptCount,
+          deliveryFailureReason: updates.deliveryFailureReason,
+          rtoReason: updates.rtoReason,
+          podReference: updates.podReference,
           timeline: updates.timeline,
           reconciliation: (updates as any).paymentReconciliation,
         }),

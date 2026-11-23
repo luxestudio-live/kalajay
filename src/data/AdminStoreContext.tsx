@@ -152,7 +152,8 @@ interface AdminStoreContextType {
     fulfillmentStatus: AdminOrder['fulfillmentStatus'],
     note?: string,
     paymentStatus?: AdminOrder['paymentStatus'],
-    reconciliation?: any
+    reconciliation?: any,
+    shipmentData?: Partial<AdminOrder>
   ) => void;
   createManualOrder: (order: Omit<AdminOrder, 'id' | 'createdAt'>) => AdminOrder;
 
@@ -1151,7 +1152,8 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     fulfillmentStatus: AdminOrder['fulfillmentStatus'],
     note?: string,
     paymentStatus?: AdminOrder['paymentStatus'],
-    reconciliation?: any
+    reconciliation?: any,
+    shipmentData?: Partial<AdminOrder>
   ) => {
     let updatedOrder: AdminOrder | undefined;
     const existingOrder = orders.find(ord => ord.id === orderId);
@@ -1201,11 +1203,12 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
           {
             title: `Fulfillment Status: ${fulfillmentStatus.toUpperCase()}${paymentStatus === 'paid' ? ' (Payment Verified)' : ''}`,
             timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
-            note,
+            note: shipmentData?.customerShippingNote || note,
           },
         ];
         updatedOrder = {
           ...ord,
+          ...shipmentData,
           fulfillmentStatus,
           timeline: newTimeline,
           ...(paymentStatus ? { paymentStatus } : {}),
@@ -1220,6 +1223,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
 
     if (updatedOrder) {
       updateFirestoreOrderStatus(orderId, {
+        ...shipmentData,
         fulfillmentStatus,
         timeline: updatedOrder.timeline,
         ...(paymentStatus ? { paymentStatus } : {}),

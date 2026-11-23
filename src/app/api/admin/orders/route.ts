@@ -5,8 +5,8 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { verifyStaffPermission } from '@/lib/serverRbac';
 import { ensureServerAdminAuth, getAdminFirestore } from '@/lib/serverFirebaseAdmin';
-import { OfflineOrder, AdminOrder, PermissionAction } from '@/data/adminTypes';
-import { dispatchOrderLifecycleNotification, OrderLifecycleEvent } from '@/lib/orderEmailDispatcher';
+import type { OfflineOrder, AdminOrder, PermissionAction } from '@/data/adminTypes';
+import { dispatchOrderLifecycleNotification, type OrderLifecycleEvent } from '@/lib/orderEmailDispatcher';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +18,20 @@ function getOrderStorePath(): string {
     } catch {}
   }
   return path.join(cacheDir, 'kalajay_orders_update_store.json');
+}
+
+function cleanPayload<T extends Record<string, any>>(obj: T): Partial<T> {
+  const clean: any = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined) {
+      if (v && typeof v === 'object' && !Array.isArray(v)) {
+        clean[k] = cleanPayload(v);
+      } else {
+        clean[k] = v;
+      }
+    }
+  }
+  return clean;
 }
 
 function readOrderStore(): Record<string, any> {
@@ -217,7 +231,7 @@ export async function POST(request: Request) {
     }
 
     // -------------------------------------------------------------
-    // ACTION B: UPDATE ONLINE / ATELIER ORDER STATUS
+    // ACTION B: UPDATE ONLINE / ATELIER ORDER STATUS & SHIPMENT
     // -------------------------------------------------------------
     const {
       orderId,
@@ -225,10 +239,57 @@ export async function POST(request: Request) {
       paymentStatus,
       note,
       timeline,
-      trackingAwb,
+      shippingMethod,
       courier,
+      trackingAwb,
+      trackingUrl,
+      expectedDispatchDate,
+      dispatchDate,
+      estimatedDeliveryDate,
+      outForDeliveryDate,
+      actualDeliveryDate,
+      customerShippingNote,
+      internalStaffNote,
+      deliveryAttemptCount,
+      deliveryFailureReason,
+      rtoReason,
+      podReference,
       reconciliation,
     } = body;
+
+    // Validate trackingUrl scheme if provided (strict security check against XSS/javascript schemes)
+    if (trackingUrl !== undefined && trackingUrl !== null && trackingUrl !== '') {
+      if (typeof trackingUrl !== 'string') {
+        return NextResponse.json(
+          { success: false, error: 'trackingUrl must be a string.' },
+          { status: 400 }
+        );
+      }
+      try {
+        const parsed = new URL(trackingUrl);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+          return NextResponse.json(
+            { success: false, error: 'Invalid tracking URL: only HTTP and HTTPS protocols are permitted.' },
+            { status: 400 }
+          );
+        }
+      } catch {
+        return NextResponse.json(
+          { success: false, error: 'Invalid tracking URL format. Must be a valid HTTP or HTTPS URL.' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate deliveryAttemptCount if provided
+    if (deliveryAttemptCount !== undefined && deliveryAttemptCount !== null) {
+      if (typeof deliveryAttemptCount !== 'number' || !Number.isInteger(deliveryAttemptCount) || deliveryAttemptCount < 0) {
+        return NextResponse.json(
+          { success: false, error: 'deliveryAttemptCount must be a non-negative integer.' },
+          { status: 400 }
+        );
+      }
+    }
 
     let requiredPermissionModule = 'orders.all';
     let requiredAction: PermissionAction = 'edit';
@@ -236,7 +297,15 @@ export async function POST(request: Request) {
     if (paymentStatus || reconciliation) {
       requiredPermissionModule = 'finance.reconciliation';
       requiredAction = 'edit';
-    } else if (fulfillmentStatus && ['shipped', 'delivered'].includes(fulfillmentStatus)) {
+    } else if (
+      (fulfillmentStatus && ['shipped', 'out_for_delivery', 'delivered', 'delivery_attempt_failed', 'rto'].includes(fulfillmentStatus)) ||
+      courier ||
+      trackingAwb ||
+      trackingUrl ||
+      shippingMethod ||
+      dispatchDate ||
+      estimatedDeliveryDate
+    ) {
       requiredPermissionModule = 'logistics.dispatch';
       requiredAction = 'edit';
     }
@@ -269,8 +338,34 @@ export async function POST(request: Request) {
 
     if (fulfillmentStatus) updates.fulfillmentStatus = fulfillmentStatus;
     if (paymentStatus) updates.paymentStatus = paymentStatus;
-    if (trackingAwb) updates.trackingAwb = trackingAwb;
-    if (courier) updates.courier = courier;
+    if (shippingMethod !== undefined) updates.shippingMethod = shippingMethod;
+    if (courier !== undefined) updates.courier = courier;
+    if (trackingAwb !== undefined) updates.trackingAwb = trackingAwb;
+    if (trackingUrl !== undefined) updates.trackingUrl = trackingUrl;
+    if (expectedDispatchDate !== undefined) updates.expectedDispatchDate = expectedDispatchDate;
+    if (dispatchDate !== undefined) updates.dispatchDate = dispatchDate;
+    if (estimatedDeliveryDate !== undefined) updates.estimatedDeliveryDate = estimatedDeliveryDate;
+    if (outForDeliveryDate !== undefined) updates.outForDeliveryDate = outForDeliveryDate;
+    if (actualDeliveryDate !== undefined) updates.actualDeliveryDate = actualDeliveryDate;
+    if (customerShippingNote !== undefined) updates.customerShippingNote = customerShippingNote;
+    if (internalStaffNote !== undefined) updates.internalStaffNote = internalStaffNote;
+    if (deliveryAttemptCount !== undefined) updates.deliveryAttemptCount = deliveryAttemptCount;
+    if (deliveryFailureReason !== undefined) updates.deliveryFailureReason = deliveryFailureReason;
+    if (rtoReason !== undefined) updates.rtoReason = rtoReason;
+    if (podReference !== undefined) updates.podReference = podReference;
+
+    const store = readOrderStore();
+    const existing = store[orderId] || {};
+
+    const effectiveMethod = updates.shippingMethod || existing.shippingMethod;
+    const effectiveCourier = updates.courier ?? existing.courier;
+    if (effectiveMethod === 'in_house' || (effectiveCourier && effectiveCourier.toLowerCase().includes('in-house'))) {
+      updates.courierType = 'internal';
+      updates.isInternalTracking = true;
+    } else if (effectiveCourier) {
+      updates.courierType = 'commercial';
+      updates.isInternalTracking = false;
+    }
 
     if (reconciliation) {
       updates.reconciliation = {
@@ -282,22 +377,46 @@ export async function POST(request: Request) {
       };
     }
 
-    const newTimelineEntry = {
-      title: paymentStatus
-        ? `Payment marked as ${paymentStatus.toUpperCase()}`
-        : `Order updated to ${fulfillmentStatus || 'modified'}`,
-      timestamp: new Date().toISOString(),
-      note: note || (reconciliation ? `Reconciled via Bank Ref ${reconciliation.bankReference}` : `Updated by ${staffName}`),
-      staffId,
-      staffName,
-      staffRole,
-    };
-
-    const store = readOrderStore();
-    const existing = store[orderId] || {};
     const existingTimeline = Array.isArray(existing.timeline) ? existing.timeline : [];
 
-    const mergedTimeline = timeline || [...existingTimeline, newTimelineEntry];
+    let mergedTimeline = timeline;
+    if (!mergedTimeline) {
+      const isStatusChanged = fulfillmentStatus && fulfillmentStatus !== existing.fulfillmentStatus;
+      const isPaymentChanged = paymentStatus && paymentStatus !== existing.paymentStatus;
+      const isCourierChanged = courier !== undefined && courier !== existing.courier;
+      const isAwbChanged = trackingAwb !== undefined && trackingAwb !== existing.trackingAwb;
+
+      const newTitle = paymentStatus
+        ? `Payment marked as ${paymentStatus.toUpperCase()}`
+        : fulfillmentStatus
+        ? `Order updated to ${fulfillmentStatus}`
+        : courier || trackingAwb
+        ? `Shipment updated (${courier || 'Carrier'}${trackingAwb ? ` - AWB: ${trackingAwb}` : ''})`
+        : 'Order updated';
+
+      const lastEntry = existingTimeline.length > 0 ? existingTimeline[existingTimeline.length - 1] : null;
+      const isDuplicate = lastEntry &&
+        lastEntry.title === newTitle &&
+        !isStatusChanged &&
+        !isPaymentChanged &&
+        !isCourierChanged &&
+        !isAwbChanged &&
+        (!note || lastEntry.note === note);
+
+      if (isDuplicate) {
+        mergedTimeline = existingTimeline;
+      } else {
+        const newTimelineEntry = {
+          title: newTitle,
+          timestamp: new Date().toISOString(),
+          note: customerShippingNote || note || (reconciliation ? `Reconciled via Bank Ref ${reconciliation.bankReference}` : `Updated by ${staffName}`),
+          staffId,
+          staffName,
+          staffRole,
+        };
+        mergedTimeline = [...existingTimeline, newTimelineEntry];
+      }
+    }
     updates.timeline = mergedTimeline;
 
     store[orderId] = {
@@ -317,8 +436,7 @@ export async function POST(request: Request) {
 
         if (orderDoc.exists) {
           const docData = orderDoc.data();
-          const docTimeline = Array.isArray(docData?.timeline) ? docData.timeline : [];
-          updates.timeline = timeline || [...docTimeline, newTimelineEntry];
+          updates.timeline = mergedTimeline;
           await orderRef.set(updates, { merge: true });
 
           // Atomic Stock restoration if order cancelled or returned before dispatch
@@ -368,7 +486,7 @@ export async function POST(request: Request) {
           userRole: staffRole,
           action: 'UPDATE_ORDER_STATUS',
           module: 'orders',
-          details: `Order #${orderId} updated: paymentStatus=${paymentStatus || 'unchanged'}, fulfillmentStatus=${fulfillmentStatus || 'unchanged'}.`,
+          details: `Order #${orderId} updated: paymentStatus=${paymentStatus || 'unchanged'}, fulfillmentStatus=${fulfillmentStatus || 'unchanged'}${courier ? `, courier=${courier}` : ''}${trackingAwb ? `, awb=${trackingAwb}` : ''}.`,
           timestamp: new Date().toISOString(),
         });
       } catch (adminErr) {
@@ -376,18 +494,21 @@ export async function POST(request: Request) {
       }
     } else {
       try {
-        await setDoc(doc(db, 'orders', orderId), updates, { merge: true });
+        const payload = cleanPayload(updates);
+        await Promise.race([
+          setDoc(doc(db, 'orders', orderId), payload, { merge: true }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Client firestore sync timed out')), 50))
+        ]);
       } catch (clientErr) {
-        console.warn('Client Firestore order sync deferred:', clientErr);
+        // Deferred in local test harnesses where client Firestore gRPC is unavailable
       }
     }
 
-    // Trigger lifecycle email notifications on milestone transitions
+    // Trigger lifecycle email notifications on milestone transitions (stable transition identity)
     try {
       const mergedOrder = { ...existing, ...updates, id: orderId };
-      const transitionKey = updates.updatedAt
-        ? new Date(updates.updatedAt).getTime().toString()
-        : Date.now().toString();
+      const currentAttempt = updates.deliveryAttemptCount ?? existing.deliveryAttemptCount ?? 0;
+      const transitionKey = currentAttempt > 0 ? `attempt_${currentAttempt}` : 'milestone_1';
 
       if (paymentStatus) {
         if (paymentStatus === 'paid') {

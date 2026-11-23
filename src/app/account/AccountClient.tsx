@@ -688,11 +688,32 @@ export default function AccountClient() {
                           </div>
                         </div>
 
-                        {/* Interactive Step Timeline */}
+                        {/* Interactive Step Timeline & Shipment Information */}
                         <div>
-                          <h4 className="text-xs uppercase tracking-refined font-semibold text-ink mb-4">
-                            Milestone Dispatch Chronicle (Kalajay In-House Dispatch: {order.awbNumber})
-                          </h4>
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                            <h4 className="text-xs uppercase tracking-refined font-semibold text-ink">
+                              Milestone Dispatch Chronicle {order.courier ? `(${order.courier}${order.awbNumber ? ` · AWB: ${order.awbNumber}` : ''})` : (order.awbNumber ? `(AWB: ${order.awbNumber})` : '')}
+                            </h4>
+                            {order.trackingUrl && (
+                              <a
+                                href={order.trackingUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-[#9E5430] hover:underline font-semibold"
+                              >
+                                <span>Track on Carrier Website</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+                          </div>
+
+                          {order.customerShippingNote && (
+                            <div className="mb-4 p-3 bg-canvas rounded-xl border border-border-gold text-xs text-ink-muted italic">
+                              <strong className="text-ink not-italic">Delivery Note: </strong>
+                              &ldquo;{order.customerShippingNote}&rdquo;
+                            </div>
+                          )}
+
                           <div className="space-y-4 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-border-medium">
                             {order.trackingSteps.map((step, idx) => (
                               <div key={idx} className="relative pl-8 flex items-start justify-between gap-4">

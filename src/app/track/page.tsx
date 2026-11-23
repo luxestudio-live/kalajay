@@ -14,7 +14,8 @@ import {
   MessageCircle,
   ArrowRight,
   ShieldCheck,
-  MapPin
+  MapPin,
+  ExternalLink
 } from 'lucide-react';
 import { BRAND_CONFIG } from '@/data/catalogue';
 import { getFirestoreOrderById } from '@/lib/firestore';
@@ -24,15 +25,21 @@ interface SimulatedOrder {
   orderId: string;
   placedDate: string;
   estimatedDelivery: string;
+  dispatchDate?: string;
+  actualDelivery?: string;
   status: 'loom' | 'sealed' | 'transit' | 'delivered';
+  fulfillmentStatus?: string;
   items: { name: string; variant: string; price: number; image: string }[];
   itemCount?: number;
   total?: number;
   customerName: string;
   city: string;
   artisanNote: string;
-  awbNumber: string;
-  courier: string;
+  awbNumber: string | null;
+  courier: string | null;
+  trackingUrl?: string | null;
+  customerShippingNote?: string | null;
+  deliveryAttemptCount?: number;
   paymentStatus?: string;
   isInternalTracking?: boolean;
   requiresVerification?: boolean;
@@ -190,20 +197,28 @@ function TrackOrderContent() {
         const mappedStatus: SimulatedOrder['status'] =
           liveDoc.fulfillmentStatus === 'delivered'
             ? 'delivered'
-            : liveDoc.fulfillmentStatus === 'shipped'
+            : liveDoc.fulfillmentStatus === 'shipped' || liveDoc.fulfillmentStatus === 'out_for_delivery' || liveDoc.fulfillmentStatus === 'delivery_attempt_failed'
             ? 'transit'
             : liveDoc.fulfillmentStatus === 'quality_checked'
             ? 'sealed'
             : 'loom';
 
-        const rawAwb = liveDoc.trackingAwb || 'KJ-DISP-' + Math.floor(10000000 + Math.random() * 90000000);
-        const isInternal = rawAwb.startsWith('KJ-DISP-') || (liveDoc.courier || '').includes('Kalajay In-House');
+        const hasAwb = Boolean(liveDoc.trackingAwb && liveDoc.trackingAwb.trim());
+        const rawAwb = hasAwb ? liveDoc.trackingAwb.trim() : null;
+        const isInternal = Boolean(
+          liveDoc.isInternalTracking ||
+          liveDoc.shippingMethod === 'in_house' ||
+          (liveDoc.courier && liveDoc.courier.toLowerCase().includes('in-house'))
+        );
 
         setActiveOrder({
           orderId: liveDoc.id,
           placedDate: liveDoc.createdAt ? new Date(liveDoc.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recent',
-          estimatedDelivery: '3 to 5 Business Days',
+          estimatedDelivery: liveDoc.estimatedDeliveryDate || '3 to 5 Business Days',
+          dispatchDate: liveDoc.dispatchDate || undefined,
+          actualDelivery: liveDoc.actualDeliveryDate || undefined,
           status: mappedStatus,
+          fulfillmentStatus: liveDoc.fulfillmentStatus,
           paymentStatus: liveDoc.paymentStatus || 'pending',
           isInternalTracking: isInternal,
           requiresVerification: liveDoc.requiresVerification,
@@ -217,10 +232,13 @@ function TrackOrderContent() {
           })),
           total: liveDoc.total,
           customerName: liveDoc.customerName,
-          city: `${liveDoc.shippingAddress?.city || 'India'}, ${liveDoc.shippingAddress?.state || ''}`,
+          city: `${liveDoc.shippingAddress?.city || 'India'}${liveDoc.shippingAddress?.state ? `, ${liveDoc.shippingAddress.state}` : ''}`,
           artisanNote: liveDoc.artisanNote || 'Handcrafted on Bihar artisan loom with heirloom-grade bead tension.',
           awbNumber: rawAwb,
-          courier: liveDoc.courier || 'Kalajay In-House Direct Dispatch',
+          courier: liveDoc.courier || (liveDoc.shippingMethod === 'in_house' ? 'Kalajay In-House Direct Dispatch' : null),
+          trackingUrl: liveDoc.trackingUrl || null,
+          customerShippingNote: liveDoc.customerShippingNote || null,
+          deliveryAttemptCount: liveDoc.deliveryAttemptCount ?? 0,
         });
         setError(false);
         setSearched(true);
@@ -398,13 +416,21 @@ function TrackOrderContent() {
                     Order #{activeOrder.orderId}
                   </span>
                   <span className={`px-2.5 py-0.5 rounded-full text-[10px] uppercase font-sans tracking-refined font-semibold ${
-                    activeOrder.status === 'transit'
+                    activeOrder.fulfillmentStatus === 'delivered'
+                      ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                      : activeOrder.fulfillmentStatus === 'out_for_delivery'
+                      ? 'bg-sky-100 text-sky-900 border border-sky-300'
+                      : activeOrder.fulfillmentStatus === 'delivery_attempt_failed'
+                      ? 'bg-rose-100 text-rose-900 border border-rose-300'
+                      : activeOrder.status === 'transit'
                       ? 'bg-amber-100 text-amber-900 border border-amber-300'
                       : activeOrder.status === 'sealed'
                       ? 'bg-purple-100 text-purple-900 border border-purple-300'
                       : 'bg-blue-100 text-blue-900 border border-blue-300'
                   }`}>
-                    {activeOrder.status === 'transit' ? 'In Express Transit' : activeOrder.status === 'sealed' ? 'Wax-Sealed & Staged' : 'On Artisan Looms'}
+                    {activeOrder.fulfillmentStatus
+                      ? activeOrder.fulfillmentStatus.replace(/_/g, ' ')
+                      : activeOrder.status === 'transit' ? 'In Express Transit' : activeOrder.status === 'sealed' ? 'Wax-Sealed & Staged' : 'On Artisan Looms'}
                   </span>
                   {activeOrder.paymentStatus && (
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] uppercase font-sans tracking-refined font-semibold ${
@@ -492,25 +518,62 @@ function TrackOrderContent() {
                     )}
                     <span className="text-[10px] uppercase tracking-refined font-bold font-mono">Stage 03</span>
                   </div>
-                  <h4 className="font-serif text-base text-plum font-normal">Atelier Direct Transit</h4>
-                  <p className="text-[11px] text-ink-muted leading-relaxed mt-1 font-light">
-                    {activeOrder.isInternalTracking || (activeOrder.awbNumber || '').startsWith('KJ-DISP-') ? (
-                      <>
-                        Dispatched via <strong className="text-plum">{activeOrder.courier}</strong> · Internal Dispatch Ref:{' '}
-                        <strong className="text-plum font-mono">{activeOrder.awbNumber}</strong>
-                        <span className="block text-[10px] text-ink-light italic mt-0.5">
-                          (Pre-allocated internal tracking reference. Commercial courier tracking details will be updated upon physical courier handover.)
-                        </span>
-                      </>
+                  <h4 className="font-serif text-base text-plum font-normal">
+                    {activeOrder.fulfillmentStatus === 'delivered'
+                      ? 'Delivered'
+                      : activeOrder.fulfillmentStatus === 'out_for_delivery'
+                      ? 'Out for Delivery'
+                      : activeOrder.fulfillmentStatus === 'delivery_attempt_failed'
+                      ? 'Delivery Attempted'
+                      : 'Dispatch & Transit'}
+                  </h4>
+                  <div className="text-[11px] text-ink-muted leading-relaxed mt-1 font-light space-y-1">
+                    {activeOrder.courier ? (
+                      <p>
+                        Carrier / Fleet: <strong className="text-plum">{activeOrder.courier}</strong>
+                        {activeOrder.awbNumber ? (
+                          <> · AWB: <strong className="text-plum font-mono">{activeOrder.awbNumber}</strong></>
+                        ) : (
+                          <> · <span className="italic">Direct Handover (No AWB required)</span></>
+                        )}
+                      </p>
                     ) : (
-                      <>
-                        Commercial Courier: <strong className="text-plum">{activeOrder.courier}</strong> · AWB Tracking:{' '}
-                        <strong className="text-plum font-mono">{activeOrder.awbNumber}</strong>
-                      </>
+                      <p>Scheduled for courier handover.</p>
                     )}
-                  </p>
+                    {activeOrder.trackingUrl && (
+                      <p className="pt-0.5">
+                        <a
+                          href={activeOrder.trackingUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-[#9E5430] hover:underline font-semibold"
+                        >
+                          <span>Track on Carrier Website</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </p>
+                    )}
+                    {activeOrder.customerShippingNote && (
+                      <p className="text-plum italic bg-canvas-subtle p-2 rounded-xs border border-border-subtle mt-1.5">
+                        &ldquo;{activeOrder.customerShippingNote}&rdquo;
+                      </p>
+                    )}
+                    {activeOrder.deliveryAttemptCount !== undefined && activeOrder.deliveryAttemptCount > 0 && (
+                      <span className="block text-[10px] text-amber-800 font-mono">
+                        Delivery Attempt(s): {activeOrder.deliveryAttemptCount}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-[10px] font-mono block mt-2 text-rosewood">
-                    {getStepActive(activeOrder.status, 3) ? '● Out for Delivery' : '○ Scheduled for Dispatch'}
+                    {activeOrder.fulfillmentStatus === 'delivered'
+                      ? '✓ Delivered to Destination'
+                      : activeOrder.fulfillmentStatus === 'out_for_delivery'
+                      ? '● Out for Delivery Today'
+                      : activeOrder.fulfillmentStatus === 'delivery_attempt_failed'
+                      ? '⚠ Delivery Attempt Failed - Rescheduling'
+                      : getStepActive(activeOrder.status, 3)
+                      ? '● In Transit'
+                      : '○ Scheduled for Dispatch'}
                   </span>
                 </div>
               </div>

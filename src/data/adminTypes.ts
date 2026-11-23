@@ -216,6 +216,7 @@ export interface AdminOrder {
     | 'shipped'
     | 'out_for_delivery'
     | 'delivered'
+    | 'delivery_attempt_failed'
     | 'rto'
     | 'cancelled';
   shippingAddress: {
@@ -224,12 +225,25 @@ export interface AdminOrder {
     state: string;
     pincode: string;
   };
-  timeline: Array<{ title: string; timestamp: string; note?: string }>;
+  timeline: Array<{ title: string; timestamp: string; note?: string; staffId?: string; staffName?: string; staffRole?: string }>;
   artisanNote?: string;
+  shippingMethod?: 'in_house' | 'third_party_courier' | 'local_delivery' | 'other';
   courier?: string;
   courierType?: 'internal' | 'commercial';
   trackingAwb?: string;
   trackingAwbType?: 'internal' | 'commercial';
+  trackingUrl?: string;
+  expectedDispatchDate?: string;
+  dispatchDate?: string;
+  estimatedDeliveryDate?: string;
+  outForDeliveryDate?: string;
+  actualDeliveryDate?: string;
+  customerShippingNote?: string;
+  internalStaffNote?: string;
+  deliveryAttemptCount?: number;
+  deliveryFailureReason?: string;
+  rtoReason?: string;
+  podReference?: string;
   isInternalTracking?: boolean;
   userId?: string;
   createdAt: string;

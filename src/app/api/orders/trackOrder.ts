@@ -403,8 +403,13 @@ export async function GET(request: Request) {
       ? `${nameParts[0]} ${nameParts[nameParts.length - 1][0]}.`
       : rawName;
 
-    const rawAwb = foundOrder.trackingAwb || `KJ-DISP-${(foundOrder.id || orderId).replace(/\D/g, '')}`;
-    const isInternalAwb = rawAwb.startsWith('KJ-DISP-') || (foundOrder.courier || '').includes('Kalajay In-House');
+    const hasAwb = Boolean(foundOrder.trackingAwb && foundOrder.trackingAwb.trim());
+    const rawAwb = hasAwb ? foundOrder.trackingAwb.trim() : null;
+    const isInternalAwb = Boolean(
+      (foundOrder.shippingMethod === 'in_house') ||
+      (foundOrder.courier && foundOrder.courier.toLowerCase().includes('in-house')) ||
+      (rawAwb && rawAwb.startsWith('KJ-DISP-'))
+    );
 
     // Build timeline
     const timeline = Array.isArray(foundOrder.timeline) && foundOrder.timeline.length > 0
@@ -421,6 +426,25 @@ export async function GET(request: Request) {
             note: 'Bead count tensioned and allocated to loom cluster',
           },
         ];
+
+    // Sanitize timeline notes strictly: never leak internal notes, staff names, staff roles, or bank reconciliation details
+    const publicTimeline = (timeline || []).map((step: any) => {
+      let stepNote = step.note;
+      if (stepNote) {
+        if (
+          stepNote.includes('Reconciled via') ||
+          stepNote.includes('Updated by') ||
+          (foundOrder.internalStaffNote && stepNote.includes(foundOrder.internalStaffNote))
+        ) {
+          stepNote = undefined;
+        }
+      }
+      return {
+        title: step.title,
+        timestamp: step.timestamp,
+        note: stepNote,
+      };
+    });
 
     // Non-public data: Line items and financial amounts are sanitized if not verified
     const rawItems = Array.isArray(foundOrder.items) ? foundOrder.items : [];
@@ -458,17 +482,22 @@ export async function GET(request: Request) {
         city: foundOrder.shippingAddress?.city || 'India',
         state: foundOrder.shippingAddress?.state || '',
       },
-      timeline: (timeline || []).map((step: any) => ({
-        title: step.title,
-        timestamp: step.timestamp,
-        note: isVerifiedOwner ? step.note : (step.note && !step.note.includes('Reconciled via') ? step.note : undefined),
-      })),
+      timeline: publicTimeline,
       artisanNote: foundOrder.artisanNote || 'Handcrafted on Bihar artisan loom with tensioned crystal fiber.',
-      courier: foundOrder.courier || 'Kalajay In-House Direct Dispatch',
-      courierType: isInternalAwb ? 'internal' : 'commercial',
+      shippingMethod: foundOrder.shippingMethod || (isInternalAwb ? 'in_house' : (foundOrder.courier ? 'third_party_courier' : undefined)),
+      courier: foundOrder.courier || (foundOrder.shippingMethod === 'in_house' ? 'Kalajay In-House Direct Dispatch' : null),
+      courierType: isInternalAwb ? 'internal' : (foundOrder.courier ? 'commercial' : undefined),
       trackingAwb: rawAwb,
-      trackingAwbType: isInternalAwb ? 'internal' : 'commercial',
-      trackingLabel: isInternalAwb ? 'Internal Atelier Dispatch Reference' : 'Commercial Courier Tracking AWB',
+      trackingAwbType: isInternalAwb ? 'internal' : (rawAwb ? 'commercial' : undefined),
+      trackingLabel: isInternalAwb ? 'Internal Atelier Dispatch Reference' : (rawAwb ? 'Commercial Courier Tracking AWB' : undefined),
+      trackingUrl: foundOrder.trackingUrl || null,
+      expectedDispatchDate: foundOrder.expectedDispatchDate || null,
+      dispatchDate: foundOrder.dispatchDate || null,
+      estimatedDeliveryDate: foundOrder.estimatedDeliveryDate || null,
+      actualDeliveryDate: foundOrder.actualDeliveryDate || null,
+      customerShippingNote: foundOrder.customerShippingNote || null,
+      deliveryAttemptCount: foundOrder.deliveryAttemptCount ?? 0,
+      deliveryFailureReason: foundOrder.deliveryFailureReason || null,
       createdAt: foundOrder.createdAt || new Date().toISOString(),
     };
 

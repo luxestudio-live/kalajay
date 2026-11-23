@@ -63,7 +63,10 @@ export interface Order {
   date: string;
   totalAmount: number;
   status: 'In Transit' | 'Delivered' | 'Hand-Stringing in Bihar' | 'Wax-Sealed in Mumbai';
+  fulfillmentStatus?: string;
   estimatedDelivery?: string;
+  dispatchDate?: string;
+  actualDeliveryDate?: string;
   paymentMethod: string;
   deliveryAddress: Address;
   items: OrderItem[];
@@ -72,6 +75,10 @@ export interface Order {
   artisanLocation: string;
   artisanNote: string;
   awbNumber: string;
+  courier?: string;
+  trackingUrl?: string;
+  customerShippingNote?: string;
+  deliveryAttemptCount?: number;
 }
 
 export interface User {

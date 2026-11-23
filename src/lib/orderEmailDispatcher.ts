@@ -188,7 +188,7 @@ export function generateGuestAccessToken(orderId: string, customerEmail: string)
 /**
  * Generates subject line and narrative copy for each order lifecycle event.
  */
-export function getEventCopy(event: OrderLifecycleEvent, orderId: string): {
+export function getEventCopy(event: OrderLifecycleEvent, orderId: string, order?: any): {
   subject: string;
   badge: string;
   badgeColor: string;
@@ -253,28 +253,32 @@ export function getEventCopy(event: OrderLifecycleEvent, orderId: string): {
         actionText: 'Inspect Quality Certificate',
         actionUrlPath: `/track?orderId=${orderId}`,
       };
-    case 'shipped':
+    case 'shipped': {
+      const carrierDisplay = order?.courier || (order?.shippingMethod === 'in_house' ? 'Kalajay in-house logistics fleet' : 'our designated courier partner');
       return {
         subject: `In Transit: Your Kalajay Order #${orderId} is En Route`,
-        badge: 'Dispatched · Air Transit En Route',
+        badge: order?.courier ? `Dispatched · ${order.courier}` : 'Dispatched · Air Transit En Route',
         badgeColor: '#1D4ED8',
         heading: 'Your Heirloom Has Departed the Atelier',
         narrative:
-          'Your package has been handed over for insured express transit via Kalajay in-house logistics fleet. It travels in reinforced temperature-neutral packaging to preserve the tension and luster of each handcrafted component.',
+          `Your package has been handed over for insured express transit via ${carrierDisplay}. It travels in reinforced temperature-neutral packaging to preserve the tension and luster of each handcrafted component.`,
         actionText: 'Track Consignment',
         actionUrlPath: `/track?orderId=${orderId}`,
       };
-    case 'out_for_delivery':
+    }
+    case 'out_for_delivery': {
+      const carrierDisplay = order?.courier || (order?.shippingMethod === 'in_house' ? 'our in-house delivery concierge' : 'our courier delivery partner');
       return {
         subject: `Out for Delivery: Your Kalajay Heirloom is Arriving Today`,
-        badge: 'Out for Delivery · In-House Fleet',
+        badge: order?.courier ? `Out for Delivery · ${order.courier}` : 'Out for Delivery · Scheduled Handover',
         badgeColor: '#0284C7',
         heading: 'Scheduled Handover Today',
         narrative:
-          'Your Kalajay handcrafted creation is with our in-house delivery concierge and out for delivery today. Our driver-partner will present the sealed parcel at your designated destination.',
+          `Your Kalajay handcrafted creation is out for delivery today with ${carrierDisplay}. Our representative will present the sealed parcel at your designated destination.`,
         actionText: 'Track Delivery Concierge',
         actionUrlPath: `/track?orderId=${orderId}`,
       };
+    }
     case 'delivered':
       return {
         subject: `Delivered: Welcome Your Kalajay Creation`,
@@ -338,7 +342,7 @@ export function buildOrderEmailHtml(params: {
   const orderId = order.id || `KJ-${Date.now().toString().slice(-4)}`;
   const patronName = order.customerName || 'Honoured Patron';
   const invNumber = getStableInvoiceNumber(order);
-  const copy = getEventCopy(event, orderId);
+  const copy = getEventCopy(event, orderId, order);
 
   const tokenParam = guestToken ? `&token=${encodeURIComponent(guestToken)}` : '';
   const actionFullUrl = `${baseUrl}${copy.actionUrlPath}${copy.actionUrlPath.includes('?') ? tokenParam : `?${tokenParam.replace('&', '')}`}`;
@@ -415,11 +419,24 @@ export function buildOrderEmailHtml(params: {
         </div>
         <div class="narrative-box">${copy.narrative}</div>
 
-        ${order.trackingAwb ? `
+        ${(order.courier || order.trackingAwb || order.customerShippingNote || order.estimatedDeliveryDate) ? `
         <div class="tracking-info-box">
-          <strong>Internal Logistics Consignment:</strong><br>
-          Fleet: ${order.courier || 'Kalajay In-House Direct Dispatch'}<br>
-          Consignment Reference: <code style="font-weight: bold;">${order.trackingAwb}</code>
+          <strong style="color: #166534; font-size: 13px;">Shipment &amp; Delivery Information:</strong><br>
+          ${order.courier ? `<span style="display:inline-block; margin-top:4px;">Carrier / Fleet: <strong>${order.courier}</strong></span><br>` : ''}
+          ${order.trackingAwb ? `<span style="display:inline-block; margin-top:2px;">Consignment / AWB: <code style="font-weight: bold; background: #DCFCE7; padding: 2px 6px; border-radius: 4px;">${order.trackingAwb}</code></span><br>` : ''}
+          ${order.estimatedDeliveryDate ? `<span style="display:inline-block; margin-top:2px;">Estimated Delivery: <strong>${order.estimatedDeliveryDate}</strong></span><br>` : ''}
+          ${(order.trackingUrl && (order.trackingUrl.startsWith('http://') || order.trackingUrl.startsWith('https://'))) ? `
+            <div style="margin-top: 8px;">
+              <a href="${order.trackingUrl}" target="_blank" rel="noopener noreferrer" style="color: #15803D; font-weight: 600; text-decoration: underline;">
+                Track Consignment on Carrier Portal &rarr;
+              </a>
+            </div>
+          ` : ''}
+          ${order.customerShippingNote ? `
+            <div style="margin-top: 6px; font-style: italic; color: #166534; font-size: 12px; border-top: 1px dashed #BBF7D0; padding-top: 4px;">
+              Note: ${order.customerShippingNote}
+            </div>
+          ` : ''}
         </div>
         ` : ''}
 
