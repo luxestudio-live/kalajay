@@ -192,7 +192,7 @@ export async function POST(request: Request) {
         : Number(catalogItem.price); // ALWAYS sourced from authoritative server/Firestore product, NEVER from client
 
       const effectiveSku = (matchedVariant && matchedVariant.code) ? matchedVariant.code : (catalogItem.code || targetId);
-      const effectiveImage = (matchedVariant && matchedVariant.image) ? matchedVariant.image : (catalogItem.images?.[0] || catalogItem.coverImage || 'https://www.kalajay.in/v2/p1-1.jpg');
+      const effectiveImage = (matchedVariant && matchedVariant.image) ? matchedVariant.image : (catalogItem.images?.[0] || catalogItem.coverImage || 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442683/kalajay/catalogue/k4oophmjhjh0rqu6hrdr.jpg');
       const effectiveLabel = matchedVariant?.label || item.variantLabel;
       const effectiveAttributes = matchedVariant?.attributeNames || matchedVariant?.attributes || item.attributes;
 

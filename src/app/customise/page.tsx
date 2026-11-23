@@ -60,10 +60,10 @@ export default function CustomisePage() {
       price: unitPrice,
       originalPrice: Math.round(unitPrice * 1.2),
       images: [
-        'https://www.kalajay.in/media/products/2a1e696f7a135c198e4f07570b37b2202ea31b1468be8245bbb51ec7b7d08e65.webp'
+        'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442713/kalajay/products/vskzgwmsrgxvfbwhtnrs.webp'
       ],
       coverImage:
-        'https://www.kalajay.in/media/products/2a1e696f7a135c198e4f07570b37b2202ea31b1468be8245bbb51ec7b7d08e65.webp',
+        'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442713/kalajay/products/vskzgwmsrgxvfbwhtnrs.webp',
       inStock: true,
       isBestSeller: false,
       isFeatured: false,

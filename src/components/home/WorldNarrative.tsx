@@ -82,7 +82,7 @@ export default function WorldNarrative() {
               {/* Primary Large Image */}
               <div className="col-span-8 relative aspect-[4/5] rounded-sm overflow-hidden bg-canvas border border-border-medium shadow-xl">
                 <img
-                  src="https://www.kalajay.in/v2/p3-2.jpg"
+                  src="https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/catalogue/cagx2jryioijvapagk6a.jpg"
                   alt="Pearl Beaded Vanity Box by Kalajay"
                   className="w-full h-full object-cover"
                 />
@@ -95,14 +95,14 @@ export default function WorldNarrative() {
               <div className="col-span-4 space-y-4">
                 <div className="relative aspect-square rounded-sm overflow-hidden bg-canvas border border-border-medium shadow-md">
                   <img
-                    src="https://www.kalajay.in/media/products/c6ba77320bf18d7c8d58f35eb9cecc5b8f79055d2b92fae00d22cfdbc40d3f85.webp"
+                    src="https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442690/kalajay/products/ugs4bturpfbqsmvf11wx.webp"
                     alt="Pearl Beaded Accent Coaster"
                     className="w-full h-full object-cover"
                   />
                 </div>
                 <div className="relative aspect-[3/4] rounded-sm overflow-hidden bg-canvas border border-border-medium shadow-md">
                   <img
-                    src="https://www.kalajay.in/media/products/07d7dce169019ce6e08e80a9d10984dc7edcc0b529f69738b5c51fb2b43e0e5a.webp"
+                    src="https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442712/kalajay/products/z2uyxgb13ucabgtpr1fi.webp"
                     alt="Crystal Beaded Butterfly Clutch"
                     className="w-full h-full object-cover"
                   />

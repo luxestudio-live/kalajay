@@ -94,7 +94,7 @@ export default function GiftingPage() {
         <section id="wedding" className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-6 relative aspect-[4/3] rounded-image overflow-hidden bg-canvas-subtle border border-border-gold shadow-xl">
             <img
-              src="https://www.kalajay.in/media/products/c6ba77320bf18d7c8d58f35eb9cecc5b8f79055d2b92fae00d22cfdbc40d3f85.webp"
+              src="https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442690/kalajay/products/ugs4bturpfbqsmvf11wx.webp"
               alt="Bridal and Mehendi Favours"
               className="w-full h-full object-cover"
             />
@@ -160,7 +160,7 @@ export default function GiftingPage() {
           </div>
           <div className="lg:col-span-6 relative aspect-[4/3] rounded-image overflow-hidden bg-canvas-subtle border border-border-gold shadow-xl lg:order-2">
             <img
-              src="https://www.kalajay.in/media/products/b1bae023973762e04b7bd33024aec63f9ee9b6d6d97aac39f51a0a78d9c4df1b.webp"
+              src="https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/products/bo9dwhm0os470xa0gcaz.webp"
               alt="Corporate Handcrafted Desk Sculptures"
               className="w-full h-full object-cover"
             />
@@ -174,7 +174,7 @@ export default function GiftingPage() {
         <section id="festive" className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-6 relative aspect-[4/3] rounded-image overflow-hidden bg-canvas-subtle border border-border-gold shadow-xl">
             <img
-              src="https://www.kalajay.in/media/products/05c487e5d0ba14e30995c085eb1718b4d752a4e1e93bff6dce835a1e98fcaf42.webp"
+              src="https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442686/kalajay/products/n3uyvult1li1rf7funfp.webp"
               alt="Festive Tealight Lanterns and Hampers"
               className="w-full h-full object-cover"
             />

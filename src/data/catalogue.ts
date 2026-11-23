@@ -224,63 +224,63 @@ export const COLLECTIONS: Collection[] = [
     "slug": "organisers",
     "tagline": "Pearl-beaded boxes & trays for jewellery and everyday essentials",
     "description": "Luminous pearl-strung catch-alls, vanity trays, and lidded jewel boxes. Hand-assembled bead by bead with reinforced wire structures to bring poetic order to dressing tables, nightstands, and private craft houses.",
-    "image": "https://www.kalajay.in/v2/p3-2.jpg"
+    "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/catalogue/cagx2jryioijvapagk6a.jpg"
   },
   {
     "name": "Purses",
     "slug": "purses",
     "tagline": "Hand-beaded clutches and purses",
     "description": "Sculptural evening clutches and statement handheld purses constructed from faceted crystals and glass seed beads. Fluid yet structural, balancing tactile shimmer with contemporary silhouettes.",
-    "image": "https://www.kalajay.in/v2/p6-2.jpg"
+    "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442716/kalajay/catalogue/yyf9ze2uluz32ujxl4mo.jpg"
   },
   {
     "name": "Slings",
     "slug": "slings",
     "tagline": "Colourful beaded sling bags with long handle straps",
     "description": "Vibrant cross-body and shoulder slings engineered with hand-strung long straps and playful bead palettes. Designed to catch light and turn casual movement into an artful statement.",
-    "image": "https://www.kalajay.in/v2/p10-3.jpg"
+    "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442722/kalajay/catalogue/pb1ws9kzarikylbsxgm9.jpg"
   },
   {
     "name": "Airpod Cases",
     "slug": "airpod-cases",
     "tagline": "Pearl beaded airpod cases for everyday use",
     "description": "Snug, protective cases hand-beaded with lustrous pearls and crystal accents. Transforming everyday technology into an intimate, jewel-like personal talisman.",
-    "image": "https://www.kalajay.in/v2/p12-3.jpg"
+    "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442684/kalajay/catalogue/olbboadvjaqiz0cjlb6s.jpg"
   },
   {
     "name": "Coasters & Mats",
     "slug": "coasters-mats",
     "tagline": "Pearl-beaded mats and\u00A0coasters",
     "description": "Intricately woven table mats, runners, and drink coasters. Crafted with dense bead lattices that offer heat resistance, tactile weight, and unforgettable tabletop radiance.",
-    "image": "https://www.kalajay.in/v2/p14-5.jpg"
+    "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442691/kalajay/catalogue/lhy85nxlwvgdpedsniao.jpg"
   },
   {
     "name": "Candle Holders",
     "slug": "candle-holders",
     "tagline": "Beaded tealight holders",
     "description": "Atmospheric tealight lanterns woven from prismatic crystal and coloured glass beads that cast dancing shadows across celebratory dinner tables and quiet evening spaces.",
-    "image": "https://www.kalajay.in/v2/p16-3.jpg"
+    "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442723/kalajay/catalogue/n5q4ecn6crnluhkcsnnl.jpg"
   },
   {
     "name": "Key Rings",
     "slug": "key-rings",
     "tagline": "Beaded keyrings and charms",
     "description": "Pocket-sized miniature sculptures: beaded hearts, monograms, and musical notations designed to bring daily joy every time you reach for your keys.",
-    "image": "https://www.kalajay.in/v2/p18-4.jpg"
+    "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442697/kalajay/catalogue/flixddc0ywvstfqwztwa.jpg"
   },
   {
     "name": "Crochet Magic",
     "slug": "crochet-magic",
     "tagline": "Handmade crochet accessories",
     "description": "Spun with fine threads and soft yarns, our crocheted flower charms and delicate bookmarks embody the tenderness of patient needlework and botanical wonder.",
-    "image": "https://www.kalajay.in/v2/p19-2.jpg"
+    "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442722/kalajay/catalogue/v6vofiiptkamnwkvx5ta.jpg"
   },
   {
     "name": "Little Treasures",
     "slug": "little-treasures",
     "tagline": "One-of-a-kind crystal and beaded showpieces",
     "description": "One-of-a-kind bespoke creations, custom name plaques, crystal bottles, and limited-edition showpieces celebrating the pure joy of artisanal experimentation.",
-    "image": "https://www.kalajay.in/v2/p21-2.jpg"
+    "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442698/kalajay/catalogue/q5nc8b7tditqhsn3vpvm.jpg"
   }
 ];
 
@@ -295,9 +295,9 @@ export const PRODUCTS: Product[] = [
     "price": 399,
     "originalPrice": 499,
     "images": [
-      "https://www.kalajay.in/v2/p12-3.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442684/kalajay/catalogue/olbboadvjaqiz0cjlb6s.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p12-3.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442684/kalajay/catalogue/olbboadvjaqiz0cjlb6s.jpg",
     "inStock": true,
     "isBestSeller": true,
     "isFeatured": true,
@@ -323,9 +323,9 @@ export const PRODUCTS: Product[] = [
     "price": 499,
     "originalPrice": 624,
     "images": [
-      "https://www.kalajay.in/v2/p12-5.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442683/kalajay/catalogue/ng8e1t0xmb4z3jlvhlnq.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p12-5.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442683/kalajay/catalogue/ng8e1t0xmb4z3jlvhlnq.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": true,
@@ -351,10 +351,10 @@ export const PRODUCTS: Product[] = [
     "price": 499,
     "originalPrice": 624,
     "images": [
-      "https://www.kalajay.in/v2/p12-1.jpg",
-      "https://www.kalajay.in/v2/p12-5.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442683/kalajay/catalogue/k4oophmjhjh0rqu6hrdr.jpg",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442683/kalajay/catalogue/ng8e1t0xmb4z3jlvhlnq.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p12-1.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442683/kalajay/catalogue/k4oophmjhjh0rqu6hrdr.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": true,
@@ -380,9 +380,9 @@ export const PRODUCTS: Product[] = [
     "price": 499,
     "originalPrice": 624,
     "images": [
-      "https://www.kalajay.in/v2/p12-4.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442684/kalajay/catalogue/rvmxm8pr1cjslsz7gja5.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p12-4.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442684/kalajay/catalogue/rvmxm8pr1cjslsz7gja5.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": true,
@@ -408,9 +408,9 @@ export const PRODUCTS: Product[] = [
     "price": 399,
     "originalPrice": 499,
     "images": [
-      "https://www.kalajay.in/v2/p12-2.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442684/kalajay/catalogue/ulojgtkola3pv8icll0n.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p12-2.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442684/kalajay/catalogue/ulojgtkola3pv8icll0n.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": true,
@@ -436,16 +436,16 @@ export const PRODUCTS: Product[] = [
     "price": 249,
     "originalPrice": 311,
     "images": [
-      "https://www.kalajay.in/media/products/05c487e5d0ba14e30995c085eb1718b4d752a4e1e93bff6dce835a1e98fcaf42.webp",
-      "https://www.kalajay.in/media/products/b5a1631e32caa509213c367f01c900e7fd34176b190fe6c3a2e45bf42afeb743.webp",
-      "https://www.kalajay.in/media/products/0d21af7de7feff822772964f66e9eb948abb612bd31fc2e8ee5e9c9241812e81.webp",
-      "https://www.kalajay.in/media/products/d9c7ffc4b20bc8c6eb4386fb68aebb16a067802f6af578097bdb492d79b231b1.webp",
-      "https://www.kalajay.in/media/products/11b631b047a84ef9636ad5cae256354490ceef7326514fd03d3a85b73fc105e0.webp",
-      "https://www.kalajay.in/media/products/3f866ea2f8366f18dee11feed806f7fe8c885fbfc05c56acbc80beebdb94a24a.webp",
-      "https://www.kalajay.in/media/products/692bdad3376130809d40986b4b1c587cddaabfdf6f05316d6b43f68d1e4910b6.webp",
-      "https://www.kalajay.in/media/products/37188d910e2da4323d94e36ff02e21dd2973774e6e82144261ea9a4821207a4d.webp"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442686/kalajay/products/n3uyvult1li1rf7funfp.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442685/kalajay/products/j7iapsunvayw8dmh1jij.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442686/kalajay/products/v9fx7maa4u3pyzutglqo.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442686/kalajay/products/p8bli1fnkwx54cfgorjy.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442687/kalajay/products/qlcuhmglvxs0cr30j5kr.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442688/kalajay/products/smsjtvkkojgwfjsc4hxr.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442688/kalajay/products/c0sp1v29lzruzr8hvnhk.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442688/kalajay/products/hnjeqw48svcz0olgqegg.webp"
     ],
-    "coverImage": "https://www.kalajay.in/media/products/05c487e5d0ba14e30995c085eb1718b4d752a4e1e93bff6dce835a1e98fcaf42.webp",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442686/kalajay/products/n3uyvult1li1rf7funfp.webp",
     "inStock": true,
     "isBestSeller": true,
     "isFeatured": true,
@@ -456,56 +456,56 @@ export const PRODUCTS: Product[] = [
         "label": "Yellow",
         "price": 249,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/b5a1631e32caa509213c367f01c900e7fd34176b190fe6c3a2e45bf42afeb743.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442685/kalajay/products/j7iapsunvayw8dmh1jij.webp"
       },
       {
         "code": "KJ-CDL-602-2",
         "label": "Dark Pink",
         "price": 249,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/0d21af7de7feff822772964f66e9eb948abb612bd31fc2e8ee5e9c9241812e81.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442686/kalajay/products/v9fx7maa4u3pyzutglqo.webp"
       },
       {
         "code": "KJ-CDL-602-3",
         "label": "Pastel Pink",
         "price": 249,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/d9c7ffc4b20bc8c6eb4386fb68aebb16a067802f6af578097bdb492d79b231b1.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442686/kalajay/products/p8bli1fnkwx54cfgorjy.webp"
       },
       {
         "code": "KJ-CDL-602-4",
         "label": "Lavender",
         "price": 249,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/05c487e5d0ba14e30995c085eb1718b4d752a4e1e93bff6dce835a1e98fcaf42.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442686/kalajay/products/n3uyvult1li1rf7funfp.webp"
       },
       {
         "code": "KJ-CDL-602-5",
         "label": "Opaque",
         "price": 249,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/11b631b047a84ef9636ad5cae256354490ceef7326514fd03d3a85b73fc105e0.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442687/kalajay/products/qlcuhmglvxs0cr30j5kr.webp"
       },
       {
         "code": "KJ-CDL-602-6",
         "label": "Mint green",
         "price": 249,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/3f866ea2f8366f18dee11feed806f7fe8c885fbfc05c56acbc80beebdb94a24a.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442688/kalajay/products/smsjtvkkojgwfjsc4hxr.webp"
       },
       {
         "code": "KJ-CDL-602-7",
         "label": "Aqua Blue",
         "price": 249,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/692bdad3376130809d40986b4b1c587cddaabfdf6f05316d6b43f68d1e4910b6.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442688/kalajay/products/c0sp1v29lzruzr8hvnhk.webp"
       },
       {
         "code": "KJ-CDL-602-8",
         "label": "Shiny Black",
         "price": 249,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/37188d910e2da4323d94e36ff02e21dd2973774e6e82144261ea9a4821207a4d.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442688/kalajay/products/hnjeqw48svcz0olgqegg.webp"
       }
     ],
     "materials": [
@@ -528,9 +528,9 @@ export const PRODUCTS: Product[] = [
     "price": 249,
     "originalPrice": 311,
     "images": [
-      "https://www.kalajay.in/media/products/f9100df045eb4c3417af2e35fee911331342df90f6c02f30156dd1707e715cad.webp"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442688/kalajay/products/fp1wwuqi3ogmgwrynxls.webp"
     ],
-    "coverImage": "https://www.kalajay.in/media/products/f9100df045eb4c3417af2e35fee911331342df90f6c02f30156dd1707e715cad.webp",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442688/kalajay/products/fp1wwuqi3ogmgwrynxls.webp",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": true,
@@ -556,9 +556,9 @@ export const PRODUCTS: Product[] = [
     "price": 699,
     "originalPrice": 874,
     "images": [
-      "https://www.kalajay.in/v2/p13-2.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442689/kalajay/catalogue/x58rsbntrjjnufdlolvl.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p13-2.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442689/kalajay/catalogue/x58rsbntrjjnufdlolvl.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": true,
@@ -584,9 +584,9 @@ export const PRODUCTS: Product[] = [
     "price": 400,
     "originalPrice": 500,
     "images": [
-      "https://www.kalajay.in/v2/kj-mat-513.png"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442690/kalajay/catalogue/mdzvawgwdwne1bxd7xf0.png"
     ],
-    "coverImage": "https://www.kalajay.in/v2/kj-mat-513.png",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442690/kalajay/catalogue/mdzvawgwdwne1bxd7xf0.png",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": true,
@@ -612,9 +612,9 @@ export const PRODUCTS: Product[] = [
     "price": 899,
     "originalPrice": 1124,
     "images": [
-      "https://www.kalajay.in/v2/p13-5.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442689/kalajay/catalogue/kdlom04mz5imgnnhjaht.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p13-5.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442689/kalajay/catalogue/kdlom04mz5imgnnhjaht.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": true,
@@ -640,9 +640,9 @@ export const PRODUCTS: Product[] = [
     "price": 175,
     "originalPrice": 219,
     "images": [
-      "https://www.kalajay.in/media/products/c6ba77320bf18d7c8d58f35eb9cecc5b8f79055d2b92fae00d22cfdbc40d3f85.webp"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442690/kalajay/products/ugs4bturpfbqsmvf11wx.webp"
     ],
-    "coverImage": "https://www.kalajay.in/media/products/c6ba77320bf18d7c8d58f35eb9cecc5b8f79055d2b92fae00d22cfdbc40d3f85.webp",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442690/kalajay/products/ugs4bturpfbqsmvf11wx.webp",
     "inStock": true,
     "isBestSeller": true,
     "isFeatured": true,
@@ -653,7 +653,7 @@ export const PRODUCTS: Product[] = [
         "label": "White",
         "price": 175,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/c6ba77320bf18d7c8d58f35eb9cecc5b8f79055d2b92fae00d22cfdbc40d3f85.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442690/kalajay/products/ugs4bturpfbqsmvf11wx.webp"
       }
     ],
     "materials": [
@@ -676,9 +676,9 @@ export const PRODUCTS: Product[] = [
     "price": 749,
     "originalPrice": 936,
     "images": [
-      "https://www.kalajay.in/v2/p15-2.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442690/kalajay/catalogue/ip23x9qdruaukunmocup.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p15-2.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442690/kalajay/catalogue/ip23x9qdruaukunmocup.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": true,
@@ -704,11 +704,11 @@ export const PRODUCTS: Product[] = [
     "price": 149,
     "originalPrice": 186,
     "images": [
-      "https://www.kalajay.in/v2/p14-5.jpg",
-      "https://www.kalajay.in/media/products/11786fbf057954b5fa08859dcb413f3bb288bf74df7cd8ddc8ce16092b45ed51.webp",
-      "https://www.kalajay.in/media/products/57e9a7da96b656b4785051c9fefd53edde9fd9640e99579cb14220e8cb782da4.webp"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442691/kalajay/catalogue/lhy85nxlwvgdpedsniao.jpg",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442691/kalajay/products/tlex3aw9gqdjdfeot1rs.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442691/kalajay/products/cvgh6ag1vetphn7q56bi.webp"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p14-5.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442691/kalajay/catalogue/lhy85nxlwvgdpedsniao.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -719,14 +719,14 @@ export const PRODUCTS: Product[] = [
         "label": "White",
         "price": 175,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/11786fbf057954b5fa08859dcb413f3bb288bf74df7cd8ddc8ce16092b45ed51.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442691/kalajay/products/tlex3aw9gqdjdfeot1rs.webp"
       },
       {
         "code": "KJ-MAT-508-2",
         "label": "Pink",
         "price": 175,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/57e9a7da96b656b4785051c9fefd53edde9fd9640e99579cb14220e8cb782da4.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442691/kalajay/products/cvgh6ag1vetphn7q56bi.webp"
       }
     ],
     "materials": [
@@ -749,9 +749,9 @@ export const PRODUCTS: Product[] = [
     "price": 249,
     "originalPrice": 311,
     "images": [
-      "https://www.kalajay.in/v2/p14-3.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442692/kalajay/catalogue/fvx0tuklrsgdyi6hfsc1.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p14-3.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442692/kalajay/catalogue/fvx0tuklrsgdyi6hfsc1.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -777,9 +777,9 @@ export const PRODUCTS: Product[] = [
     "price": 300,
     "originalPrice": 375,
     "images": [
-      "https://www.kalajay.in/v2/kj-mat-512.png"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442693/kalajay/catalogue/zgugp5eo7wltikp1g7ya.png"
     ],
-    "coverImage": "https://www.kalajay.in/v2/kj-mat-512.png",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442693/kalajay/catalogue/zgugp5eo7wltikp1g7ya.png",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -805,9 +805,9 @@ export const PRODUCTS: Product[] = [
     "price": 549,
     "originalPrice": 686,
     "images": [
-      "https://www.kalajay.in/v2/p13-4.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442692/kalajay/catalogue/hsrabsqwyvzlxjkxp7lx.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p13-4.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442692/kalajay/catalogue/hsrabsqwyvzlxjkxp7lx.jpg",
     "inStock": true,
     "isBestSeller": true,
     "isFeatured": false,
@@ -833,9 +833,9 @@ export const PRODUCTS: Product[] = [
     "price": 599,
     "originalPrice": 749,
     "images": [
-      "https://www.kalajay.in/media/products/298ce7d748a167c8f356cf934737ff8f6fca1297c6d450e1ae9f6db309e67711.webp"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442693/kalajay/products/lrngi6w3prvapnjkcrxu.webp"
     ],
-    "coverImage": "https://www.kalajay.in/media/products/298ce7d748a167c8f356cf934737ff8f6fca1297c6d450e1ae9f6db309e67711.webp",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442693/kalajay/products/lrngi6w3prvapnjkcrxu.webp",
     "inStock": false,
     "isBestSeller": false,
     "isFeatured": false,
@@ -846,7 +846,7 @@ export const PRODUCTS: Product[] = [
         "label": "Blush Punk Translucent",
         "price": 599,
         "inStock": false,
-        "image": "https://www.kalajay.in/media/products/298ce7d748a167c8f356cf934737ff8f6fca1297c6d450e1ae9f6db309e67711.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442693/kalajay/products/lrngi6w3prvapnjkcrxu.webp"
       }
     ],
     "materials": [
@@ -869,9 +869,9 @@ export const PRODUCTS: Product[] = [
     "price": 149,
     "originalPrice": 186,
     "images": [
-      "https://www.kalajay.in/v2/p19-3.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442693/kalajay/catalogue/o2zq3so1izokx1eicj3w.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p19-3.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442693/kalajay/catalogue/o2zq3so1izokx1eicj3w.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -896,9 +896,9 @@ export const PRODUCTS: Product[] = [
     "price": 149,
     "originalPrice": 186,
     "images": [
-      "https://www.kalajay.in/v2/x19-2.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442694/kalajay/catalogue/nlidl74xyqqlbikp5bsu.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/x19-2.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442694/kalajay/catalogue/nlidl74xyqqlbikp5bsu.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -923,9 +923,9 @@ export const PRODUCTS: Product[] = [
     "price": 149,
     "originalPrice": 186,
     "images": [
-      "https://www.kalajay.in/v2/p20-3.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442694/kalajay/catalogue/ngshevs7ipxogmvyxdem.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p20-3.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442694/kalajay/catalogue/ngshevs7ipxogmvyxdem.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -950,9 +950,9 @@ export const PRODUCTS: Product[] = [
     "price": 199,
     "originalPrice": 249,
     "images": [
-      "https://www.kalajay.in/v2/p20-2.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442694/kalajay/catalogue/j3wtvqqgpqnrq60uixi8.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p20-2.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442694/kalajay/catalogue/j3wtvqqgpqnrq60uixi8.jpg",
     "inStock": true,
     "isBestSeller": true,
     "isFeatured": false,
@@ -977,13 +977,13 @@ export const PRODUCTS: Product[] = [
     "price": 249,
     "originalPrice": 311,
     "images": [
-      "https://www.kalajay.in/v2/p17-3.jpg",
-      "https://www.kalajay.in/media/products/71adb1ab3bc7dd4cb369d041f8dae6a49a8ded6388cc66c32462b76598ffd3c8.webp",
-      "https://www.kalajay.in/media/products/8d5e1dcd70ee483163812137111ce6e0755bbc669785696450fc78be94ffa82c.webp",
-      "https://www.kalajay.in/media/products/496ea29dd1dc3b8daca3e43c8454c7ec2058373621f65a67567cda5eaaccadcd.webp",
-      "https://www.kalajay.in/media/products/7a261788facaca8cbfa2fde64129240247d16332a5c1bd6e0e45a551e46eaf36.webp"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442695/kalajay/catalogue/iwkgob2ornfoxs3h71cx.jpg",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442695/kalajay/products/ejkc1pwbgsbif3nzv9fn.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442695/kalajay/products/i03nlmsc35kmiccobhrs.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442696/kalajay/products/f115njld07hughhoxj6y.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442696/kalajay/products/drqt1iydqzadulimz3y3.webp"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p17-3.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442695/kalajay/catalogue/iwkgob2ornfoxs3h71cx.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -994,28 +994,28 @@ export const PRODUCTS: Product[] = [
         "label": "Lime Green",
         "price": 199,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/71adb1ab3bc7dd4cb369d041f8dae6a49a8ded6388cc66c32462b76598ffd3c8.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442695/kalajay/products/ejkc1pwbgsbif3nzv9fn.webp"
       },
       {
         "code": "KJ-KEY-701-2",
         "label": "Cobalt Blue",
         "price": 199,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/8d5e1dcd70ee483163812137111ce6e0755bbc669785696450fc78be94ffa82c.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442695/kalajay/products/i03nlmsc35kmiccobhrs.webp"
       },
       {
         "code": "KJ-KEY-701-3",
         "label": "Mixed Pastel",
         "price": 249,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/496ea29dd1dc3b8daca3e43c8454c7ec2058373621f65a67567cda5eaaccadcd.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442696/kalajay/products/f115njld07hughhoxj6y.webp"
       },
       {
         "code": "KJ-KEY-701-4",
         "label": "Peach",
         "price": 249,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/7a261788facaca8cbfa2fde64129240247d16332a5c1bd6e0e45a551e46eaf36.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442696/kalajay/products/drqt1iydqzadulimz3y3.webp"
       }
     ],
     "materials": [
@@ -1038,9 +1038,9 @@ export const PRODUCTS: Product[] = [
     "price": 249,
     "originalPrice": 311,
     "images": [
-      "https://www.kalajay.in/v2/p18-4.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442697/kalajay/catalogue/flixddc0ywvstfqwztwa.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p18-4.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442697/kalajay/catalogue/flixddc0ywvstfqwztwa.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1066,9 +1066,9 @@ export const PRODUCTS: Product[] = [
     "price": 249,
     "originalPrice": 311,
     "images": [
-      "https://www.kalajay.in/v2/p18-3.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442696/kalajay/catalogue/zndcpbr9evbkmptcatow.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p18-3.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442696/kalajay/catalogue/zndcpbr9evbkmptcatow.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1094,9 +1094,9 @@ export const PRODUCTS: Product[] = [
     "price": 229,
     "originalPrice": 286,
     "images": [
-      "https://www.kalajay.in/v2/p17-2.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442697/kalajay/catalogue/wht9w9uj3rl5qnoe7zai.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p17-2.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442697/kalajay/catalogue/wht9w9uj3rl5qnoe7zai.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1122,9 +1122,9 @@ export const PRODUCTS: Product[] = [
     "price": 149,
     "originalPrice": 186,
     "images": [
-      "https://www.kalajay.in/v2/p17-5.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442697/kalajay/catalogue/a8a1hfhse09dtoejx8xz.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p17-5.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442697/kalajay/catalogue/a8a1hfhse09dtoejx8xz.jpg",
     "inStock": true,
     "isBestSeller": true,
     "isFeatured": false,
@@ -1150,9 +1150,9 @@ export const PRODUCTS: Product[] = [
     "price": 149,
     "originalPrice": 186,
     "images": [
-      "https://www.kalajay.in/v2/p17-4.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442698/kalajay/catalogue/lrdplpps5zho0nog8t68.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p17-4.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442698/kalajay/catalogue/lrdplpps5zho0nog8t68.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1178,9 +1178,9 @@ export const PRODUCTS: Product[] = [
     "price": 1699,
     "originalPrice": 2124,
     "images": [
-      "https://www.kalajay.in/v2/p21-2.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442698/kalajay/catalogue/q5nc8b7tditqhsn3vpvm.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p21-2.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442698/kalajay/catalogue/q5nc8b7tditqhsn3vpvm.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1206,9 +1206,9 @@ export const PRODUCTS: Product[] = [
     "price": 1999,
     "originalPrice": 2499,
     "images": [
-      "https://www.kalajay.in/v2/p21-4.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442698/kalajay/catalogue/c1xpwikmwxl0jomqqcne.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p21-4.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442698/kalajay/catalogue/c1xpwikmwxl0jomqqcne.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1234,9 +1234,9 @@ export const PRODUCTS: Product[] = [
     "price": 149,
     "originalPrice": 186,
     "images": [
-      "https://www.kalajay.in/v2/p21-3.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442698/kalajay/catalogue/imjvuqgkfkqtkkyws25s.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p21-3.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442698/kalajay/catalogue/imjvuqgkfkqtkkyws25s.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1262,9 +1262,9 @@ export const PRODUCTS: Product[] = [
     "price": 499,
     "originalPrice": 624,
     "images": [
-      "https://www.kalajay.in/v2/p4-3.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442699/kalajay/catalogue/p0f3jsavegiz1i1vokwq.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p4-3.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442699/kalajay/catalogue/p0f3jsavegiz1i1vokwq.jpg",
     "inStock": true,
     "isBestSeller": true,
     "isFeatured": false,
@@ -1291,9 +1291,9 @@ export const PRODUCTS: Product[] = [
     "price": 599,
     "originalPrice": 749,
     "images": [
-      "https://www.kalajay.in/v2/p4-4.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442699/kalajay/catalogue/abklphqi89ad2htsg8u6.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p4-4.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442699/kalajay/catalogue/abklphqi89ad2htsg8u6.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1320,10 +1320,10 @@ export const PRODUCTS: Product[] = [
     "price": 599,
     "originalPrice": 749,
     "images": [
-      "https://www.kalajay.in/v2/p5-3b.png",
-      "https://www.kalajay.in/media/products/0b171bb3e679ef491e7dd7bcf9835cb7f0c9f6afd8941d636a9ff2859c36159d.webp"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442701/kalajay/catalogue/zp2ep1ckllc5nnn0iaro.png",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442699/kalajay/products/iotvjewusdp5stjfqjrx.webp"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p5-3b.png",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442701/kalajay/catalogue/zp2ep1ckllc5nnn0iaro.png",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1334,7 +1334,7 @@ export const PRODUCTS: Product[] = [
         "label": "Blush Pink",
         "price": 599,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/0b171bb3e679ef491e7dd7bcf9835cb7f0c9f6afd8941d636a9ff2859c36159d.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442699/kalajay/products/iotvjewusdp5stjfqjrx.webp"
       }
     ],
     "materials": [
@@ -1358,10 +1358,10 @@ export const PRODUCTS: Product[] = [
     "price": 1649,
     "originalPrice": 2061,
     "images": [
-      "https://www.kalajay.in/v2/p5-3a.png",
-      "https://www.kalajay.in/media/products/c6f1a7cb4c3b94d914f74243f43d2242eef62330c0ef48e51521e009211664cb.webp"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442700/kalajay/catalogue/ow1inwvsvx1cyczexxoo.png",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442700/kalajay/products/bdtwhqpgkosfzocy3izc.webp"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p5-3a.png",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442700/kalajay/catalogue/ow1inwvsvx1cyczexxoo.png",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1372,7 +1372,7 @@ export const PRODUCTS: Product[] = [
         "label": "Blush Pink",
         "price": 1449,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/c6f1a7cb4c3b94d914f74243f43d2242eef62330c0ef48e51521e009211664cb.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442700/kalajay/products/bdtwhqpgkosfzocy3izc.webp"
       }
     ],
     "materials": [
@@ -1396,11 +1396,11 @@ export const PRODUCTS: Product[] = [
     "price": 799,
     "originalPrice": 999,
     "images": [
-      "https://www.kalajay.in/v2/p5-2.jpg",
-      "https://www.kalajay.in/media/products/01420a416db370ce5c995a6372b0229e4eb66657f6c53a1602a1183d71ed0263.webp",
-      "https://www.kalajay.in/media/products/9478137febb4d125b0ccca4f0480b7ef10eeeedba6625be6dd9ea04762564af0.webp"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442702/kalajay/catalogue/hfejpavwxc6phew0ybta.jpg",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442701/kalajay/products/t2to1siprkvshjff8zvy.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442701/kalajay/products/f9pdmykhesicetkxmqyh.webp"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p5-2.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442702/kalajay/catalogue/hfejpavwxc6phew0ybta.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1411,14 +1411,14 @@ export const PRODUCTS: Product[] = [
         "label": "Blue",
         "price": 799,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/01420a416db370ce5c995a6372b0229e4eb66657f6c53a1602a1183d71ed0263.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442701/kalajay/products/t2to1siprkvshjff8zvy.webp"
       },
       {
         "code": "KJ-ORG-109-2",
         "label": "Lavender",
         "price": 799,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/9478137febb4d125b0ccca4f0480b7ef10eeeedba6625be6dd9ea04762564af0.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442701/kalajay/products/f9pdmykhesicetkxmqyh.webp"
       }
     ],
     "materials": [
@@ -1442,11 +1442,11 @@ export const PRODUCTS: Product[] = [
     "price": 549,
     "originalPrice": 686,
     "images": [
-      "https://www.kalajay.in/v2/p5-4.png",
-      "https://www.kalajay.in/media/products/0f9648dace54610730e26226a9a2936e849adbf2858d86d1b40ef583421dcb63.webp",
-      "https://www.kalajay.in/media/products/d4360190076124ebd044502564d158a52de401c4f128b51b9ef69726ef12188b.webp"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442704/kalajay/catalogue/as87aboowvodgpxn8xdc.png",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442703/kalajay/products/xfiqok1ghdwncd4abhh8.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442702/kalajay/products/wefahldhgfxtkzqfpnye.webp"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p5-4.png",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442704/kalajay/catalogue/as87aboowvodgpxn8xdc.png",
     "inStock": true,
     "isBestSeller": true,
     "isFeatured": false,
@@ -1457,14 +1457,14 @@ export const PRODUCTS: Product[] = [
         "label": "Lavender",
         "price": 499,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/0f9648dace54610730e26226a9a2936e849adbf2858d86d1b40ef583421dcb63.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442703/kalajay/products/xfiqok1ghdwncd4abhh8.webp"
       },
       {
         "code": "KJ-ORG-112-2",
         "label": "Blue",
         "price": 499,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/d4360190076124ebd044502564d158a52de401c4f128b51b9ef69726ef12188b.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442702/kalajay/products/wefahldhgfxtkzqfpnye.webp"
       }
     ],
     "materials": [
@@ -1488,9 +1488,9 @@ export const PRODUCTS: Product[] = [
     "price": 499,
     "originalPrice": 624,
     "images": [
-      "https://www.kalajay.in/v2/p4-5.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442704/kalajay/catalogue/hjeycopa7fnlf1nhqq39.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p4-5.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442704/kalajay/catalogue/hjeycopa7fnlf1nhqq39.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1517,9 +1517,9 @@ export const PRODUCTS: Product[] = [
     "price": 2599,
     "originalPrice": 3249,
     "images": [
-      "https://www.kalajay.in/v2/p3-2.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/catalogue/cagx2jryioijvapagk6a.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p3-2.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/catalogue/cagx2jryioijvapagk6a.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1546,9 +1546,9 @@ export const PRODUCTS: Product[] = [
     "price": 749,
     "originalPrice": 936,
     "images": [
-      "https://www.kalajay.in/media/products/b1bae023973762e04b7bd33024aec63f9ee9b6d6d97aac39f51a0a78d9c4df1b.webp"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/products/bo9dwhm0os470xa0gcaz.webp"
     ],
-    "coverImage": "https://www.kalajay.in/media/products/b1bae023973762e04b7bd33024aec63f9ee9b6d6d97aac39f51a0a78d9c4df1b.webp",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/products/bo9dwhm0os470xa0gcaz.webp",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1575,11 +1575,11 @@ export const PRODUCTS: Product[] = [
     "price": 499,
     "originalPrice": 624,
     "images": [
-      "https://www.kalajay.in/v2/p4-2.jpg",
-      "https://www.kalajay.in/media/products/836fa543a8e12245ab83adc23211568e0ed18b42e97ca17b3baff46b60dc8fe6.webp",
-      "https://www.kalajay.in/media/products/bca1096710fddd239f46efa101f91047996d0dfec30d18b586cb97314db1717e.webp"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442706/kalajay/catalogue/pay4pp87qwofbmwog7q5.jpg",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442706/kalajay/products/stpjcyygfpvkqrzng4ca.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442706/kalajay/products/d7ozhx8lmjxbiyzoh4dx.webp"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p4-2.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442706/kalajay/catalogue/pay4pp87qwofbmwog7q5.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1590,14 +1590,14 @@ export const PRODUCTS: Product[] = [
         "label": "White Round (Small)",
         "price": 449,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/836fa543a8e12245ab83adc23211568e0ed18b42e97ca17b3baff46b60dc8fe6.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442706/kalajay/products/stpjcyygfpvkqrzng4ca.webp"
       },
       {
         "code": "KJ-ORG-105-2",
         "label": "White Square",
         "price": 449,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/bca1096710fddd239f46efa101f91047996d0dfec30d18b586cb97314db1717e.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442706/kalajay/products/d7ozhx8lmjxbiyzoh4dx.webp"
       }
     ],
     "materials": [
@@ -1621,14 +1621,14 @@ export const PRODUCTS: Product[] = [
     "price": 599,
     "originalPrice": 749,
     "images": [
-      "https://www.kalajay.in/v2/p3-3.jpg",
-      "https://www.kalajay.in/media/products/82de6afd08ff448280211f0bfcc8dde73ecbfa427b97749596ad38de44c9d763.webp",
-      "https://www.kalajay.in/media/products/92dcd604091320e757566c4c6f2c127ac6abe66bd468a4e088f66e10d4073892.webp",
-      "https://www.kalajay.in/media/products/806d64b4c75cf4c44339359479eed5193f59921bf942a4c7e26d1e2db5be8dfd.webp",
-      "https://www.kalajay.in/media/products/16592885ffc8aeaa87efb24e2088faf6a4d9f853e4e96477e591ab0a0be1beb1.webp",
-      "https://www.kalajay.in/media/products/c17115c495b65d7dfbe7ba7dc8597223cc08b02acd29d54494930fda8cb25f5b.webp"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442707/kalajay/catalogue/wxgxbkzmgadryuke88wu.jpg",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442708/kalajay/products/ibghteyg6idikpaaptpd.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442708/kalajay/products/est2djknfj8m3q23fsor.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442708/kalajay/products/evjw0vvkrjez5qngem11.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442709/kalajay/products/kt8otqfktujlezrhicgz.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442709/kalajay/products/jvtt0negmcsbpvdf4ln7.webp"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p3-3.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442707/kalajay/catalogue/wxgxbkzmgadryuke88wu.jpg",
     "inStock": true,
     "isBestSeller": true,
     "isFeatured": false,
@@ -1639,35 +1639,35 @@ export const PRODUCTS: Product[] = [
         "label": "White Square",
         "price": 549,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/82de6afd08ff448280211f0bfcc8dde73ecbfa427b97749596ad38de44c9d763.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442708/kalajay/products/ibghteyg6idikpaaptpd.webp"
       },
       {
         "code": "KJ-ORG-102-2",
         "label": "White Round",
         "price": 549,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/92dcd604091320e757566c4c6f2c127ac6abe66bd468a4e088f66e10d4073892.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442708/kalajay/products/est2djknfj8m3q23fsor.webp"
       },
       {
         "code": "KJ-ORG-102-3",
         "label": "Colourful Round",
         "price": 599,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/806d64b4c75cf4c44339359479eed5193f59921bf942a4c7e26d1e2db5be8dfd.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442708/kalajay/products/evjw0vvkrjez5qngem11.webp"
       },
       {
         "code": "KJ-ORG-102-4",
         "label": "Colourful Square",
         "price": 599,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/16592885ffc8aeaa87efb24e2088faf6a4d9f853e4e96477e591ab0a0be1beb1.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442709/kalajay/products/kt8otqfktujlezrhicgz.webp"
       },
       {
         "code": "KJ-ORG-102-5",
         "label": "Crystal Black",
         "price": 599,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/c17115c495b65d7dfbe7ba7dc8597223cc08b02acd29d54494930fda8cb25f5b.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442709/kalajay/products/jvtt0negmcsbpvdf4ln7.webp"
       }
     ],
     "materials": [
@@ -1691,9 +1691,9 @@ export const PRODUCTS: Product[] = [
     "price": 699,
     "originalPrice": 874,
     "images": [
-      "https://www.kalajay.in/v2/p3-4.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442710/kalajay/catalogue/movzwcwoxepeshnqbfof.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p3-4.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442710/kalajay/catalogue/movzwcwoxepeshnqbfof.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1720,9 +1720,9 @@ export const PRODUCTS: Product[] = [
     "price": 1199,
     "originalPrice": 1499,
     "images": [
-      "https://www.kalajay.in/v2/p3-5.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442709/kalajay/catalogue/tfo8vfssqqlmwzprhn9g.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p3-5.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442709/kalajay/catalogue/tfo8vfssqqlmwzprhn9g.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1749,12 +1749,12 @@ export const PRODUCTS: Product[] = [
     "price": 1599,
     "originalPrice": 1999,
     "images": [
-      "https://www.kalajay.in/v2/p9-4.jpg",
-      "https://www.kalajay.in/media/products/b9ea88960b80aefd3d8f30fb17d02c08bac01b5a2e57d88c2e8d72439219a5d4.webp",
-      "https://www.kalajay.in/media/products/a87cc12c74f0b50dd89773b3bd05004366cc45b40e34782fddfd7fbaf48987af.webp",
-      "https://www.kalajay.in/media/products/5e321e4b7b2a0635b210b2e16318b0fe855084cafe3a44611b1a134d449a6e6f.webp"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442710/kalajay/catalogue/ld6jd6pyrgsayzqsqwps.jpg",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442711/kalajay/products/o64whndr9mc3tf6cczbp.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442710/kalajay/products/rnxy84so9avkehrrgash.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442711/kalajay/products/nuqglwprmugcnzybaiy7.webp"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p9-4.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442710/kalajay/catalogue/ld6jd6pyrgsayzqsqwps.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1765,21 +1765,21 @@ export const PRODUCTS: Product[] = [
         "label": "Orange",
         "price": 1099,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/b9ea88960b80aefd3d8f30fb17d02c08bac01b5a2e57d88c2e8d72439219a5d4.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442711/kalajay/products/o64whndr9mc3tf6cczbp.webp"
       },
       {
         "code": "KJ-PRS-215-2",
         "label": "Lemon Yellow",
         "price": 1099,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/a87cc12c74f0b50dd89773b3bd05004366cc45b40e34782fddfd7fbaf48987af.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442710/kalajay/products/rnxy84so9avkehrrgash.webp"
       },
       {
         "code": "KJ-PRS-215-3",
         "label": "Lavender",
         "price": 1199,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/5e321e4b7b2a0635b210b2e16318b0fe855084cafe3a44611b1a134d449a6e6f.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442711/kalajay/products/nuqglwprmugcnzybaiy7.webp"
       }
     ],
     "materials": [
@@ -1803,9 +1803,9 @@ export const PRODUCTS: Product[] = [
     "price": 1349,
     "originalPrice": 1686,
     "images": [
-      "https://www.kalajay.in/media/products/b57e3efd6e2f7c2f0bcac6be9aaf5e1b506ff561e72739f1c3041d6fbf4afe8b.webp"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442712/kalajay/products/lfqo8pdu1mtokvl18vej.webp"
     ],
-    "coverImage": "https://www.kalajay.in/media/products/b57e3efd6e2f7c2f0bcac6be9aaf5e1b506ff561e72739f1c3041d6fbf4afe8b.webp",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442712/kalajay/products/lfqo8pdu1mtokvl18vej.webp",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1832,11 +1832,11 @@ export const PRODUCTS: Product[] = [
     "price": 1449,
     "originalPrice": 1811,
     "images": [
-      "https://www.kalajay.in/media/products/07d7dce169019ce6e08e80a9d10984dc7edcc0b529f69738b5c51fb2b43e0e5a.webp",
-      "https://www.kalajay.in/media/products/f5676a19cc07260c89a670f51fd169b552be69099e606a67a71f59c33f63d803.webp",
-      "https://www.kalajay.in/media/products/8f02ff4080c089d140aa0dbcb18f2f47eca367e3fa83af361826d4b0d25d44a2.webp"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442712/kalajay/products/z2uyxgb13ucabgtpr1fi.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442713/kalajay/products/ggwsszczowjz9g16el38.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442713/kalajay/products/acau4uwyxiu2ozskt1da.webp"
     ],
-    "coverImage": "https://www.kalajay.in/media/products/07d7dce169019ce6e08e80a9d10984dc7edcc0b529f69738b5c51fb2b43e0e5a.webp",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442712/kalajay/products/z2uyxgb13ucabgtpr1fi.webp",
     "inStock": true,
     "isBestSeller": true,
     "isFeatured": false,
@@ -1847,21 +1847,21 @@ export const PRODUCTS: Product[] = [
         "label": "Crystal Shiny Transparent",
         "price": 1199,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/07d7dce169019ce6e08e80a9d10984dc7edcc0b529f69738b5c51fb2b43e0e5a.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442712/kalajay/products/z2uyxgb13ucabgtpr1fi.webp"
       },
       {
         "code": "KJ-PRS-222-2",
         "label": "Blue & White",
         "price": 1249,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/f5676a19cc07260c89a670f51fd169b552be69099e606a67a71f59c33f63d803.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442713/kalajay/products/ggwsszczowjz9g16el38.webp"
       },
       {
         "code": "KJ-PRS-222-3",
         "label": "Iridescent Black",
         "price": 1249,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/8f02ff4080c089d140aa0dbcb18f2f47eca367e3fa83af361826d4b0d25d44a2.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442713/kalajay/products/acau4uwyxiu2ozskt1da.webp"
       }
     ],
     "materials": [
@@ -1885,11 +1885,11 @@ export const PRODUCTS: Product[] = [
     "price": 949,
     "originalPrice": 1186,
     "images": [
-      "https://www.kalajay.in/media/products/2a1e696f7a135c198e4f07570b37b2202ea31b1468be8245bbb51ec7b7d08e65.webp",
-      "https://www.kalajay.in/media/products/d7c3b6f4f28058c25b9ec7d872916ee02a797351b1d862c9b39ff88d7335d105.webp",
-      "https://www.kalajay.in/media/products/9021e2609bc626d28db4ce0c463bc1e2a306b1727641267f9dc6b3b5c544b57f.webp"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442713/kalajay/products/vskzgwmsrgxvfbwhtnrs.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442714/kalajay/products/xrvrvebyyzyfm5ccclh6.webp",
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442714/kalajay/products/s47kruyp0iaqh6fhtlkh.webp"
     ],
-    "coverImage": "https://www.kalajay.in/media/products/2a1e696f7a135c198e4f07570b37b2202ea31b1468be8245bbb51ec7b7d08e65.webp",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442713/kalajay/products/vskzgwmsrgxvfbwhtnrs.webp",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1900,21 +1900,21 @@ export const PRODUCTS: Product[] = [
         "label": "Orange and Green Floral",
         "price": 949,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/2a1e696f7a135c198e4f07570b37b2202ea31b1468be8245bbb51ec7b7d08e65.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442713/kalajay/products/vskzgwmsrgxvfbwhtnrs.webp"
       },
       {
         "code": "KJ-PRS-217-2",
         "label": "Green and Orange Floral",
         "price": 949,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/d7c3b6f4f28058c25b9ec7d872916ee02a797351b1d862c9b39ff88d7335d105.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442714/kalajay/products/xrvrvebyyzyfm5ccclh6.webp"
       },
       {
         "code": "KJ-PRS-217-3",
         "label": "Pastel green",
         "price": 949,
         "inStock": true,
-        "image": "https://www.kalajay.in/media/products/9021e2609bc626d28db4ce0c463bc1e2a306b1727641267f9dc6b3b5c544b57f.webp"
+        "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442714/kalajay/products/s47kruyp0iaqh6fhtlkh.webp"
       }
     ],
     "materials": [
@@ -1938,9 +1938,9 @@ export const PRODUCTS: Product[] = [
     "price": 2799,
     "originalPrice": 3499,
     "images": [
-      "https://www.kalajay.in/v2/p6-3.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442714/kalajay/catalogue/oh1h1mvgnmb0qczpnlbj.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p6-3.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442714/kalajay/catalogue/oh1h1mvgnmb0qczpnlbj.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1967,9 +1967,9 @@ export const PRODUCTS: Product[] = [
     "price": 1249,
     "originalPrice": 1561,
     "images": [
-      "https://www.kalajay.in/media/products/f0c5032d0b82d3644610122d138a5c9619c7892cbc870232a52482d78e0c0722.webp"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442715/kalajay/products/cfp7z1owdsssludzueur.webp"
     ],
-    "coverImage": "https://www.kalajay.in/media/products/f0c5032d0b82d3644610122d138a5c9619c7892cbc870232a52482d78e0c0722.webp",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442715/kalajay/products/cfp7z1owdsssludzueur.webp",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -1996,9 +1996,9 @@ export const PRODUCTS: Product[] = [
     "price": 1349,
     "originalPrice": 1686,
     "images": [
-      "https://www.kalajay.in/media/products/dae8ab3a1f602e5d9903cc2219b46912e6085619bfd22a923443604120728fa9.webp"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442715/kalajay/products/igiyjsnxrw8vabnygegq.webp"
     ],
-    "coverImage": "https://www.kalajay.in/media/products/dae8ab3a1f602e5d9903cc2219b46912e6085619bfd22a923443604120728fa9.webp",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442715/kalajay/products/igiyjsnxrw8vabnygegq.webp",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -2025,9 +2025,9 @@ export const PRODUCTS: Product[] = [
     "price": 1799,
     "originalPrice": 2249,
     "images": [
-      "https://www.kalajay.in/v2/p9-3.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442715/kalajay/catalogue/sr8ntxrea57xczzywuji.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p9-3.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442715/kalajay/catalogue/sr8ntxrea57xczzywuji.jpg",
     "inStock": true,
     "isBestSeller": true,
     "isFeatured": false,
@@ -2054,9 +2054,9 @@ export const PRODUCTS: Product[] = [
     "price": 1399,
     "originalPrice": 1749,
     "images": [
-      "https://www.kalajay.in/media/products/027823f3c22440caddc7ea75b5b47e1dde5e3c9c5b1db0f1d1d9a1e7e910eb2e.webp"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442716/kalajay/products/rrar0exhlrhpp4dilav6.webp"
     ],
-    "coverImage": "https://www.kalajay.in/media/products/027823f3c22440caddc7ea75b5b47e1dde5e3c9c5b1db0f1d1d9a1e7e910eb2e.webp",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442716/kalajay/products/rrar0exhlrhpp4dilav6.webp",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -2083,9 +2083,9 @@ export const PRODUCTS: Product[] = [
     "price": 1499,
     "originalPrice": 1874,
     "images": [
-      "https://www.kalajay.in/v2/p6-2.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442716/kalajay/catalogue/yyf9ze2uluz32ujxl4mo.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p6-2.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442716/kalajay/catalogue/yyf9ze2uluz32ujxl4mo.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -2112,9 +2112,9 @@ export const PRODUCTS: Product[] = [
     "price": 2099,
     "originalPrice": 2624,
     "images": [
-      "https://www.kalajay.in/v2/p8-5.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442717/kalajay/catalogue/u6cudwzc2zpvph3ifvqy.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p8-5.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442717/kalajay/catalogue/u6cudwzc2zpvph3ifvqy.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -2141,9 +2141,9 @@ export const PRODUCTS: Product[] = [
     "price": 649,
     "originalPrice": 811,
     "images": [
-      "https://www.kalajay.in/v2/p8-2.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442718/kalajay/catalogue/uewm2oye054abrs5ffvq.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p8-2.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442718/kalajay/catalogue/uewm2oye054abrs5ffvq.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -2170,9 +2170,9 @@ export const PRODUCTS: Product[] = [
     "price": 2299,
     "originalPrice": 2874,
     "images": [
-      "https://www.kalajay.in/v2/p9-2.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442717/kalajay/catalogue/ets2opnqxaw2w4ru2o65.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p9-2.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442717/kalajay/catalogue/ets2opnqxaw2w4ru2o65.jpg",
     "inStock": true,
     "isBestSeller": true,
     "isFeatured": false,
@@ -2199,9 +2199,9 @@ export const PRODUCTS: Product[] = [
     "price": 2599,
     "originalPrice": 3249,
     "images": [
-      "https://www.kalajay.in/v2/p7-3.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442717/kalajay/catalogue/tabtjxlh4bokknnrws9u.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p7-3.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442717/kalajay/catalogue/tabtjxlh4bokknnrws9u.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -2228,9 +2228,9 @@ export const PRODUCTS: Product[] = [
     "price": 1649,
     "originalPrice": 2061,
     "images": [
-      "https://www.kalajay.in/v2/p6-5.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442718/kalajay/catalogue/igdnqgjebnlnorpzvhwm.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p6-5.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442718/kalajay/catalogue/igdnqgjebnlnorpzvhwm.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -2257,9 +2257,9 @@ export const PRODUCTS: Product[] = [
     "price": 1349,
     "originalPrice": 1686,
     "images": [
-      "https://www.kalajay.in/v2/p8-3.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442718/kalajay/catalogue/b2eub8hun20qbybdcran.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p8-3.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442718/kalajay/catalogue/b2eub8hun20qbybdcran.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -2286,9 +2286,9 @@ export const PRODUCTS: Product[] = [
     "price": 2299,
     "originalPrice": 2874,
     "images": [
-      "https://www.kalajay.in/v2/p7-2.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442719/kalajay/catalogue/pawxok02k4hbaajfqsrn.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p7-2.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442719/kalajay/catalogue/pawxok02k4hbaajfqsrn.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -2315,9 +2315,9 @@ export const PRODUCTS: Product[] = [
     "price": 649,
     "originalPrice": 811,
     "images": [
-      "https://www.kalajay.in/v2/p7-5.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442719/kalajay/catalogue/x5qnr4ljub59mjht95s3.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p7-5.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442719/kalajay/catalogue/x5qnr4ljub59mjht95s3.jpg",
     "inStock": true,
     "isBestSeller": true,
     "isFeatured": false,
@@ -2344,9 +2344,9 @@ export const PRODUCTS: Product[] = [
     "price": 1249,
     "originalPrice": 1561,
     "images": [
-      "https://www.kalajay.in/v2/p6-4.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442719/kalajay/catalogue/u1vxbtxtxzszom32irmy.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p6-4.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442719/kalajay/catalogue/u1vxbtxtxzszom32irmy.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -2373,9 +2373,9 @@ export const PRODUCTS: Product[] = [
     "price": 1099,
     "originalPrice": 1374,
     "images": [
-      "https://www.kalajay.in/media/products/afc6784546d51f2ce43375e908073d3049c859d263153eac198acd0a25efb451.webp"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442720/kalajay/products/pmuaqm4ykh30mzlgawtn.webp"
     ],
-    "coverImage": "https://www.kalajay.in/media/products/afc6784546d51f2ce43375e908073d3049c859d263153eac198acd0a25efb451.webp",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442720/kalajay/products/pmuaqm4ykh30mzlgawtn.webp",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -2402,9 +2402,9 @@ export const PRODUCTS: Product[] = [
     "price": 1999,
     "originalPrice": 2499,
     "images": [
-      "https://www.kalajay.in/v2/p8-4.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442720/kalajay/catalogue/gvqgsht1leayj1iiki5h.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p8-4.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442720/kalajay/catalogue/gvqgsht1leayj1iiki5h.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -2431,9 +2431,9 @@ export const PRODUCTS: Product[] = [
     "price": 2399,
     "originalPrice": 2999,
     "images": [
-      "https://www.kalajay.in/v2/p7-4.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442721/kalajay/catalogue/bixagjlzfdxso3ey2tds.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p7-4.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442721/kalajay/catalogue/bixagjlzfdxso3ey2tds.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -2460,9 +2460,9 @@ export const PRODUCTS: Product[] = [
     "price": 899,
     "originalPrice": 1124,
     "images": [
-      "https://www.kalajay.in/v2/p10-4.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442721/kalajay/catalogue/k15ukcgezi7t2s9ixrtf.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p10-4.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442721/kalajay/catalogue/k15ukcgezi7t2s9ixrtf.jpg",
     "inStock": true,
     "isBestSeller": true,
     "isFeatured": false,
@@ -2489,9 +2489,9 @@ export const PRODUCTS: Product[] = [
     "price": 649,
     "originalPrice": 811,
     "images": [
-      "https://www.kalajay.in/v2/p11-2.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442721/kalajay/catalogue/c4g7u7bikkvprvzodscn.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p11-2.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442721/kalajay/catalogue/c4g7u7bikkvprvzodscn.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -2518,9 +2518,9 @@ export const PRODUCTS: Product[] = [
     "price": 949,
     "originalPrice": 1186,
     "images": [
-      "https://www.kalajay.in/v2/p10-5.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442722/kalajay/catalogue/ueuy6zmsagytveivkli8.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p10-5.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442722/kalajay/catalogue/ueuy6zmsagytveivkli8.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,
@@ -2547,9 +2547,9 @@ export const PRODUCTS: Product[] = [
     "price": 899,
     "originalPrice": 1124,
     "images": [
-      "https://www.kalajay.in/v2/p10-3.jpg"
+      "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442722/kalajay/catalogue/pb1ws9kzarikylbsxgm9.jpg"
     ],
-    "coverImage": "https://www.kalajay.in/v2/p10-3.jpg",
+    "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442722/kalajay/catalogue/pb1ws9kzarikylbsxgm9.jpg",
     "inStock": true,
     "isBestSeller": false,
     "isFeatured": false,

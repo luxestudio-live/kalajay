@@ -21,8 +21,8 @@ const KNOWN_ORDERS: Record<string, any> = {
     fulfillmentStatus: 'shipped',
     paymentStatus: 'paid',
     items: [
-      { name: 'Pearl Vanity Box Heirloom', sku: 'KJ-PVB-101', price: 1449, quantity: 1, image: 'https://www.kalajay.in/v2/p3-2.jpg' },
-      { name: 'Pearl Drop AirPods Case', sku: 'KJ-APC-401', price: 399, quantity: 1, image: 'https://www.kalajay.in/v2/p12-3.jpg' }
+      { name: 'Pearl Vanity Box Heirloom', sku: 'KJ-PVB-101', price: 1449, quantity: 1, image: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/catalogue/cagx2jryioijvapagk6a.jpg' },
+      { name: 'Pearl Drop AirPods Case', sku: 'KJ-APC-401', price: 399, quantity: 1, image: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442684/kalajay/catalogue/olbboadvjaqiz0cjlb6s.jpg' }
     ],
     subtotal: 1848,
     discount: 0,
@@ -49,7 +49,7 @@ const KNOWN_ORDERS: Record<string, any> = {
     fulfillmentStatus: 'quality_checked',
     paymentStatus: 'paid',
     items: [
-      { name: 'Pearl Beaded Vintage Bag', sku: 'KJ-PRS-207', price: 2399, quantity: 1, image: 'https://www.kalajay.in/v2/p6-2.jpg' }
+      { name: 'Pearl Beaded Vintage Bag', sku: 'KJ-PRS-207', price: 2399, quantity: 1, image: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442716/kalajay/catalogue/yyf9ze2uluz32ujxl4mo.jpg' }
     ],
     subtotal: 2399,
     discount: 0,
@@ -75,7 +75,7 @@ const KNOWN_ORDERS: Record<string, any> = {
     fulfillmentStatus: 'in_loom',
     paymentStatus: 'pending',
     items: [
-      { name: 'Crystal Beaded Tealight Lantern Set', sku: 'KJ-TEA-501', price: 999, quantity: 1, image: 'https://www.kalajay.in/v2/p16-3.jpg' }
+      { name: 'Crystal Beaded Tealight Lantern Set', sku: 'KJ-TEA-501', price: 999, quantity: 1, image: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442723/kalajay/catalogue/n5q4ecn6crnluhkcsnnl.jpg' }
     ],
     subtotal: 999,
     discount: 0,
@@ -454,7 +454,7 @@ export async function GET(request: Request) {
           sku: it.sku || it.productId || 'KJ-ATELIER',
           price: Number(it.price) || 0,
           quantity: Number(it.quantity) || 1,
-          image: it.image || 'https://www.kalajay.in/v2/p3-2.jpg',
+          image: it.image || 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/catalogue/cagx2jryioijvapagk6a.jpg',
           variantLabel: it.variantLabel || it.colorway,
           variantId: it.variantId,
           attributes: it.attributes,

@@ -200,7 +200,7 @@ const INITIAL_MEDIA: MediaAsset[] = [
   {
     id: 'med-1',
     name: 'Signature Pearl Vanity Box (Hero)',
-    url: 'https://www.kalajay.in/media/products/c6ba77320bf18d7c8d58f35eb9cecc5b8f79055d2b92fae00d22cfdbc40d3f85.webp',
+    url: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442690/kalajay/products/ugs4bturpfbqsmvf11wx.webp',
     dimensions: '1200 x 1200 px',
     size: '142 KB',
     category: 'Product',
@@ -208,7 +208,7 @@ const INITIAL_MEDIA: MediaAsset[] = [
   {
     id: 'med-2',
     name: 'Vintage Pearl Evening Bag (Atelier)',
-    url: 'https://www.kalajay.in/v2/p3-2.jpg',
+    url: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/catalogue/cagx2jryioijvapagk6a.jpg',
     dimensions: '1080 x 1350 px',
     size: '210 KB',
     category: 'Lifestyle',
@@ -216,7 +216,7 @@ const INITIAL_MEDIA: MediaAsset[] = [
   {
     id: 'med-3',
     name: 'Crystal Beaded Tealight Lantern',
-    url: 'https://www.kalajay.in/media/products/82de6afd08ff448280211f0bfcc8dde73ecbfa427b97749596ad38de44c9d763.webp',
+    url: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442708/kalajay/products/ibghteyg6idikpaaptpd.webp',
     dimensions: '1200 x 1200 px',
     size: '188 KB',
     category: 'Product',
@@ -224,7 +224,7 @@ const INITIAL_MEDIA: MediaAsset[] = [
   {
     id: 'med-4',
     name: 'Luminous Pearl Envelope Clutch',
-    url: 'https://www.kalajay.in/media/products/b57e3efd6e2f7c2f0bcac6be9aaf5e1b506ff561e72739f1c3041d6fbf4afe8b.webp',
+    url: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442712/kalajay/products/lfqo8pdu1mtokvl18vej.webp',
     dimensions: '1200 x 1200 px',
     size: '165 KB',
     category: 'Product',
@@ -232,7 +232,7 @@ const INITIAL_MEDIA: MediaAsset[] = [
   {
     id: 'med-5',
     name: 'Pastel Blossoms Crossbody Sling',
-    url: 'https://www.kalajay.in/v2/p2-2.jpg',
+    url: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442683/kalajay/catalogue/k4oophmjhjh0rqu6hrdr.jpg',
     dimensions: '1080 x 1080 px',
     size: '195 KB',
     category: 'Campaign',
@@ -240,7 +240,7 @@ const INITIAL_MEDIA: MediaAsset[] = [
   {
     id: 'med-6',
     name: 'Bihar Atelier Wooden Loom Weaving',
-    url: 'https://www.kalajay.in/v2/banner-1.jpg',
+    url: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442683/kalajay/catalogue/k4oophmjhjh0rqu6hrdr.jpg',
     dimensions: '1920 x 800 px',
     size: '340 KB',
     category: 'Atelier',
@@ -560,7 +560,7 @@ export default function CmsView() {
     const newAsset: MediaAsset = {
       id: `med-${Date.now()}`,
       name: newMediaName.trim(),
-      url: newMediaUrl.trim() || 'https://www.kalajay.in/v2/banner-1.jpg',
+      url: newMediaUrl.trim() || 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442683/kalajay/catalogue/k4oophmjhjh0rqu6hrdr.jpg',
       dimensions: newMediaDimensions,
       size: '180 KB',
       category: newMediaCategory,
@@ -1773,7 +1773,7 @@ export default function CmsView() {
                   required
                   value={newMediaUrl}
                   onChange={e => setNewMediaUrl(e.target.value)}
-                  placeholder="https://www.kalajay.in/media/photo.webp"
+                  placeholder="https://res.cloudinary.com/da6uncyb/image/upload/..."
                   className="w-full bg-[#FAF8F5] border border-[#DED3C5] rounded-lg p-2.5 font-mono text-xs text-[#372921]"
                 />
               </div>

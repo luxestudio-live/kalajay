@@ -13,7 +13,7 @@ export default function FirstBeadScrollStory() {
       phase: 'The Raw Elements',
       subtitle: 'Materials & Mineral Luster',
       copy: 'Every Kalajay wonder begins with elemental raw components: faceted glass seed beads, lustrous synthetic pearls, polished crystal bicones, and high-tensile stainless steel monofilament thread. No synthetic glue, no machine molding.',
-      image: 'https://www.kalajay.in/media/products/c6ba77320bf18d7c8d58f35eb9cecc5b8f79055d2b92fae00d22cfdbc40d3f85.webp',
+      image: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442690/kalajay/products/ugs4bturpfbqsmvf11wx.webp',
       metrics: ['Zero Plastic Moulding', 'Tensile Steel Core', 'Faceted Crystal Luster']
     },
     {
@@ -21,7 +21,7 @@ export default function FirstBeadScrollStory() {
       phase: 'The Maker’s Tension',
       subtitle: 'Human Craft & Hand-Strung Presence',
       copy: 'In our Bihar Craft House, 21 women artisans sit together with trays of sorted beads. Each bead is manually picked and hand-threaded with exact micro-tension. Too tight, and the piece buckles; too loose, and the box loses its architectural stance.',
-      image: 'https://www.kalajay.in/v2/p3-2.jpg',
+      image: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/catalogue/cagx2jryioijvapagk6a.jpg',
       metrics: ['14+ Hours Per Piece', '21 Women Artisans', 'Exact Finger Calibration']
     },
     {
@@ -29,7 +29,7 @@ export default function FirstBeadScrollStory() {
       phase: 'The Micro Architecture',
       subtitle: 'Geometric Interlocking & Structural Detail',
       copy: 'Individual rows form rigid geometric planes—diamonds, honeycombs, and interlocking cubic lattices. Internal vanity mirrors are framed by hand, and protective velvet pads are hand-trimmed to cradle cherished rings and heirlooms.',
-      image: 'https://www.kalajay.in/media/products/82de6afd08ff448280211f0bfcc8dde73ecbfa427b97749596ad38de44c9d763.webp',
+      image: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442708/kalajay/products/ibghteyg6idikpaaptpd.webp',
       metrics: ['Interlocking Lattices', 'Velvet Protective Lining', 'Concealed Wire Knots']
     },
     {
@@ -37,7 +37,7 @@ export default function FirstBeadScrollStory() {
       phase: 'The Finished Wonder',
       subtitle: 'A Heirloom for Your Daily Sanctuary',
       copy: 'Inspected and wrapped at our Mumbai studio with hand-stamped wax seals and canvas dust bags. The object is complete: radiant under morning light, tactile to the touch, and made to last for years of affectionate daily use.',
-      image: 'https://www.kalajay.in/media/products/b57e3efd6e2f7c2f0bcac6be9aaf5e1b506ff561e72739f1c3041d6fbf4afe8b.webp',
+      image: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442712/kalajay/products/lfqo8pdu1mtokvl18vej.webp',
       metrics: ['Pan-India Dispatch', 'Wax Seal Packaging', 'A Lifetime of Light']
     }
   ];

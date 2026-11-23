@@ -96,7 +96,7 @@ export async function POST(request: Request) {
           sku: it.sku,
           price: it.price,
           quantity: it.quantity,
-          image: 'https://www.kalajay.in/v2/p3-2.jpg',
+          image: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/catalogue/cagx2jryioijvapagk6a.jpg',
         })),
         subtotal: newOfflineOrder.subtotal,
         discount: newOfflineOrder.discount || 0,

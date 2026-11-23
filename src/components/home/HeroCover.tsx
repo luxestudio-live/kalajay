@@ -329,7 +329,7 @@ export default function HeroCover() {
             >
               <Link href="/shop" className="absolute inset-0 z-20" aria-label="Inspect Pearl Beaded Mini Tote" />
               <img
-                src="https://www.kalajay.in/media/products/2a1e696f7a135c198e4f07570b37b2202ea31b1468be8245bbb51ec7b7d08e65.webp"
+                src="https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442713/kalajay/products/vskzgwmsrgxvfbwhtnrs.webp"
                 alt="Handcrafted Pearl Beaded Mini Tote Bag"
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
@@ -360,7 +360,7 @@ export default function HeroCover() {
               className="relative w-[168px] sm:w-[205px] lg:w-[230px] aspect-[4/5] rounded-[20px] sm:rounded-[22px] overflow-hidden bg-canvas border-2 border-[#9E5430] shadow-[0_18px_45px_rgba(55,41,33,0.14)] will-change-transform flex flex-col justify-between group z-20 select-none"
             >
               <img
-                src="https://www.kalajay.in/v2/p3-2.jpg"
+                src="https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/catalogue/cagx2jryioijvapagk6a.jpg"
                 alt="Pearl Beaded Vanity Box with interior mirror"
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
@@ -406,7 +406,7 @@ export default function HeroCover() {
             >
               <Link href="/shop" className="absolute inset-0 z-20" aria-label="Inspect Rose Pink Crystal Butterfly Evening Clutch" />
               <img
-                src="https://www.kalajay.in/media/products/07d7dce169019ce6e08e80a9d10984dc7edcc0b529f69738b5c51fb2b43e0e5a.webp"
+                src="https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442712/kalajay/products/z2uyxgb13ucabgtpr1fi.webp"
                 alt="Rose Pink Crystal Butterfly Evening Clutch"
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />

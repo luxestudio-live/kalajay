@@ -133,7 +133,7 @@ export default function StoryPage() {
 
             <div className="aspect-[16/9] rounded-[28px] overflow-hidden border border-border-subtle shadow-lg bg-canvas-subtle mt-8">
               <img
-                src="https://www.kalajay.in/v2/p3-2.jpg"
+                src="https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/catalogue/cagx2jryioijvapagk6a.jpg"
                 alt="Handcrafted Pearl Vanity Box by Kalajay"
                 className="w-full h-full object-cover"
               />
@@ -164,7 +164,7 @@ export default function StoryPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full overflow-hidden border border-gold/40">
                     <img 
-                      src="https://www.kalajay.in/media/products/2a1e696f7a135c198e4f07570b37b2202ea31b1468be8245bbb51ec7b7d08e65.webp" 
+                      src="https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442713/kalajay/products/vskzgwmsrgxvfbwhtnrs.webp" 
                       alt="Artisan hands weaving beaded tote" 
                       className="w-full h-full object-cover"
                     />
@@ -189,7 +189,7 @@ export default function StoryPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full overflow-hidden border border-gold/40">
                     <img 
-                      src="https://www.kalajay.in/v2/p4-2.jpg" 
+                      src="https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442706/kalajay/catalogue/pay4pp87qwofbmwog7q5.jpg" 
                       alt="Artisan finishing velvet lining" 
                       className="w-full h-full object-cover"
                     />

@@ -1,0 +1,834 @@
+{
+  "products": [
+    {
+      "id": "KJ-APC-402",
+      "code": "KJ-APC-402",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442684/kalajay/catalogue/olbboadvjaqiz0cjlb6s.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442684/kalajay/catalogue/olbboadvjaqiz0cjlb6s.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-APC-404",
+      "code": "KJ-APC-404",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442683/kalajay/catalogue/ng8e1t0xmb4z3jlvhlnq.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442683/kalajay/catalogue/ng8e1t0xmb4z3jlvhlnq.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-APC-405",
+      "code": "KJ-APC-405",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442683/kalajay/catalogue/k4oophmjhjh0rqu6hrdr.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442683/kalajay/catalogue/k4oophmjhjh0rqu6hrdr.jpg",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442683/kalajay/catalogue/ng8e1t0xmb4z3jlvhlnq.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-APC-403",
+      "code": "KJ-APC-403",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442684/kalajay/catalogue/rvmxm8pr1cjslsz7gja5.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442684/kalajay/catalogue/rvmxm8pr1cjslsz7gja5.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-APC-401",
+      "code": "KJ-APC-401",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442684/kalajay/catalogue/ulojgtkola3pv8icll0n.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442684/kalajay/catalogue/ulojgtkola3pv8icll0n.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-CDL-602",
+      "code": "KJ-CDL-602",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442686/kalajay/products/n3uyvult1li1rf7funfp.webp",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442686/kalajay/products/n3uyvult1li1rf7funfp.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442685/kalajay/products/j7iapsunvayw8dmh1jij.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442686/kalajay/products/v9fx7maa4u3pyzutglqo.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442686/kalajay/products/p8bli1fnkwx54cfgorjy.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442687/kalajay/products/qlcuhmglvxs0cr30j5kr.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442688/kalajay/products/smsjtvkkojgwfjsc4hxr.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442688/kalajay/products/c0sp1v29lzruzr8hvnhk.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442688/kalajay/products/hnjeqw48svcz0olgqegg.webp"
+      ],
+      "variants": [
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442685/kalajay/products/j7iapsunvayw8dmh1jij.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442686/kalajay/products/v9fx7maa4u3pyzutglqo.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442686/kalajay/products/p8bli1fnkwx54cfgorjy.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442686/kalajay/products/n3uyvult1li1rf7funfp.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442687/kalajay/products/qlcuhmglvxs0cr30j5kr.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442688/kalajay/products/smsjtvkkojgwfjsc4hxr.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442688/kalajay/products/c0sp1v29lzruzr8hvnhk.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442688/kalajay/products/hnjeqw48svcz0olgqegg.webp"
+        }
+      ]
+    },
+    {
+      "id": "KJ-CDL-601",
+      "code": "KJ-CDL-601",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442688/kalajay/products/fp1wwuqi3ogmgwrynxls.webp",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442688/kalajay/products/fp1wwuqi3ogmgwrynxls.webp"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-MAT-510",
+      "code": "KJ-MAT-510",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442689/kalajay/catalogue/x58rsbntrjjnufdlolvl.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442689/kalajay/catalogue/x58rsbntrjjnufdlolvl.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-MAT-513",
+      "code": "KJ-MAT-513",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442690/kalajay/catalogue/mdzvawgwdwne1bxd7xf0.png",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442690/kalajay/catalogue/mdzvawgwdwne1bxd7xf0.png"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-MAT-504",
+      "code": "KJ-MAT-504",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442689/kalajay/catalogue/kdlom04mz5imgnnhjaht.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442689/kalajay/catalogue/kdlom04mz5imgnnhjaht.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-MAT-507",
+      "code": "KJ-MAT-507",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442690/kalajay/products/ugs4bturpfbqsmvf11wx.webp",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442690/kalajay/products/ugs4bturpfbqsmvf11wx.webp"
+      ],
+      "variants": [
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442690/kalajay/products/ugs4bturpfbqsmvf11wx.webp"
+        }
+      ]
+    },
+    {
+      "id": "KJ-MAT-509",
+      "code": "KJ-MAT-509",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442690/kalajay/catalogue/ip23x9qdruaukunmocup.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442690/kalajay/catalogue/ip23x9qdruaukunmocup.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-MAT-508",
+      "code": "KJ-MAT-508",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442691/kalajay/catalogue/lhy85nxlwvgdpedsniao.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442691/kalajay/catalogue/lhy85nxlwvgdpedsniao.jpg",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442691/kalajay/products/tlex3aw9gqdjdfeot1rs.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442691/kalajay/products/cvgh6ag1vetphn7q56bi.webp"
+      ],
+      "variants": [
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442691/kalajay/products/tlex3aw9gqdjdfeot1rs.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442691/kalajay/products/cvgh6ag1vetphn7q56bi.webp"
+        }
+      ]
+    },
+    {
+      "id": "KJ-MAT-506",
+      "code": "KJ-MAT-506",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442692/kalajay/catalogue/fvx0tuklrsgdyi6hfsc1.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442692/kalajay/catalogue/fvx0tuklrsgdyi6hfsc1.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-MAT-512",
+      "code": "KJ-MAT-512",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442693/kalajay/catalogue/zgugp5eo7wltikp1g7ya.png",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442693/kalajay/catalogue/zgugp5eo7wltikp1g7ya.png"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-MAT-503",
+      "code": "KJ-MAT-503",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442692/kalajay/catalogue/hsrabsqwyvzlxjkxp7lx.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442692/kalajay/catalogue/hsrabsqwyvzlxjkxp7lx.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-MAT-514",
+      "code": "KJ-MAT-514",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442693/kalajay/products/lrngi6w3prvapnjkcrxu.webp",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442693/kalajay/products/lrngi6w3prvapnjkcrxu.webp"
+      ],
+      "variants": [
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442693/kalajay/products/lrngi6w3prvapnjkcrxu.webp"
+        }
+      ]
+    },
+    {
+      "id": "KJ-CRO-803",
+      "code": "KJ-CRO-803",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442693/kalajay/catalogue/o2zq3so1izokx1eicj3w.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442693/kalajay/catalogue/o2zq3so1izokx1eicj3w.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-CRO-801",
+      "code": "KJ-CRO-801",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442694/kalajay/catalogue/nlidl74xyqqlbikp5bsu.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442694/kalajay/catalogue/nlidl74xyqqlbikp5bsu.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-CRO-805",
+      "code": "KJ-CRO-805",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442694/kalajay/catalogue/ngshevs7ipxogmvyxdem.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442694/kalajay/catalogue/ngshevs7ipxogmvyxdem.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-CRO-804",
+      "code": "KJ-CRO-804",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442694/kalajay/catalogue/j3wtvqqgpqnrq60uixi8.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442694/kalajay/catalogue/j3wtvqqgpqnrq60uixi8.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-KEY-701",
+      "code": "KJ-KEY-701",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442695/kalajay/catalogue/iwkgob2ornfoxs3h71cx.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442695/kalajay/catalogue/iwkgob2ornfoxs3h71cx.jpg",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442695/kalajay/products/ejkc1pwbgsbif3nzv9fn.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442695/kalajay/products/i03nlmsc35kmiccobhrs.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442696/kalajay/products/f115njld07hughhoxj6y.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442696/kalajay/products/drqt1iydqzadulimz3y3.webp"
+      ],
+      "variants": [
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442695/kalajay/products/ejkc1pwbgsbif3nzv9fn.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442695/kalajay/products/i03nlmsc35kmiccobhrs.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442696/kalajay/products/f115njld07hughhoxj6y.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442696/kalajay/products/drqt1iydqzadulimz3y3.webp"
+        }
+      ]
+    },
+    {
+      "id": "KJ-KEY-707",
+      "code": "KJ-KEY-707",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442697/kalajay/catalogue/flixddc0ywvstfqwztwa.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442697/kalajay/catalogue/flixddc0ywvstfqwztwa.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-KEY-706",
+      "code": "KJ-KEY-706",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442696/kalajay/catalogue/zndcpbr9evbkmptcatow.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442696/kalajay/catalogue/zndcpbr9evbkmptcatow.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-KEY-702",
+      "code": "KJ-KEY-702",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442697/kalajay/catalogue/wht9w9uj3rl5qnoe7zai.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442697/kalajay/catalogue/wht9w9uj3rl5qnoe7zai.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-KEY-704",
+      "code": "KJ-KEY-704",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442697/kalajay/catalogue/a8a1hfhse09dtoejx8xz.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442697/kalajay/catalogue/a8a1hfhse09dtoejx8xz.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-KEY-703",
+      "code": "KJ-KEY-703",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442698/kalajay/catalogue/lrdplpps5zho0nog8t68.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442698/kalajay/catalogue/lrdplpps5zho0nog8t68.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-SPL-901",
+      "code": "KJ-SPL-901",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442698/kalajay/catalogue/q5nc8b7tditqhsn3vpvm.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442698/kalajay/catalogue/q5nc8b7tditqhsn3vpvm.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-SPL-903",
+      "code": "KJ-SPL-903",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442698/kalajay/catalogue/c1xpwikmwxl0jomqqcne.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442698/kalajay/catalogue/c1xpwikmwxl0jomqqcne.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-SPL-902",
+      "code": "KJ-SPL-902",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442698/kalajay/catalogue/imjvuqgkfkqtkkyws25s.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442698/kalajay/catalogue/imjvuqgkfkqtkkyws25s.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-ORG-106",
+      "code": "KJ-ORG-106",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442699/kalajay/catalogue/p0f3jsavegiz1i1vokwq.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442699/kalajay/catalogue/p0f3jsavegiz1i1vokwq.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-ORG-107",
+      "code": "KJ-ORG-107",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442699/kalajay/catalogue/abklphqi89ad2htsg8u6.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442699/kalajay/catalogue/abklphqi89ad2htsg8u6.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-ORG-111",
+      "code": "KJ-ORG-111",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442701/kalajay/catalogue/zp2ep1ckllc5nnn0iaro.png",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442701/kalajay/catalogue/zp2ep1ckllc5nnn0iaro.png",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442699/kalajay/products/iotvjewusdp5stjfqjrx.webp"
+      ],
+      "variants": [
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442699/kalajay/products/iotvjewusdp5stjfqjrx.webp"
+        }
+      ]
+    },
+    {
+      "id": "KJ-ORG-110",
+      "code": "KJ-ORG-110",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442700/kalajay/catalogue/ow1inwvsvx1cyczexxoo.png",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442700/kalajay/catalogue/ow1inwvsvx1cyczexxoo.png",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442700/kalajay/products/bdtwhqpgkosfzocy3izc.webp"
+      ],
+      "variants": [
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442700/kalajay/products/bdtwhqpgkosfzocy3izc.webp"
+        }
+      ]
+    },
+    {
+      "id": "KJ-ORG-109",
+      "code": "KJ-ORG-109",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442702/kalajay/catalogue/hfejpavwxc6phew0ybta.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442702/kalajay/catalogue/hfejpavwxc6phew0ybta.jpg",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442701/kalajay/products/t2to1siprkvshjff8zvy.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442701/kalajay/products/f9pdmykhesicetkxmqyh.webp"
+      ],
+      "variants": [
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442701/kalajay/products/t2to1siprkvshjff8zvy.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442701/kalajay/products/f9pdmykhesicetkxmqyh.webp"
+        }
+      ]
+    },
+    {
+      "id": "KJ-ORG-112",
+      "code": "KJ-ORG-112",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442704/kalajay/catalogue/as87aboowvodgpxn8xdc.png",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442704/kalajay/catalogue/as87aboowvodgpxn8xdc.png",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442703/kalajay/products/xfiqok1ghdwncd4abhh8.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442702/kalajay/products/wefahldhgfxtkzqfpnye.webp"
+      ],
+      "variants": [
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442703/kalajay/products/xfiqok1ghdwncd4abhh8.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442702/kalajay/products/wefahldhgfxtkzqfpnye.webp"
+        }
+      ]
+    },
+    {
+      "id": "KJ-ORG-108",
+      "code": "KJ-ORG-108",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442704/kalajay/catalogue/hjeycopa7fnlf1nhqq39.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442704/kalajay/catalogue/hjeycopa7fnlf1nhqq39.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-ORG-101",
+      "code": "KJ-ORG-101",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/catalogue/cagx2jryioijvapagk6a.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/catalogue/cagx2jryioijvapagk6a.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-ORG-113",
+      "code": "KJ-ORG-113",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/products/bo9dwhm0os470xa0gcaz.webp",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/products/bo9dwhm0os470xa0gcaz.webp"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-ORG-105",
+      "code": "KJ-ORG-105",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442706/kalajay/catalogue/pay4pp87qwofbmwog7q5.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442706/kalajay/catalogue/pay4pp87qwofbmwog7q5.jpg",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442706/kalajay/products/stpjcyygfpvkqrzng4ca.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442706/kalajay/products/d7ozhx8lmjxbiyzoh4dx.webp"
+      ],
+      "variants": [
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442706/kalajay/products/stpjcyygfpvkqrzng4ca.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442706/kalajay/products/d7ozhx8lmjxbiyzoh4dx.webp"
+        }
+      ]
+    },
+    {
+      "id": "KJ-ORG-102",
+      "code": "KJ-ORG-102",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442707/kalajay/catalogue/wxgxbkzmgadryuke88wu.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442707/kalajay/catalogue/wxgxbkzmgadryuke88wu.jpg",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442708/kalajay/products/ibghteyg6idikpaaptpd.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442708/kalajay/products/est2djknfj8m3q23fsor.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442708/kalajay/products/evjw0vvkrjez5qngem11.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442709/kalajay/products/kt8otqfktujlezrhicgz.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442709/kalajay/products/jvtt0negmcsbpvdf4ln7.webp"
+      ],
+      "variants": [
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442708/kalajay/products/ibghteyg6idikpaaptpd.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442708/kalajay/products/est2djknfj8m3q23fsor.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442708/kalajay/products/evjw0vvkrjez5qngem11.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442709/kalajay/products/kt8otqfktujlezrhicgz.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442709/kalajay/products/jvtt0negmcsbpvdf4ln7.webp"
+        }
+      ]
+    },
+    {
+      "id": "KJ-ORG-103",
+      "code": "KJ-ORG-103",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442710/kalajay/catalogue/movzwcwoxepeshnqbfof.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442710/kalajay/catalogue/movzwcwoxepeshnqbfof.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-ORG-104",
+      "code": "KJ-ORG-104",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442709/kalajay/catalogue/tfo8vfssqqlmwzprhn9g.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442709/kalajay/catalogue/tfo8vfssqqlmwzprhn9g.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-PRS-215",
+      "code": "KJ-PRS-215",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442710/kalajay/catalogue/ld6jd6pyrgsayzqsqwps.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442710/kalajay/catalogue/ld6jd6pyrgsayzqsqwps.jpg",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442711/kalajay/products/o64whndr9mc3tf6cczbp.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442710/kalajay/products/rnxy84so9avkehrrgash.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442711/kalajay/products/nuqglwprmugcnzybaiy7.webp"
+      ],
+      "variants": [
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442711/kalajay/products/o64whndr9mc3tf6cczbp.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442710/kalajay/products/rnxy84so9avkehrrgash.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442711/kalajay/products/nuqglwprmugcnzybaiy7.webp"
+        }
+      ]
+    },
+    {
+      "id": "KJ-PRS-216",
+      "code": "KJ-PRS-216",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442712/kalajay/products/lfqo8pdu1mtokvl18vej.webp",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442712/kalajay/products/lfqo8pdu1mtokvl18vej.webp"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-PRS-222",
+      "code": "KJ-PRS-222",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442712/kalajay/products/z2uyxgb13ucabgtpr1fi.webp",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442712/kalajay/products/z2uyxgb13ucabgtpr1fi.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442713/kalajay/products/ggwsszczowjz9g16el38.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442713/kalajay/products/acau4uwyxiu2ozskt1da.webp"
+      ],
+      "variants": [
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442712/kalajay/products/z2uyxgb13ucabgtpr1fi.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442713/kalajay/products/ggwsszczowjz9g16el38.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442713/kalajay/products/acau4uwyxiu2ozskt1da.webp"
+        }
+      ]
+    },
+    {
+      "id": "KJ-PRS-217",
+      "code": "KJ-PRS-217",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442713/kalajay/products/vskzgwmsrgxvfbwhtnrs.webp",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442713/kalajay/products/vskzgwmsrgxvfbwhtnrs.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442714/kalajay/products/xrvrvebyyzyfm5ccclh6.webp",
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442714/kalajay/products/s47kruyp0iaqh6fhtlkh.webp"
+      ],
+      "variants": [
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442713/kalajay/products/vskzgwmsrgxvfbwhtnrs.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442714/kalajay/products/xrvrvebyyzyfm5ccclh6.webp"
+        },
+        {
+          "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442714/kalajay/products/s47kruyp0iaqh6fhtlkh.webp"
+        }
+      ]
+    },
+    {
+      "id": "KJ-PRS-202",
+      "code": "KJ-PRS-202",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442714/kalajay/catalogue/oh1h1mvgnmb0qczpnlbj.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442714/kalajay/catalogue/oh1h1mvgnmb0qczpnlbj.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-PRS-218",
+      "code": "KJ-PRS-218",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442715/kalajay/products/cfp7z1owdsssludzueur.webp",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442715/kalajay/products/cfp7z1owdsssludzueur.webp"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-PRS-220",
+      "code": "KJ-PRS-220",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442715/kalajay/products/igiyjsnxrw8vabnygegq.webp",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442715/kalajay/products/igiyjsnxrw8vabnygegq.webp"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-PRS-214",
+      "code": "KJ-PRS-214",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442715/kalajay/catalogue/sr8ntxrea57xczzywuji.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442715/kalajay/catalogue/sr8ntxrea57xczzywuji.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-PRS-221",
+      "code": "KJ-PRS-221",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442716/kalajay/products/rrar0exhlrhpp4dilav6.webp",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442716/kalajay/products/rrar0exhlrhpp4dilav6.webp"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-PRS-201",
+      "code": "KJ-PRS-201",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442716/kalajay/catalogue/yyf9ze2uluz32ujxl4mo.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442716/kalajay/catalogue/yyf9ze2uluz32ujxl4mo.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-PRS-212",
+      "code": "KJ-PRS-212",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442717/kalajay/catalogue/u6cudwzc2zpvph3ifvqy.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442717/kalajay/catalogue/u6cudwzc2zpvph3ifvqy.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-PRS-209",
+      "code": "KJ-PRS-209",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442718/kalajay/catalogue/uewm2oye054abrs5ffvq.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442718/kalajay/catalogue/uewm2oye054abrs5ffvq.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-PRS-213",
+      "code": "KJ-PRS-213",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442717/kalajay/catalogue/ets2opnqxaw2w4ru2o65.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442717/kalajay/catalogue/ets2opnqxaw2w4ru2o65.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-PRS-206",
+      "code": "KJ-PRS-206",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442717/kalajay/catalogue/tabtjxlh4bokknnrws9u.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442717/kalajay/catalogue/tabtjxlh4bokknnrws9u.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-PRS-204",
+      "code": "KJ-PRS-204",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442718/kalajay/catalogue/igdnqgjebnlnorpzvhwm.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442718/kalajay/catalogue/igdnqgjebnlnorpzvhwm.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-PRS-210",
+      "code": "KJ-PRS-210",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442718/kalajay/catalogue/b2eub8hun20qbybdcran.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442718/kalajay/catalogue/b2eub8hun20qbybdcran.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-PRS-205",
+      "code": "KJ-PRS-205",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442719/kalajay/catalogue/pawxok02k4hbaajfqsrn.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442719/kalajay/catalogue/pawxok02k4hbaajfqsrn.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-PRS-208",
+      "code": "KJ-PRS-208",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442719/kalajay/catalogue/x5qnr4ljub59mjht95s3.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442719/kalajay/catalogue/x5qnr4ljub59mjht95s3.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-PRS-203",
+      "code": "KJ-PRS-203",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442719/kalajay/catalogue/u1vxbtxtxzszom32irmy.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442719/kalajay/catalogue/u1vxbtxtxzszom32irmy.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-PRS-219",
+      "code": "KJ-PRS-219",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442720/kalajay/products/pmuaqm4ykh30mzlgawtn.webp",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442720/kalajay/products/pmuaqm4ykh30mzlgawtn.webp"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-PRS-211",
+      "code": "KJ-PRS-211",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442720/kalajay/catalogue/gvqgsht1leayj1iiki5h.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442720/kalajay/catalogue/gvqgsht1leayj1iiki5h.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-PRS-207",
+      "code": "KJ-PRS-207",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442721/kalajay/catalogue/bixagjlzfdxso3ey2tds.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442721/kalajay/catalogue/bixagjlzfdxso3ey2tds.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-SLG-303",
+      "code": "KJ-SLG-303",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442721/kalajay/catalogue/k15ukcgezi7t2s9ixrtf.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442721/kalajay/catalogue/k15ukcgezi7t2s9ixrtf.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-SLG-305",
+      "code": "KJ-SLG-305",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442721/kalajay/catalogue/c4g7u7bikkvprvzodscn.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442721/kalajay/catalogue/c4g7u7bikkvprvzodscn.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-SLG-304",
+      "code": "KJ-SLG-304",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442722/kalajay/catalogue/ueuy6zmsagytveivkli8.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442722/kalajay/catalogue/ueuy6zmsagytveivkli8.jpg"
+      ],
+      "variants": []
+    },
+    {
+      "id": "KJ-SLG-302",
+      "code": "KJ-SLG-302",
+      "coverImage": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442722/kalajay/catalogue/pb1ws9kzarikylbsxgm9.jpg",
+      "images": [
+        "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442722/kalajay/catalogue/pb1ws9kzarikylbsxgm9.jpg"
+      ],
+      "variants": []
+    }
+  ],
+  "categories": [
+    {
+      "slug": "organisers",
+      "name": "Organisers",
+      "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/catalogue/cagx2jryioijvapagk6a.jpg"
+    },
+    {
+      "slug": "purses",
+      "name": "Purses",
+      "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442716/kalajay/catalogue/yyf9ze2uluz32ujxl4mo.jpg"
+    },
+    {
+      "slug": "slings",
+      "name": "Slings",
+      "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442722/kalajay/catalogue/pb1ws9kzarikylbsxgm9.jpg"
+    },
+    {
+      "slug": "airpod-cases",
+      "name": "Airpod Cases",
+      "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442684/kalajay/catalogue/olbboadvjaqiz0cjlb6s.jpg"
+    },
+    {
+      "slug": "coasters-mats",
+      "name": "Coasters & Mats",
+      "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442691/kalajay/catalogue/lhy85nxlwvgdpedsniao.jpg"
+    },
+    {
+      "slug": "candle-holders",
+      "name": "Candle Holders",
+      "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442723/kalajay/catalogue/n5q4ecn6crnluhkcsnnl.jpg"
+    },
+    {
+      "slug": "key-rings",
+      "name": "Key Rings",
+      "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442697/kalajay/catalogue/flixddc0ywvstfqwztwa.jpg"
+    },
+    {
+      "slug": "crochet-magic",
+      "name": "Crochet Magic",
+      "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442722/kalajay/catalogue/v6vofiiptkamnwkvx5ta.jpg"
+    },
+    {
+      "slug": "little-treasures",
+      "name": "Little Treasures",
+      "image": "https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442698/kalajay/catalogue/q5nc8b7tditqhsn3vpvm.jpg"
+    }
+  ]
+}

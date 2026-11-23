@@ -9,32 +9,32 @@ export default function SocialAndReviews() {
 
   const glimpsePhotos = [
     {
-      src: 'https://www.kalajay.in/media/products/c6ba77320bf18d7c8d58f35eb9cecc5b8f79055d2b92fae00d22cfdbc40d3f85.webp',
+      src: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442690/kalajay/products/ugs4bturpfbqsmvf11wx.webp',
       alt: 'Macro beadwork closeup',
       tag: '@kalajay_store',
     },
     {
-      src: 'https://www.kalajay.in/v2/p3-2.jpg',
+      src: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/catalogue/cagx2jryioijvapagk6a.jpg',
       alt: 'Pearl vanity box on dressing table',
       tag: '#kalajaycrafthouse',
     },
     {
-      src: 'https://www.kalajay.in/media/products/b57e3efd6e2f7c2f0bcac6be9aaf5e1b506ff561e72739f1c3041d6fbf4afe8b.webp',
+      src: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442712/kalajay/products/lfqo8pdu1mtokvl18vej.webp',
       alt: 'Bluebell diamond crystal bag under light',
       tag: '#handmadeaccessories',
     },
     {
-      src: 'https://www.kalajay.in/media/products/2a1e696f7a135c198e4f07570b37b2202ea31b1468be8245bbb51ec7b7d08e65.webp',
+      src: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442713/kalajay/products/vskzgwmsrgxvfbwhtnrs.webp',
       alt: 'Pearl beaded mini tote flat lay',
       tag: '@kalajay_store',
     },
     {
-      src: 'https://www.kalajay.in/media/products/07d7dce169019ce6e08e80a9d10984dc7edcc0b529f69738b5c51fb2b43e0e5a.webp',
+      src: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442712/kalajay/products/z2uyxgb13ucabgtpr1fi.webp',
       alt: 'Crystal butterfly evening clutch with hands',
       tag: '#weddingfavours',
     },
     {
-      src: 'https://www.kalajay.in/media/products/05c487e5d0ba14e30995c085eb1718b4d752a4e1e93bff6dce835a1e98fcaf42.webp',
+      src: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442686/kalajay/products/n3uyvult1li1rf7funfp.webp',
       alt: 'Candlelight glowing through beaded lantern',
       tag: '#festivehampers',
     },

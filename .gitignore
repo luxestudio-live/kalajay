@@ -88,4 +88,13 @@ public/*.pdf
 public/*.docx
 public/*.xlsx
 
+# Media staging, migration receipts & backups
+media-staging/
+backup/
+*.bak
+migration_upload_receipt.json
+download_staging_receipt.json
+firestore-backup-*.json
+firestore-sync-receipt-*.json
+
 .vercel
