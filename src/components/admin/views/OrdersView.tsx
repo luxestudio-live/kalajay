@@ -548,7 +548,11 @@ export default function OrdersView() {
                       <td className="py-3 px-4 text-right">
                         <button
                           type="button"
-                          onClick={() => showToast(`Downloaded GST Tax Invoice ${invNumber}.pdf`)}
+                          onClick={() => {
+                            if (typeof window !== 'undefined') {
+                              window.open(`/api/orders/${o.id}/invoice?print=1`, '_blank');
+                            }
+                          }}
                           className="px-2.5 py-1 rounded bg-white hover:bg-[#F7F3EC] border border-[#DED3C5] text-[#372921] text-xs font-medium inline-flex items-center gap-1 cursor-pointer"
                         >
                           <Printer className="w-3.5 h-3.5 text-[#9E5430]" />

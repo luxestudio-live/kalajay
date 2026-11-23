@@ -6,6 +6,7 @@ import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { verifyStaffPermission } from '@/lib/serverRbac';
 import { ensureServerAdminAuth, getAdminFirestore } from '@/lib/serverFirebaseAdmin';
 import { OfflineOrder, AdminOrder, PermissionAction } from '@/data/adminTypes';
+import { dispatchOrderLifecycleNotification, OrderLifecycleEvent } from '@/lib/orderEmailDispatcher';
 
 export const dynamic = 'force-dynamic';
 
@@ -194,6 +195,19 @@ export async function POST(request: Request) {
         await setDoc(doc(db, 'orders', orderId), companionAdminOrder, { merge: true });
       }
 
+      if (newOfflineOrder.customerEmail && newOfflineOrder.customerEmail.includes('@')) {
+        dispatchOrderLifecycleNotification({
+          order: companionAdminOrder,
+          event: 'order_placed',
+        }).catch(() => {});
+        if (newOfflineOrder.paymentStatus === 'paid') {
+          dispatchOrderLifecycleNotification({
+            order: companionAdminOrder,
+            event: 'payment_success',
+          }).catch(() => {});
+        }
+      }
+
       return NextResponse.json({
         success: true,
         orderId,
@@ -366,6 +380,36 @@ export async function POST(request: Request) {
       } catch (clientErr) {
         console.warn('Client Firestore order sync deferred:', clientErr);
       }
+    }
+
+    // Trigger lifecycle email notifications on milestone transitions
+    try {
+      const mergedOrder = { ...existing, ...updates, id: orderId };
+      if (paymentStatus) {
+        if (paymentStatus === 'paid') {
+          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'payment_success' }).catch(() => {});
+        } else if (paymentStatus === 'failed') {
+          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'payment_failed' }).catch(() => {});
+        } else if (paymentStatus === 'refunded') {
+          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'refunded' }).catch(() => {});
+        }
+      }
+
+      if (fulfillmentStatus) {
+        if (fulfillmentStatus === 'in_loom') {
+          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'in_loom' }).catch(() => {});
+        } else if (fulfillmentStatus === 'quality_checked') {
+          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'quality_checked' }).catch(() => {});
+        } else if (fulfillmentStatus === 'shipped') {
+          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'shipped' }).catch(() => {});
+        } else if (fulfillmentStatus === 'delivered') {
+          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'delivered' }).catch(() => {});
+        } else if (fulfillmentStatus === 'cancelled') {
+          dispatchOrderLifecycleNotification({ order: mergedOrder, event: 'cancelled' }).catch(() => {});
+        }
+      }
+    } catch (notifErr) {
+      console.warn('Order update notification notice:', notifErr);
     }
 
     return NextResponse.json({

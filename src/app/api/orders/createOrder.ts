@@ -8,6 +8,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import { verifyFirebaseIdToken } from '@/lib/serverRbac';
 import { getAdminFirestore } from '@/lib/serverFirebaseAdmin';
+import { dispatchOrderLifecycleNotification } from '@/lib/orderEmailDispatcher';
 
 interface CreateOrderRequestBody {
   customerName: string;
@@ -525,6 +526,24 @@ export async function POST(request: Request) {
       order: orderRecord,
     };
 
+    const notifyOrderPlaced = (record: any) => {
+      try {
+        dispatchOrderLifecycleNotification({
+          order: record,
+          event: 'order_placed',
+        }).catch(e => console.warn('Order placed notification notice:', e));
+
+        if (record.paymentStatus === 'paid') {
+          dispatchOrderLifecycleNotification({
+            order: record,
+            event: 'payment_success',
+          }).catch(e => console.warn('Payment success notification notice:', e));
+        }
+      } catch (err) {
+        console.warn('Deferred email dispatch notice:', err);
+      }
+    };
+
     // 8. Atomic Server-Side Idempotency, Inventory Deduction, and Order Persistence
     if (adminDb) {
       try {
@@ -614,6 +633,7 @@ export async function POST(request: Request) {
             isIdempotentReplay: true,
           });
         }
+        notifyOrderPlaced(orderRecord);
         return NextResponse.json(txResult.response);
       } catch (adminTxErr: any) {
         if (adminTxErr.message === 'IDEMPOTENCY_PAYLOAD_MISMATCH') {
@@ -710,6 +730,7 @@ export async function POST(request: Request) {
             isIdempotentReplay: true,
           });
         }
+        notifyOrderPlaced(orderRecord);
         serverMemoryIdempotencyStore.set(sanitizedIdempKey, {
           payloadHash,
           customerEmail: finalCustomerEmail,
@@ -742,6 +763,7 @@ export async function POST(request: Request) {
       }
     }
 
+    notifyOrderPlaced(orderRecord);
     serverMemoryIdempotencyStore.set(sanitizedIdempKey, {
       payloadHash,
       customerEmail: finalCustomerEmail,

@@ -740,7 +740,11 @@ export default function AccountClient() {
 
                           <button
                             type="button"
-                            onClick={() => alert(`Invoice #INV-${order.id}.pdf downloaded.`)}
+                            onClick={() => {
+                              if (typeof window !== 'undefined') {
+                                window.open(`/api/orders/${order.id}/invoice?download=1`, '_blank');
+                              }
+                            }}
                             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-canvas border border-border-medium hover:border-gold text-ink font-semibold transition-colors cursor-pointer self-start sm:self-auto shadow-2xs"
                           >
                             <Download className="w-3.5 h-3.5 text-gold-dark" />
