@@ -27,7 +27,11 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { getAdminFirestore } from '@/lib/serverFirebaseAdmin';
-import { KALAJAY_SELLER_DETAILS, getStableInvoiceNumber } from '@/lib/invoiceGenerator';
+import {
+  KALAJAY_SELLER_DETAILS,
+  getStableInvoiceNumber,
+  fetchOrderAuthoritatively,
+} from '@/lib/invoiceGenerator';
 
 export type OrderLifecycleEvent =
   | 'order_placed'
@@ -557,8 +561,12 @@ export async function dispatchOrderLifecycleNotification(params: {
   // 1. Check existing outbox state
   const existing = await getOutboxItem(outboxId);
   if (existing && !forceResend) {
-    // If already successfully accepted by provider or delivered, do NOT duplicate
-    if (existing.status === 'provider_accepted' || existing.status === 'delivered') {
+    // If already successfully accepted by provider, delivered, or sandbox-mocked, do NOT duplicate
+    if (
+      existing.status === 'provider_accepted' ||
+      existing.status === 'delivered' ||
+      existing.status === 'sandbox_mocked'
+    ) {
       return {
         ...existing,
         isDeduplicated: true,
@@ -631,8 +639,8 @@ export async function dispatchOrderLifecycleNotification(params: {
     let providerMessageId: string | undefined = undefined;
     let sendError: string | undefined = undefined;
 
-    // 5. Live Provider Dispatch (Resend) if configured
-    if (process.env.RESEND_API_KEY) {
+    // 5. Live Provider Dispatch (Resend) if configured with valid API key and verified sender
+    if (process.env.RESEND_API_KEY && process.env.EMAIL_FROM) {
       try {
         mode = 'live';
         providerName = 'resend';
@@ -730,12 +738,117 @@ export async function retryNotificationOutboxItem(
     return item;
   }
 
+  const parts = outboxId.split(`_${item.event}`);
+  const transitionKey = parts[1] ? parts[1].replace(/^_/, '') : undefined;
+
   return dispatchOrderLifecycleNotification({
     order: orderSnapshot,
     event: item.event,
-    transitionKey: outboxId.split(`_${item.event}_`)[1] || undefined,
+    transitionKey,
     forceResend: true,
   });
+}
+
+/**
+ * Processes pending, un-dispatched, stale-claimed, or retryable notification outbox items.
+ * Recovers queued or failed state after a server restart or network interruption.
+ */
+export async function processPendingNotificationOutbox(options?: {
+  maxAttempts?: number;
+  limit?: number;
+}): Promise<{
+  totalPending: number;
+  processed: number;
+  succeeded: number;
+  failed: number;
+  skipped: number;
+}> {
+  const maxAttempts = options?.maxAttempts || 3;
+  const limit = options?.limit || 50;
+
+  // 1. Gather candidate items from disk mirror and memory
+  const diskStore = readDiskOutbox();
+
+  // 2. Also query Admin Firestore if available
+  try {
+    const adminDb = getAdminFirestore();
+    if (adminDb) {
+      const snap = await adminDb
+        .collection('notification_outbox')
+        .where('status', 'in', ['queued', 'failed', 'claiming'])
+        .limit(limit)
+        .get();
+
+      snap.forEach((docSnap) => {
+        const item = docSnap.data() as NotificationOutboxItem;
+        if (item && item.id) {
+          diskStore[item.id] = item;
+        }
+      });
+    }
+  } catch {}
+
+  // 3. Filter for truly recoverable items
+  const now = Date.now();
+  const candidates: NotificationOutboxItem[] = [];
+
+  for (const item of Object.values(diskStore)) {
+    if (!item || !item.id) continue;
+
+    const isQueued = item.status === 'queued';
+    const isRetryableFailure = item.status === 'failed' && (item.attempts || 0) < maxAttempts;
+    const isStaleClaim =
+      item.status === 'claiming' &&
+      item.claimedAt &&
+      now - item.claimedAt > 60000; // Worker crashed/restarted more than 60s ago
+
+    if (isQueued || isRetryableFailure || isStaleClaim) {
+      candidates.push(item);
+    }
+  }
+
+  const results = {
+    totalPending: candidates.length,
+    processed: 0,
+    succeeded: 0,
+    failed: 0,
+    skipped: 0,
+  };
+
+  // 4. Process each recoverable item safely without corrupting order state
+  for (const item of candidates.slice(0, limit)) {
+    results.processed++;
+    try {
+      const orderSnapshot = await fetchOrderAuthoritatively(item.orderId);
+      if (!orderSnapshot) {
+        item.status = 'failed';
+        item.lastError = `Authoritative order #${item.orderId} not found during outbox replay.`;
+        item.attempts = (item.attempts || 0) + 1;
+        item.updatedAt = new Date().toISOString();
+        await saveOutboxItem(item);
+        results.failed++;
+        continue;
+      }
+
+      const res = await retryNotificationOutboxItem(item.id, orderSnapshot);
+      if (res?.status === 'provider_accepted' || res?.status === 'sandbox_mocked') {
+        results.succeeded++;
+      } else if (res?.status === 'skipped') {
+        results.skipped++;
+      } else {
+        results.failed++;
+      }
+    } catch (err: any) {
+      item.status = 'failed';
+      item.lastError = err?.message || 'Outbox processor recovery exception';
+      item.attempts = (item.attempts || 0) + 1;
+      item.updatedAt = new Date().toISOString();
+      await saveOutboxItem(item);
+      results.failed++;
+    }
+  }
+
+  return results;
 }
 
 /**

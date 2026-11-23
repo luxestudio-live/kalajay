@@ -79,6 +79,31 @@ export async function POST(request: Request) {
     const action = body.action;
 
     // ------------------------------------------
+    // ACTION 00: Process / Sweep Notification Outbox
+    // ------------------------------------------
+    if (action === 'process_outbox' || action === 'sweep_notifications') {
+      const authCheck = await verifyStaffPermission(request, body, 'orders.orders', 'edit');
+      if (!authCheck.authorized) {
+        return NextResponse.json(
+          { success: false, error: authCheck.error, code: authCheck.code },
+          { status: authCheck.status }
+        );
+      }
+
+      const { processPendingNotificationOutbox } = await import('@/lib/orderEmailDispatcher');
+      const stats = await processPendingNotificationOutbox({
+        maxAttempts: body.maxAttempts ? Number(body.maxAttempts) : 3,
+        limit: body.limit ? Number(body.limit) : 50,
+      });
+
+      return NextResponse.json({
+        success: true,
+        stats,
+        message: `Notification outbox sweep completed: ${stats.processed} processed, ${stats.succeeded} recovered/sent, ${stats.failed} failed.`,
+      });
+    }
+
+    // ------------------------------------------
     // ACTION 0A: Save Inventory SKU (Create/Update)
     // ------------------------------------------
     if (action === 'inventory_save') {

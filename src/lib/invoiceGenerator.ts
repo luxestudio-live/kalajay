@@ -615,30 +615,58 @@ export async function generateInvoicePdf(order: any): Promise<Uint8Array> {
     total: marginX + 475,
   };
 
-  page.drawRectangle({
-    x: marginX,
-    y: curY - 14,
-    width: contentWidth,
-    height: 18,
-    color: cCardBg,
-    borderColor: cBorder,
-    borderWidth: 1,
-  });
+  // Helper to draw table header row
+  const drawTableHeader = (targetPage: PDFPage, y: number) => {
+    targetPage.drawRectangle({
+      x: marginX,
+      y: y - 14,
+      width: contentWidth,
+      height: 18,
+      color: cCardBg,
+      borderColor: cBorder,
+      borderWidth: 1,
+    });
 
-  page.drawText('HANDCRAFTED CREATION & SPECIFICATION', { x: colX.desc, y: curY - 10, size: 7.5, font: fontBold, color: cMuted });
-  page.drawText('HSN', { x: colX.hsn, y: curY - 10, size: 7.5, font: fontBold, color: cMuted });
-  page.drawText('QTY', { x: colX.qty, y: curY - 10, size: 7.5, font: fontBold, color: cMuted });
-  page.drawText('UNIT RATE', { x: colX.rate, y: curY - 10, size: 7.5, font: fontBold, color: cMuted });
-  page.drawText('TOTAL (INR)', { x: colX.total, y: curY - 10, size: 7.5, font: fontBold, color: cMuted });
+    targetPage.drawText('HANDCRAFTED CREATION & SPECIFICATION', { x: colX.desc, y: y - 10, size: 7.5, font: fontBold, color: cMuted });
+    targetPage.drawText('HSN', { x: colX.hsn, y: y - 10, size: 7.5, font: fontBold, color: cMuted });
+    targetPage.drawText('QTY', { x: colX.qty, y: y - 10, size: 7.5, font: fontBold, color: cMuted });
+    targetPage.drawText('UNIT RATE', { x: colX.rate, y: y - 10, size: 7.5, font: fontBold, color: cMuted });
+    targetPage.drawText('TOTAL (INR)', { x: colX.total, y: y - 10, size: 7.5, font: fontBold, color: cMuted });
+  };
 
+  drawTableHeader(page, curY);
   curY -= 22;
 
   // Render Items
   for (const item of inv.items) {
-    // If running low on page space, add page
-    if (curY < 180) {
+    // If running low on page space (less than 135pt above footer), paginate cleanly
+    if (curY < 135) {
       page = doc.addPage([A4_WIDTH, A4_HEIGHT]);
-      curY = A4_HEIGHT - 50;
+      // Top accent bar
+      page.drawRectangle({
+        x: 0,
+        y: A4_HEIGHT - 5,
+        width: A4_WIDTH,
+        height: 5,
+        color: cBronze,
+      });
+      // Continuation letterhead
+      page.drawText(`KALAJAY — ${inv.invoiceNumber} (Continuation)`, {
+        x: marginX,
+        y: A4_HEIGHT - 32,
+        size: 9.5,
+        font: fontBold,
+        color: cInk,
+      });
+      page.drawText(`Order Reference: #${inv.orderId} | Date: ${formattedDate}`, {
+        x: A4_WIDTH - marginX - 180,
+        y: A4_HEIGHT - 32,
+        size: 8,
+        font: fontRegular,
+        color: cMuted,
+      });
+      drawTableHeader(page, A4_HEIGHT - 48);
+      curY = A4_HEIGHT - 70;
     }
 
     const variantStr = item.attributes && Object.keys(item.attributes).length > 0
@@ -687,7 +715,8 @@ export async function generateInvoicePdf(order: any): Promise<Uint8Array> {
 
     curY -= 12;
 
-    page.drawText(`SKU: ${item.sku}${variantStr ? ` | ${variantStr}` : ''}`, {
+    const skuAndVariant = `SKU: ${item.sku}${variantStr ? ` | ${variantStr}` : ''}`.substring(0, 75);
+    page.drawText(skuAndVariant, {
       x: colX.desc,
       y: curY,
       size: 7.5,
@@ -711,6 +740,27 @@ export async function generateInvoicePdf(order: any): Promise<Uint8Array> {
   const totalsBoxWidth = 240;
   const totalsBoxX = A4_WIDTH - marginX - totalsBoxWidth;
   const totalsBoxHeight = 105;
+
+  // Check if totals box fits above the 90pt statutory declaration footer
+  if (curY - totalsBoxHeight < 110) {
+    page = doc.addPage([A4_WIDTH, A4_HEIGHT]);
+    page.drawRectangle({
+      x: 0,
+      y: A4_HEIGHT - 5,
+      width: A4_WIDTH,
+      height: 5,
+      color: cBronze,
+    });
+    page.drawText(`KALAJAY — ${inv.invoiceNumber} (Financial Summary)`, {
+      x: marginX,
+      y: A4_HEIGHT - 32,
+      size: 9.5,
+      font: fontBold,
+      color: cInk,
+    });
+    curY = A4_HEIGHT - 50;
+  }
+
   const totalsBoxY = curY - totalsBoxHeight;
 
   page.drawRectangle({
@@ -832,6 +882,19 @@ export async function generateInvoicePdf(order: any): Promise<Uint8Array> {
     size: 6.5,
     font: fontRegular,
     color: cMuted,
+  });
+
+  // 7. Dynamic Page Numbering Across All Pages
+  const pages = doc.getPages();
+  const totalPages = pages.length;
+  pages.forEach((p, idx) => {
+    p.drawText(`Page ${idx + 1} of ${totalPages}`, {
+      x: A4_WIDTH - marginX - 55,
+      y: 18,
+      size: 7,
+      font: fontRegular,
+      color: cMuted,
+    });
   });
 
   return await doc.save();
