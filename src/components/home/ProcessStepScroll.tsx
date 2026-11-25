@@ -99,17 +99,17 @@ export default function ProcessStepScroll() {
   return (
     <section
       ref={containerRef}
-      className="relative w-full bg-[#372921] border-b border-[#DED3C5]/20 lg:h-[260vh]"
+      className="relative w-full bg-[#372921] border-b border-[#DED3C5]/20 lg:h-[200vh]"
     >
       {/* 
         Native GPU Sticky Stage:
-        Uses CSS position: sticky top-0 inside a 260vh container.
+        Uses CSS position: sticky top-0 inside a 200vh container.
         Eliminates GSAP .pin-spacer layout mutations, prevents double-scroll dead space,
         and cleanly exits into Chapter 05 immediately at the end of Step 04.
       */}
       <div
         ref={pinWrapperRef}
-        className="bg-[#372921] text-canvas relative overflow-hidden flex flex-col justify-center py-6 lg:py-8 h-full min-h-screen lg:h-screen lg:min-h-[580px] lg:sticky lg:top-0"
+        className="bg-[#372921] text-canvas relative overflow-hidden flex flex-col justify-start pt-16 sm:pt-20 lg:pt-20 pb-6 lg:pb-8 h-full min-h-screen lg:h-screen lg:min-h-[580px] lg:sticky lg:top-0"
       >
         {/* Background Soft Radiance */}
         <div className="absolute top-1/2 left-1/3 -translate-y-1/2 w-[550px] h-[550px] bg-[#9E5430]/10 rounded-full blur-[140px] pointer-events-none" />

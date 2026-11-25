@@ -23,86 +23,114 @@ export default function MakersRoute() {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) return;
 
-    const ctx = gsap.context(() => {
-      // Draw the Bihar-to-Mumbai route line on scroll
-      if (routeLineRef.current && routeBoxRef.current) {
-        const path = routeLineRef.current;
-        const arcLength = 144.2;
+    let animatedCounters = false;
 
-        gsap.set(path, {
-          strokeDasharray: arcLength,
-          strokeDashoffset: arcLength,
-        });
+    // 1. STATISTICAL COUNTERS: Precise In-Focus Trigger via IntersectionObserver
+    // Guarantees counters roll ONLY when the card is visibly in focus inside the user's viewport
+    if (countersRef.current) {
+      const counters = countersRef.current.querySelectorAll('.counter-val');
+      // Set initial state to 0
+      counters.forEach((el) => {
+        el.textContent = '0';
+      });
 
-        gsap.to(path, {
-          strokeDashoffset: 0,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: routeBoxRef.current,
-            start: 'top 75%',
-            end: 'bottom 40%',
-            scrub: 1,
-            invalidateOnRefresh: true,
-          },
-        });
-
-        // Animated moving circle traversing from Origin 01 to Origin 02
-        if (transitCircleRef.current) {
-          const circle = transitCircleRef.current;
-          circle.setAttribute('cx', '10');
-          circle.setAttribute('cy', '20');
-
-          ScrollTrigger.create({
-            trigger: routeBoxRef.current,
-            start: 'top 75%',
-            end: 'bottom 40%',
-            invalidateOnRefresh: true,
-            onUpdate: (self) => {
-              const t = self.progress;
-              const oneMinusT = 1 - t;
-              const x = oneMinusT * oneMinusT * 10 + 2 * oneMinusT * t * 80 + t * t * 150;
-              const y = oneMinusT * oneMinusT * 20 + 2 * oneMinusT * t * (-10) + t * t * 20;
-              circle.setAttribute('cx', x.toFixed(2));
-              circle.setAttribute('cy', y.toFixed(2));
-            },
-          });
-        }
-      }
-
-      // Animate statistical counters when clearly in focus
-      if (countersRef.current) {
-        const counters = countersRef.current.querySelectorAll('.counter-val');
-        counters.forEach((el) => {
-          const target = parseInt(el.getAttribute('data-target') || '0', 10);
-          gsap.fromTo(
-            el,
-            { textContent: '0' },
-            {
-              textContent: target,
-              duration: 2,
-              snap: { textContent: 1 },
-              ease: 'power2.out',
-              scrollTrigger: {
-                trigger: countersRef.current,
-                start: 'top 65%',
-                toggleActions: 'play none none none',
-                invalidateOnRefresh: true,
-              },
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && !animatedCounters) {
+              animatedCounters = true;
+              counters.forEach((el) => {
+                const target = parseInt(el.getAttribute('data-target') || '0', 10);
+                gsap.fromTo(
+                  el,
+                  { textContent: '0' },
+                  {
+                    textContent: target,
+                    duration: 1.8,
+                    snap: { textContent: 1 },
+                    ease: 'power2.out',
+                  }
+                );
+              });
             }
-          );
-        });
+          });
+        },
+        {
+          // Requires the card to be at least 30% into the visible viewport
+          threshold: 0.3,
+          rootMargin: '0px 0px -10% 0px',
+        }
+      );
+
+      observer.observe(countersRef.current);
+    }
+
+    // 2. ARTISAN TRANSIT: Direct Viewport-Relative Quadratic Bezier Motion
+    // Immune to upstream layout shifts, image lazy-loading, or pin-spacers
+    const path = routeLineRef.current;
+    const circle = transitCircleRef.current;
+    const routeBox = routeBoxRef.current;
+    const arcLength = 144.2;
+
+    if (path) {
+      path.style.strokeDasharray = `${arcLength}`;
+      path.style.strokeDashoffset = `${arcLength}`;
+    }
+
+    if (circle) {
+      circle.setAttribute('cx', '10');
+      circle.setAttribute('cy', '20');
+    }
+
+    let ticking = false;
+    const updateTransit = () => {
+      if (!routeBox || !circle || !path) return;
+      const rect = routeBox.getBoundingClientRect();
+      const vh = window.innerHeight || 900;
+
+      // Start when box top enters at 75% of viewport; complete when box center reaches 35% of viewport
+      const startY = vh * 0.75;
+      const endY = vh * 0.30;
+      const progress = (startY - rect.top) / (startY - endY);
+      const t = Math.max(0, Math.min(1, progress));
+
+      // Closed-form quadratic Bezier: Origin 01 (10, 20) -> Apex (80, -10) -> Origin 02 (150, 20)
+      const oneMinusT = 1 - t;
+      const x = oneMinusT * oneMinusT * 10 + 2 * oneMinusT * t * 80 + t * t * 150;
+      const y = oneMinusT * oneMinusT * 20 + 2 * oneMinusT * t * (-10) + t * t * 20;
+
+      circle.setAttribute('cx', x.toFixed(2));
+      circle.setAttribute('cy', y.toFixed(2));
+      path.style.strokeDashoffset = `${(arcLength * (1 - t)).toFixed(2)}`;
+
+      ticking = false;
+    };
+
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(updateTransit);
+        ticking = true;
       }
+    };
 
-      const refreshTimer = setTimeout(() => {
-        ScrollTrigger.refresh();
-      }, 600);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    // Also listen to Lenis scroll if available
+    const win = window as any;
+    if (win.__lenis) {
+      win.__lenis.on('scroll', onScroll);
+    }
 
-      return () => {
-        clearTimeout(refreshTimer);
-      };
-    }, containerRef);
+    // Initial positioning check
+    updateTransit();
 
-    return () => ctx.revert();
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (win.__lenis) {
+        win.__lenis.off('scroll', onScroll);
+      }
+    };
   }, []);
 
   return (
