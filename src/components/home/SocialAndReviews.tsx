@@ -9,34 +9,34 @@ export default function SocialAndReviews() {
 
   const glimpsePhotos = [
     {
-      src: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442690/kalajay/products/ugs4bturpfbqsmvf11wx.webp',
-      alt: 'Macro beadwork closeup',
-      tag: '@kalajay_store',
+      src: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442712/kalajay/products/z2uyxgb13ucabgtpr1fi.webp',
+      alt: 'Crystal butterfly evening clutch held by customer for evening reception',
+      tag: '#EveningClutch',
     },
     {
       src: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/catalogue/cagx2jryioijvapagk6a.jpg',
-      alt: 'Pearl vanity box on dressing table',
-      tag: '#kalajaycrafthouse',
+      alt: 'Pearl vanity box placed on bride dressing table',
+      tag: '#VanityHeirloom',
     },
     {
-      src: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442712/kalajay/products/lfqo8pdu1mtokvl18vej.webp',
-      alt: 'Bluebell diamond crystal bag under light',
-      tag: '#handmadeaccessories',
+      src: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442714/kalajay/products/xrvrvebyyzyfm5ccclh6.webp',
+      alt: 'Floral beaded shoulder bag worn as daily luxury accessory',
+      tag: '#InTheWild',
     },
     {
-      src: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442713/kalajay/products/vskzgwmsrgxvfbwhtnrs.webp',
-      alt: 'Pearl beaded mini tote flat lay',
+      src: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442710/kalajay/products/rnxy84so9avkehrrgash.webp',
+      alt: 'Honeycomb beaded handbag carried on afternoon outing',
       tag: '@kalajay_store',
     },
     {
-      src: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442712/kalajay/products/z2uyxgb13ucabgtpr1fi.webp',
-      alt: 'Crystal butterfly evening clutch with hands',
-      tag: '#weddingfavours',
+      src: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442708/kalajay/products/ibghteyg6idikpaaptpd.webp',
+      alt: 'Pearl ring box opened with curated jewelry pieces',
+      tag: '#BridalKeepsake',
     },
     {
       src: 'https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442686/kalajay/products/n3uyvult1li1rf7funfp.webp',
-      alt: 'Candlelight glowing through beaded lantern',
-      tag: '#festivehampers',
+      alt: 'Warm candlelight glowing through beaded lantern on dining tablescape',
+      tag: '#FestiveLiving',
     },
   ];
 

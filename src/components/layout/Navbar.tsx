@@ -180,10 +180,10 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
                 aria-label="Kalajay — A World of Little Wonders"
               >
                 <img
-                  src="/logo.png"
+                  src="/loader/wordmark.png"
                   alt="Kalajay — A World of Little Wonders"
                   className={`w-auto object-contain transition-all duration-300 group-hover:scale-[1.03] ${
-                    isScrolled ? 'h-9 sm:h-11 md:h-12' : 'h-12 sm:h-15 md:h-16'
+                    isScrolled ? 'h-7 sm:h-8 md:h-9' : 'h-8 sm:h-10 md:h-11'
                   }`}
                 />
               </Link>

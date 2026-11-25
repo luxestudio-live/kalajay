@@ -130,13 +130,13 @@ export default function ProcessStepScroll() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
               {/* Visual Frame */}
               <div className="lg:col-span-6">
-                <div className="relative aspect-[4/3] sm:aspect-[16/11] lg:aspect-[4/3] rounded-[16px] overflow-hidden bg-black/40 border border-canvas/15 shadow-inner group">
+                <div className="relative aspect-[4/3] sm:aspect-[16/11] lg:aspect-[4/3] rounded-[16px] overflow-hidden bg-black/40 border border-canvas/15 shadow-inner group/visual">
                   {steps.map((st, idx) => (
                     <img
                       key={st.num}
                       src={st.image}
                       alt={st.title}
-                      className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-out ${
+                      className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ease-out group-hover/visual:scale-[1.05] ${
                         activeStep === idx
                           ? 'opacity-100 scale-100'
                           : 'opacity-0 scale-105 pointer-events-none'
@@ -175,10 +175,14 @@ export default function ProcessStepScroll() {
                       <div
                         key={st.num}
                         onClick={() => setActiveStep(idx)}
-                        className={`relative rounded-[14px] p-3 transition-all duration-300 cursor-pointer border select-none ${
+                        onMouseEnter={() => {
+                          // Preview step on desktop hover
+                          setActiveStep(idx);
+                        }}
+                        className={`group/step relative rounded-[14px] p-3 transition-all duration-300 cursor-pointer border select-none lg:hover:scale-[1.03] lg:hover:-translate-y-0.5 ${
                           isActive
-                            ? 'bg-white/[0.06] border-[#9E5430] shadow-lg'
-                            : 'bg-transparent border-transparent hover:bg-white/[0.02] opacity-75 hover:opacity-100'
+                            ? 'bg-white/[0.08] border-[#9E5430] shadow-xl'
+                            : 'bg-transparent border-transparent hover:bg-white/[0.03] opacity-75 hover:opacity-100 hover:border-white/10'
                         }`}
                       >
                         {/* Milestone Node on the Vertical Rail */}

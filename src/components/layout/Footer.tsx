@@ -27,50 +27,51 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-[#372921] text-[#F7F3EC] pt-16 pb-12 border-t border-[#DED3C5]/20 relative overflow-hidden">
-      {/* Subtle Background Radial Aura */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#9E5430]/10 rounded-full blur-3xl pointer-events-none -mr-40 -mt-40" />
-      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#9E5430]/10 rounded-full blur-3xl pointer-events-none -ml-32 -mb-32" />
+    <footer className="bg-[#2A1E18] text-[#FAF7F2] pt-16 pb-12 border-t border-[#9E5430]/30 relative overflow-hidden">
+      {/* Warm Ambient Radial Auras for Depth & Luminous Luxury */}
+      <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-[#9E5430]/12 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-10 left-10 w-[500px] h-[500px] bg-[#C5A880]/10 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Top Editorial Invitation Spread */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 pb-14 border-b border-[#DED3C5]/15">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 pb-14 border-b border-[#9E5430]/20">
           <div className="lg:col-span-5 space-y-4">
             <Link href="/" className="inline-block group mb-1" aria-label="Kalajay">
               <img
                 src="/logo.png"
                 alt="Kalajay"
-                className="h-12 sm:h-14 w-auto object-contain brightness-0 invert opacity-90 group-hover:opacity-100 transition-opacity"
+                className="h-12 sm:h-14 w-auto object-contain brightness-0 invert opacity-95 group-hover:opacity-100 transition-opacity"
               />
             </Link>
-            <span className="text-[11px] uppercase tracking-refined text-[#DED3C5] font-sans block font-medium">
+            <span className="text-[11px] uppercase tracking-refined text-[#D49B74] font-sans block font-semibold">
               Editorial Flagship · LuxeStudio Edition
             </span>
-            <h3 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-normal leading-tight tracking-wide text-[#F7F3EC]">
+            <h3 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-normal leading-tight tracking-wide text-[#FAF7F2]">
               A little wonder <br />
-              <span className="italic font-light text-[#DED3C5]">goes a long way.</span>
+              <span className="italic font-light text-[#D49B74]">goes a long way.</span>
             </h3>
-            <p className="font-sans text-sm text-[#DED3C5] max-w-md leading-relaxed font-light pt-2">
+            <p className="font-sans text-sm text-[#E5DDD3] max-w-md leading-relaxed font-light pt-2">
               Every Kalajay object begins as a loose cluster of glass seed beads, lustrous synthetic pearls, and faceted crystals. Hand-strung, counted, and balanced with patience and devotion by our master women artisans.
             </p>
           </div>
 
           {/* Newsletter Box */}
           <div className="lg:col-span-7 flex flex-col justify-end">
-            <div className="bg-[#2A1F19] p-7 sm:p-8 rounded-sm border border-[#DED3C5]/20 max-w-lg lg:ml-auto w-full">
-              <span className="text-xs uppercase tracking-editorial text-[#DED3C5] font-medium block mb-1">
+            <div className="bg-[#1F1511] p-7 sm:p-8 rounded-xl border border-[#9E5430]/30 shadow-2xl relative overflow-hidden max-w-lg lg:ml-auto w-full">
+              <div className="absolute -top-12 -right-12 w-28 h-28 bg-[#9E5430]/20 rounded-full blur-2xl pointer-events-none" />
+              <span className="text-xs uppercase tracking-editorial text-[#D49B74] font-semibold block mb-1">
                 The Kalajay Gazette
               </span>
-              <p className="text-sm text-[#EAE2D8] font-light mb-4">
+              <p className="text-sm text-[#E5DDD3] font-light mb-4">
                 Receive intimate previews, seasonal bead drops, and private Craft House dispatches.
               </p>
               {subscribed ? (
-                <div className="flex items-center gap-2 p-3 bg-white/5 border border-[#9E5430]/40 text-[#F7F3EC] text-xs rounded-sm">
-                  <Check className="w-4 h-4 text-[#9E5430]" />
+                <div className="flex items-center gap-2 p-3 bg-white/5 border border-[#9E5430]/50 text-[#FAF7F2] text-xs rounded-sm">
+                  <Check className="w-4 h-4 text-[#D49B74]" />
                   <span>Welcome to our inner circle. Your letter is on its way.</span>
                 </div>
               ) : (
-                <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-2">
+                <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-2 relative z-10">
                   <input
                     type="email"
                     required
@@ -78,11 +79,11 @@ export default function Footer() {
                     placeholder="Enter your email address"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    className="flex-1 px-4 py-3 bg-[#FFFCF7] border border-[#DED3C5] text-[#372921] placeholder:text-[#76695F] text-xs focus:outline-none focus:border-[#9E5430] transition-colors rounded-sm"
+                    className="flex-1 px-4 py-3 bg-[#FAF7F2] border border-[#C5A880]/50 text-[#372921] placeholder:text-[#76695F] text-xs focus:outline-none focus:border-[#9E5430] transition-colors rounded-sm"
                   />
                   <button
                     type="submit"
-                    className="px-6 py-3 bg-[#9E5430] hover:bg-[#874427] text-white text-xs tracking-editorial uppercase font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer rounded-sm shadow-xs"
+                    className="px-6 py-3 bg-gradient-to-r from-[#9E5430] to-[#874427] hover:from-[#B86B45] hover:to-[#9E5430] text-[#FAF7F2] text-xs tracking-editorial uppercase font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer rounded-sm shadow-md shadow-[#9E5430]/25"
                   >
                     <span>Subscribe</span>
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -94,22 +95,22 @@ export default function Footer() {
         </div>
 
         {/* Middle Navigation Columns */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 py-16 border-b border-[#DED3C5]/15 text-xs text-[#DED3C5] font-sans">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 py-16 border-b border-[#9E5430]/20 text-xs text-[#D8CEBF] font-sans">
           {/* Col 1: Curated Collections */}
           <div>
-            <h4 className="text-xs uppercase tracking-monumental text-[#F7F3EC] font-medium mb-4">
+            <h4 className="text-xs uppercase tracking-monumental text-[#FAF7F2] font-semibold mb-4 text-[#D49B74]">
               Collections
             </h4>
             <ul className="space-y-2.5">
               {COLLECTIONS.slice(0, 6).map(c => (
                 <li key={c.slug}>
-                  <Link href={`/collections/${c.slug}`} className="hover:text-[#F7F3EC] hover:underline transition-colors">
+                  <Link href={`/collections/${c.slug}`} className="hover:text-[#FAF7F2] hover:underline transition-colors">
                     {c.name}
                   </Link>
                 </li>
               ))}
               <li>
-                <Link href="/shop" className="text-[#9E5430] hover:text-[#F7F3EC] hover:underline inline-flex items-center gap-1">
+                <Link href="/shop" className="text-[#D49B74] hover:text-[#FAF7F2] hover:underline inline-flex items-center gap-1 font-medium">
                   <span>View All 69 Pieces</span>
                   <span>→</span>
                 </Link>
@@ -119,32 +120,32 @@ export default function Footer() {
 
           {/* Col 2: The Craft House */}
           <div>
-            <h4 className="text-xs uppercase tracking-monumental text-[#F7F3EC] font-medium mb-4">
+            <h4 className="text-xs uppercase tracking-monumental text-[#FAF7F2] font-semibold mb-4 text-[#D49B74]">
               The Craft House
             </h4>
             <ul className="space-y-2.5">
               <li>
-                <Link href="/story" className="hover:text-[#F7F3EC] transition-colors">
+                <Link href="/story" className="hover:text-[#FAF7F2] transition-colors">
                   Our Story & Philosophy
                 </Link>
               </li>
               <li>
-                <Link href="/atelier" className="hover:text-[#F7F3EC] transition-colors">
+                <Link href="/atelier" className="hover:text-[#FAF7F2] transition-colors">
                   The Craft House & Artisans
                 </Link>
               </li>
               <li>
-                <Link href="/customise" className="hover:text-[#F7F3EC] transition-colors text-[#F0E9DF]">
+                <Link href="/customise" className="hover:text-[#FAF7F2] transition-colors text-[#FAF7F2]">
                   Create Your Own (Custom)
                 </Link>
               </li>
               <li>
-                <Link href="/gifting" className="hover:text-[#F7F3EC] transition-colors">
+                <Link href="/gifting" className="hover:text-[#FAF7F2] transition-colors">
                   Gifting & Celebrations
                 </Link>
               </li>
               <li>
-                <Link href="/corporate-gifting" className="hover:text-[#F7F3EC] transition-colors">
+                <Link href="/corporate-gifting" className="hover:text-[#FAF7F2] transition-colors">
                   Wedding & Corporate Favours
                 </Link>
               </li>
@@ -153,7 +154,7 @@ export default function Footer() {
 
           {/* Col 3: Customer Care */}
           <div>
-            <h4 className="text-xs uppercase tracking-monumental text-[#F7F3EC] font-medium mb-4">
+            <h4 className="text-xs uppercase tracking-monumental text-[#FAF7F2] font-semibold mb-4 text-[#D49B74]">
               Care & Service
             </h4>
             <ul className="space-y-2.5">
@@ -276,20 +277,22 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Monumental Sculptural Wordmark Spread */}
-        <div className="py-8 sm:py-12 text-center select-none flex justify-center items-center w-full overflow-hidden" aria-hidden="true" role="presentation">
-          <div className="font-kalajay text-[13vw] sm:text-[14vw] lg:text-[14.5vw] leading-none tracking-[0.02em] text-[#F7F3EC]/[0.08] font-normal pointer-events-none transition-transform duration-700 select-none whitespace-nowrap">
-            kalajay
-          </div>
+        {/* Monumental Sculptural Brand Wordmark Spread (Official Logo Wordmark) */}
+        <div className="py-10 sm:py-16 text-center select-none flex justify-center items-center w-full overflow-hidden" aria-hidden="true" role="presentation">
+          <img
+            src="/loader/wordmark.png"
+            alt="Kalajay"
+            className="w-[82vw] max-w-5xl h-auto object-contain brightness-0 invert opacity-[0.08] pointer-events-none select-none transition-opacity duration-700"
+          />
         </div>
 
         {/* Bottom Credits & Copyright */}
-        <div className="pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-[#DED3C5] font-sans gap-4 border-t border-[#DED3C5]/15">
+        <div className="pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-[#D8CEBF] font-sans gap-4 border-t border-[#9E5430]/20">
           <div className="space-y-0.5">
             <div>
               © {new Date().getFullYear()} Kalajay Creations Private Limited. All rights reserved.
             </div>
-            <div className="text-[11px] text-[#DED3C5]/70">
+            <div className="text-[11px] text-[#D8CEBF]/75">
               Engineered with DPDP Act, 2023 Technical Safeguards · Consumer Protection (E-Commerce) Rules, 2020 Framework
             </div>
           </div>
@@ -299,12 +302,12 @@ export default function Footer() {
             <span>by 21 women artisans across India</span>
           </div>
           <div className="text-right">
-            <span className="text-[#DED3C5]">Bespoke Creative Direction by </span>
+            <span className="text-[#D8CEBF]">Bespoke Creative Direction by </span>
             <a
               href="https://theluxestudio.in/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#F7F3EC] hover:underline font-medium"
+              className="text-[#FAF7F2] hover:text-[#D49B74] hover:underline font-medium transition-colors"
             >
               LuxeStudio
             </a>

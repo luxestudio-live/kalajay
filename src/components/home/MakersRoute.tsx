@@ -14,6 +14,7 @@ if (typeof window !== 'undefined') {
 export default function MakersRoute() {
   const containerRef = useRef<HTMLDivElement>(null);
   const routeLineRef = useRef<SVGPathElement>(null);
+  const transitCircleRef = useRef<SVGCircleElement>(null);
   const countersRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,6 +42,31 @@ export default function MakersRoute() {
             scrub: 1,
           },
         });
+
+        // Animated moving circle traversing from Origin 01 to Origin 02
+        if (transitCircleRef.current) {
+          const circle = transitCircleRef.current;
+          const initialPoint = path.getPointAtLength(0);
+          circle.setAttribute('cx', String(initialPoint.x));
+          circle.setAttribute('cy', String(initialPoint.y));
+
+          const progressObj = { progress: 0 };
+          gsap.to(progressObj, {
+            progress: 1,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: containerRef.current,
+              start: 'top 75%',
+              end: 'center center',
+              scrub: 1,
+              onUpdate: (self) => {
+                const point = path.getPointAtLength(self.progress * length);
+                circle.setAttribute('cx', String(point.x));
+                circle.setAttribute('cy', String(point.y));
+              },
+            },
+          });
+        }
       }
 
       // Animate statistical counters
@@ -174,8 +200,21 @@ export default function MakersRoute() {
                   strokeWidth="2"
                   strokeDasharray="4 4"
                 />
+                {/* Static Origin Coordinates */}
                 <circle cx="10" cy="20" r="4.5" fill="#9E5430" />
                 <circle cx="150" cy="20" r="4.5" fill="#372921" />
+
+                {/* Animated Moving Transit Circle: Glides from Origin 01 to Origin 02 on scroll */}
+                <circle
+                  ref={transitCircleRef}
+                  cx="10"
+                  cy="20"
+                  r="5"
+                  fill="#FAF7F2"
+                  stroke="#9E5430"
+                  strokeWidth="2.5"
+                  className="filter drop-shadow-[0_0_6px_rgba(158,84,48,0.7)] pointer-events-none"
+                />
               </svg>
               <span className="text-xs uppercase tracking-monumental text-champagne font-sans mt-1 font-medium">
                 Artisan Transit

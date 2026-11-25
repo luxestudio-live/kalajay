@@ -97,16 +97,24 @@ export default function BestSellersRail() {
       if (!pinWrapperRef.current || !trackRef.current) return;
 
       const track = trackRef.current;
-      const getScrollDistance = () => track.scrollWidth - window.innerWidth + 140;
+      const container = track.parentElement;
 
-      const tween = gsap.to(track, {
-        x: () => -getScrollDistance(),
-        ease: 'none',
+      const calculateDistance = () => {
+        const containerWidth = container ? container.clientWidth : window.innerWidth;
+        const travel = track.scrollWidth - containerWidth + 96;
+        return Math.max(200, travel);
+      };
+
+      const scrollDistance = calculateDistance();
+      const holdBuffer = 350;
+      const totalPinDuration = scrollDistance + holdBuffer;
+
+      const tl = gsap.timeline({
         scrollTrigger: {
           trigger: pinWrapperRef.current,
           start: 'top top',
-          end: () => `+=${getScrollDistance()}`,
-          scrub: 0.8,
+          end: () => `+=${totalPinDuration}`,
+          scrub: 1,
           pin: true,
           anticipatePin: 1,
           invalidateOnRefresh: true,
@@ -118,8 +126,21 @@ export default function BestSellersRail() {
         },
       });
 
+      tl.to(track, {
+        x: () => -calculateDistance(),
+        ease: 'power1.out',
+        duration: scrollDistance / totalPinDuration,
+      });
+
+      tl.to({}, { duration: holdBuffer / totalPinDuration });
+
+      const refreshTimeout = setTimeout(() => {
+        ScrollTrigger.refresh();
+      }, 500);
+
       return () => {
-        tween.kill();
+        clearTimeout(refreshTimeout);
+        tl.kill();
       };
     });
 
@@ -145,7 +166,7 @@ export default function BestSellersRail() {
       */}
       <div
         ref={pinWrapperRef}
-        className="bg-canvas relative overflow-hidden flex flex-col justify-between py-3 sm:py-4 lg:py-5 lg:h-screen lg:max-h-[720px] lg:min-h-[500px]"
+        className="bg-canvas relative overflow-hidden flex flex-col justify-between py-3 sm:py-4 lg:py-6 lg:h-screen lg:min-h-[560px]"
       >
         {/* Top Section Header */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10 shrink-0 mb-2 sm:mb-3">
@@ -176,7 +197,7 @@ export default function BestSellersRail() {
         <div className="lg:overflow-hidden pl-4 sm:pl-6 lg:pl-12 flex-1 flex items-center">
           <div
             ref={trackRef}
-            className="flex gap-4 sm:gap-5 overflow-x-auto lg:overflow-visible snap-x snap-mandatory lg:snap-none no-scrollbar pr-6 py-1 will-change-transform"
+            className="flex gap-4 sm:gap-5 overflow-x-auto lg:overflow-visible snap-x snap-mandatory lg:snap-none no-scrollbar pr-6 lg:pr-24 py-1 will-change-transform"
           >
             {bestSellers.map((product) => {
               const secondImg = product.images[1] || product.coverImage;

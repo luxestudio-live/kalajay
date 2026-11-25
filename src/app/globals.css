@@ -224,11 +224,18 @@ html.lenis, html.lenis body {
 .animate-marquee-rtl {
   display: flex;
   width: max-content;
-  animation: marquee-rtl 32s linear infinite;
+  animation: marquee-rtl 65s linear infinite;
+  will-change: transform;
 }
 
 .animate-marquee-rtl:hover {
   animation-play-state: paused;
+}
+
+@media (max-width: 640px) {
+  .animate-marquee-rtl {
+    animation-duration: 50s;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -251,11 +258,18 @@ html.lenis, html.lenis body {
 .animate-marquee-ltr {
   display: flex;
   width: max-content;
-  animation: marquee-ltr 32s linear infinite;
+  animation: marquee-ltr 65s linear infinite;
+  will-change: transform;
 }
 
 .animate-marquee-ltr:hover {
   animation-play-state: paused;
+}
+
+@media (max-width: 640px) {
+  .animate-marquee-ltr {
+    animation-duration: 50s;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -39,6 +39,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <PageTransitionCurtain />
       <TheThread />
 
+      {/* Official Kalajay Emblem Watermark at 5% Opacity */}
+      <div
+        className="fixed inset-0 z-0 pointer-events-none select-none flex items-center justify-center overflow-hidden"
+        aria-hidden="true"
+        role="presentation"
+      >
+        <img
+          src="/loader/emblem.png"
+          alt=""
+          className="w-[85vw] max-w-2xl aspect-[430/226] object-contain opacity-[0.05]"
+        />
+      </div>
+
       <Navbar onOpenSearch={() => setIsSearchOpen(true)} />
       <main className="flex-1 min-h-[calc(100vh-250px)] relative z-10">
         {children}
