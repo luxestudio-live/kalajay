@@ -70,10 +70,10 @@ export default function ProcessStepScroll() {
       const trigger = ScrollTrigger.create({
         trigger: pinWrapperRef.current,
         start: 'top top',
-        end: '+=220%',
+        end: () => `+=${Math.round(window.innerHeight * 1.8)}`,
         pin: true,
-        anticipatePin: 1,
         scrub: 0.8,
+        invalidateOnRefresh: true,
         onUpdate: (self) => {
           const progress = self.progress;
           const stepIndex = Math.min(3, Math.floor(progress * 4));
@@ -105,7 +105,7 @@ export default function ProcessStepScroll() {
       */}
       <div
         ref={pinWrapperRef}
-        className="bg-[#372921] text-canvas relative overflow-hidden flex flex-col justify-center py-6 lg:py-8 lg:h-screen lg:max-h-[760px] lg:min-h-[540px]"
+        className="bg-[#372921] text-canvas relative overflow-hidden flex flex-col justify-center py-6 lg:py-8 lg:h-screen lg:min-h-[580px]"
       >
         {/* Background Soft Radiance */}
         <div className="absolute top-1/2 left-1/3 -translate-y-1/2 w-[550px] h-[550px] bg-[#9E5430]/10 rounded-full blur-[140px] pointer-events-none" />
