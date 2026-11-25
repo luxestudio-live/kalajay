@@ -185,9 +185,7 @@ function AdminSecurityGate({
       setError('Please enter your unique Staff Username (e.g. soumya or @soumya).');
       return;
     }
-    if (cleanInput.startsWith('@')) {
-      cleanInput = cleanInput.substring(1).trim();
-    }
+    cleanInput = cleanInput.replace(/^@+\s*/, '').trim().toLowerCase();
 
     if (!password) {
       setError('Please enter your atelier security passcode.');
@@ -292,9 +290,7 @@ function AdminSecurityGate({
       setError('Please enter your Staff Username (e.g. soumya or @soumya) first to request password recovery.');
       return;
     }
-    if (cleanInput.startsWith('@')) {
-      cleanInput = cleanInput.substring(1).trim();
-    }
+    cleanInput = cleanInput.replace(/^@+\s*/, '').trim().toLowerCase();
 
     setIsSendingReset(true);
     try {
@@ -462,9 +458,9 @@ function AdminSecurityGate({
                 <input
                   type="text"
                   required
-                  value={userId.startsWith('@') ? userId.substring(1) : userId}
+                  value={userId.replace(/^@+\s*/, '')}
                   onChange={e => {
-                    const val = e.target.value.trim().toLowerCase();
+                    const val = e.target.value.replace(/^@+\s*/, '').trim().toLowerCase();
                     setUserId(val);
                   }}
                   placeholder="soumya"

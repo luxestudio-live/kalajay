@@ -787,9 +787,9 @@ export async function verifyFirebaseIdToken(
     return { valid: true, uid: cached.uid, email: cached.email, emailVerified: cached.emailVerified };
   }
 
-  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '';
-  const isLocalHost = !process.env.VERCEL && !process.env.AWS_BRANCH && (Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST) || Boolean(process.env.FIRESTORE_EMULATOR_HOST) || process.env.NODE_ENV !== 'production');
-  const authEmulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || (isLocalHost ? '127.0.0.1:9099' : undefined);
+  const rawApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '';
+  const apiKey = rawApiKey.replace(/^["']|["']$/g, '');
+  const authEmulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
   const lookupEndpoint = authEmulatorHost
     ? `http://${authEmulatorHost}/identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey || 'emulator-api-key'}`
     : `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`;

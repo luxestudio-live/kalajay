@@ -68,10 +68,10 @@ export async function POST(request: Request) {
 
       if (resolved && resolved.status !== 'deactivated' && resolved.email) {
         try {
-          const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '';
+          const rawApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '';
+          const apiKey = rawApiKey.replace(/^["']|["']$/g, '');
           if (apiKey) {
-            const isLocalHost = !process.env.VERCEL && !process.env.AWS_BRANCH && (Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST) || Boolean(process.env.FIRESTORE_EMULATOR_HOST) || process.env.NODE_ENV !== 'production');
-            const authEmulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || (isLocalHost ? '127.0.0.1:9099' : undefined);
+            const authEmulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
             const resetUrl = authEmulatorHost
               ? `http://${authEmulatorHost}/identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`
               : `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`;
@@ -141,7 +141,8 @@ export async function POST(request: Request) {
       return genericAuthFailure();
     }
 
-    const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '';
+    const rawApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '';
+    const apiKey = rawApiKey.replace(/^["']|["']$/g, '');
     if (!apiKey) {
       console.error('Server configuration error: NEXT_PUBLIC_FIREBASE_API_KEY is not defined.');
       return NextResponse.json(
@@ -151,8 +152,7 @@ export async function POST(request: Request) {
     }
 
     try {
-      const isLocalHost = !process.env.VERCEL && !process.env.AWS_BRANCH && (Boolean(process.env.FIREBASE_AUTH_EMULATOR_HOST) || Boolean(process.env.FIRESTORE_EMULATOR_HOST) || process.env.NODE_ENV !== 'production');
-      const authEmulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || (isLocalHost ? '127.0.0.1:9099' : undefined);
+      const authEmulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
       const signInUrl = authEmulatorHost
         ? `http://${authEmulatorHost}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`
         : `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`;

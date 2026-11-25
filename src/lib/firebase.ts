@@ -41,8 +41,8 @@ try {
 
 // Client-only Google Analytics & Emulator initialization
 if (typeof window !== 'undefined') {
-  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  if (isLocal && !(window as any).__EMULATORS_CONNECTED__) {
+  const useEmulator = process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true';
+  if (useEmulator && !(window as any).__EMULATORS_CONNECTED__) {
     try {
       if (auth && (auth as any).app) {
         connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
