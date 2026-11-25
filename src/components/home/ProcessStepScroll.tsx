@@ -13,6 +13,7 @@ if (typeof window !== 'undefined') {
 const useIsomorphicLayoutEffect = useEffect;
 
 export default function ProcessStepScroll() {
+  const containerRef = useRef<HTMLDivElement>(null);
   const pinWrapperRef = useRef<HTMLDivElement>(null);
   const stepProgressRef = useRef<HTMLDivElement>(null);
   const textContainerRef = useRef<HTMLDivElement>(null);
@@ -63,15 +64,14 @@ export default function ProcessStepScroll() {
 
     const mm = gsap.matchMedia();
 
-    // Desktop Pinned Process Documentary Scroll on the inner pin wrapper
+    // Desktop Pinned Process Documentary Scroll using sticky container
     mm.add('(min-width: 1024px)', () => {
-      if (!pinWrapperRef.current) return;
+      if (!containerRef.current) return;
 
       const trigger = ScrollTrigger.create({
-        trigger: pinWrapperRef.current,
+        trigger: containerRef.current,
         start: 'top top',
-        end: () => `+=${Math.round(window.innerHeight * 1.8)}`,
-        pin: true,
+        end: 'bottom bottom',
         scrub: 0.8,
         invalidateOnRefresh: true,
         onUpdate: (self) => {
@@ -97,15 +97,19 @@ export default function ProcessStepScroll() {
   const current = steps[activeStep];
 
   return (
-    <section className="relative w-full bg-[#372921] border-b border-[#DED3C5]/20 overflow-hidden">
+    <section
+      ref={containerRef}
+      className="relative w-full bg-[#372921] border-b border-[#DED3C5]/20 lg:h-[260vh]"
+    >
       {/* 
-        Inner Pin Stage: GSAP pins this inner wrapper.
-        The outer <section> is owned purely by React and never reparented,
-        preventing NotFoundError / removeChild crashes during client-side navigation.
+        Native GPU Sticky Stage:
+        Uses CSS position: sticky top-0 inside a 260vh container.
+        Eliminates GSAP .pin-spacer layout mutations, prevents double-scroll dead space,
+        and cleanly exits into Chapter 05 immediately at the end of Step 04.
       */}
       <div
         ref={pinWrapperRef}
-        className="bg-[#372921] text-canvas relative overflow-hidden flex flex-col justify-center py-6 lg:py-8 lg:h-screen lg:min-h-[580px]"
+        className="bg-[#372921] text-canvas relative overflow-hidden flex flex-col justify-center py-6 lg:py-8 h-full min-h-screen lg:h-screen lg:min-h-[580px] lg:sticky lg:top-0"
       >
         {/* Background Soft Radiance */}
         <div className="absolute top-1/2 left-1/3 -translate-y-1/2 w-[550px] h-[550px] bg-[#9E5430]/10 rounded-full blur-[140px] pointer-events-none" />

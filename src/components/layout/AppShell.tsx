@@ -34,10 +34,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <SmoothScroll>
+    <>
       <Preloader />
       <PageTransitionCurtain />
-      <TheThread />
+      <SmoothScroll>
+        <TheThread />
 
       {/* Official Kalajay Emblem Watermark at 5% Opacity */}
       <div
@@ -74,7 +75,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       >
         <MessageCircle className="w-6 h-6 sm:w-7 sm:h-7 text-[#9E5430] transition-transform group-hover:scale-110" />
       </a>
-    </SmoothScroll>
+      </SmoothScroll>
+    </>
   );
 }
 

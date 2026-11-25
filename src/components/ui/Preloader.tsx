@@ -1,19 +1,25 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { BIG_ELEPHANT_SRC, SMALL_ELEPHANT_SRC, FLOWER_SRC, WORDMARK_SRC } from './loaderAssets';
 
 export default function Preloader() {
   const [dismissed, setDismissed] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
+  const initialized = useRef(false);
 
   useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+
     try {
       const seen = sessionStorage.getItem('kalajay_preloader_seen');
       if (seen) {
         setDismissed(true);
         return;
       }
+      // Immediately flag as seen in session so subsequent renders/refreshes never replay
+      sessionStorage.setItem('kalajay_preloader_seen', 'true');
 
       // Preloader plays the full 1.6s elephant glide & lotus bloom animation,
       // then smoothly glides away to unveil the luxury storefront
@@ -23,7 +29,6 @@ export default function Preloader() {
 
       // Unmount after smooth transition
       const timer2 = setTimeout(() => {
-        sessionStorage.setItem('kalajay_preloader_seen', 'true');
         setDismissed(true);
       }, 2050);
 
