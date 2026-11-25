@@ -1,11 +1,14 @@
+import dynamic from 'next/dynamic';
 import HeroCover from '@/components/home/HeroCover';
 import Manifesto from '@/components/home/Manifesto';
 import BestSellersRail from '@/components/home/BestSellersRail';
-import ProcessStepScroll from '@/components/home/ProcessStepScroll';
-import PrettyLittleCollection from '@/components/home/PrettyLittleCollection';
-import GiftingTeaser from '@/components/home/GiftingTeaser';
-import MakersRoute from '@/components/home/MakersRoute';
-import SocialAndReviews from '@/components/home/SocialAndReviews';
+
+// Code-split below-the-fold storytelling sections while preserving full SSR HTML for SEO
+const ProcessStepScroll = dynamic(() => import('@/components/home/ProcessStepScroll'));
+const PrettyLittleCollection = dynamic(() => import('@/components/home/PrettyLittleCollection'));
+const GiftingTeaser = dynamic(() => import('@/components/home/GiftingTeaser'));
+const MakersRoute = dynamic(() => import('@/components/home/MakersRoute'));
+const SocialAndReviews = dynamic(() => import('@/components/home/SocialAndReviews'));
 
 export default function HomePage() {
   return (

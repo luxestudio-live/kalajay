@@ -62,15 +62,18 @@ if (typeof window !== 'undefined') {
     signInWithCustomToken(auth, savedToken).catch(() => {});
   }
 
-  isSupported()
-    .then((yes) => {
-      if (yes) {
-        analytics = getAnalytics(app);
-      }
-    })
-    .catch(() => {
-      // Analytics not supported in this environment
-    });
+  // Defer Google Analytics by 5 seconds so gtag.js never competes with initial mobile LCP/TBT
+  const initAnalytics = () => {
+    isSupported()
+      .then((yes) => {
+        if (yes) {
+          analytics = getAnalytics(app);
+        }
+      })
+      .catch(() => {});
+  };
+
+  setTimeout(initAnalytics, 5000);
 }
 
 export { app, auth, db, analytics };

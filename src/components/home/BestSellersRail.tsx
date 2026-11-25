@@ -13,7 +13,7 @@ if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+const useIsomorphicLayoutEffect = useEffect;
 
 function formatINR(price: number): string {
   return new Intl.NumberFormat('en-IN', {
@@ -32,21 +32,21 @@ export default function BestSellersRail() {
   const [dynamicFeaturedIds, setDynamicFeaturedIds] = useState<string[]>([]);
   const [liveProducts, setLiveProducts] = useState<Product[]>(PRODUCTS);
 
-  // Fetch dynamic curation from Cloud Firestore /cms/featured_products (Published only)
+  // Fetch dynamic curation from Cloud Firestore /cms/featured_products (Published only) during idle time
   useEffect(() => {
-    getFirestoreFeaturedConfig().then(cfg => {
-      if (cfg && cfg.status === 'published' && cfg.productIds && cfg.productIds.length > 0) {
-        setDynamicFeaturedIds(cfg.productIds);
-      }
-    }).catch(() => {});
+    const fetchCuration = () => {
+      getFirestoreFeaturedConfig().then(cfg => {
+        if (cfg && cfg.status === 'published' && cfg.productIds && cfg.productIds.length > 0) {
+          setDynamicFeaturedIds(cfg.productIds);
+        }
+      }).catch(() => {});
+    };
 
-    getFirestoreProducts().then(prods => {
-      if (prods && prods.length > 0) {
-        const codeSet = new Set(prods.map(p => p.code));
-        const combined = [...prods, ...PRODUCTS.filter(p => !codeSet.has(p.code))];
-        setLiveProducts(combined);
-      }
-    }).catch(() => {});
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(fetchCuration);
+    } else {
+      setTimeout(fetchCuration, 2500);
+    }
   }, []);
 
   // Curate 8 authentic, verified bestsellers with genuine macro photography
@@ -86,7 +86,7 @@ export default function BestSellersRail() {
     ).slice(0, 8);
   }, [dynamicFeaturedIds, liveProducts]);
 
-  useIsomorphicLayoutEffect(() => {
+  useEffect(() => {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) return;
 

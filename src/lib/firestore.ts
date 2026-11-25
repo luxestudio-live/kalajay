@@ -28,6 +28,11 @@ import type {
   BannerItem,
   InventoryItem,
   StockAdjustment,
+  InventoryMovement,
+  ExpenseRecord,
+  VendorRecord,
+  CategoryBudget,
+  ArtisanProfile,
   CouponItem,
   AuditLogItem,
   WorkOrder,
@@ -810,6 +815,212 @@ export async function logFirestoreStockAdjustment(adjustment: StockAdjustment): 
     });
   } catch (error) {
     console.error('Error logging stock adjustment:', error);
+  }
+}
+
+export async function getInventoryMovements(sku?: string): Promise<InventoryMovement[]> {
+  try {
+    if (!db || !db.type) return [];
+    const ref = collection(db, 'inventory_movements');
+    const q = sku
+      ? query(ref, where('sku', '==', sku), orderBy('timestamp', 'desc'), limit(100))
+      : query(ref, orderBy('timestamp', 'desc'), limit(200));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return [];
+    const list: InventoryMovement[] = [];
+    snapshot.forEach((snap) => {
+      list.push({ id: snap.id, ...snap.data() } as InventoryMovement);
+    });
+    return list;
+  } catch (error) {
+    console.warn('Error fetching inventory movements from Firestore:', error);
+    return [];
+  }
+}
+
+export async function logFirestoreInventoryMovement(movement: InventoryMovement): Promise<void> {
+  try {
+    if (typeof window !== 'undefined') {
+      const token = sessionStorage.getItem('kalajay_staff_token') || localStorage.getItem('kalajay_staff_token') || '';
+      const res = await fetch('/api/admin/operations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ action: 'inventory_movement', movement }),
+      });
+      if (res.ok) return;
+    }
+    if (!db || !db.type) return;
+    const ref = doc(db, 'inventory_movements', movement.id);
+    await setDoc(ref, {
+      ...movement,
+      createdAtServer: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error logging inventory movement to Firestore:', error);
+  }
+}
+
+/* ===============================================================
+   8B. EXPENSE BOOK & VENDORS (/expenses, /vendors, /budgets)
+   =============================================================== */
+
+export async function getFirestoreExpenses(): Promise<ExpenseRecord[]> {
+  try {
+    if (!db || !db.type) return [];
+    const ref = collection(db, 'expenses');
+    const q = query(ref, orderBy('date', 'desc'), limit(300));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return [];
+    const list: ExpenseRecord[] = [];
+    snapshot.forEach((snap) => {
+      list.push({ id: snap.id, ...snap.data() } as ExpenseRecord);
+    });
+    return list;
+  } catch (error) {
+    console.warn('Error fetching expenses from Firestore:', error);
+    return [];
+  }
+}
+
+export async function saveFirestoreExpense(expense: ExpenseRecord): Promise<void> {
+  try {
+    if (typeof window !== 'undefined') {
+      const token = sessionStorage.getItem('kalajay_staff_token') || localStorage.getItem('kalajay_staff_token') || '';
+      const res = await fetch('/api/admin/operations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ action: 'expense_save', expense }),
+      });
+      if (res.ok) return;
+    }
+    if (!db || !db.type) return;
+    const ref = doc(db, 'expenses', expense.id);
+    await setDoc(ref, {
+      ...expense,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (error) {
+    console.error('Error saving expense to Firestore:', error);
+  }
+}
+
+export async function getFirestoreVendors(): Promise<VendorRecord[]> {
+  try {
+    if (!db || !db.type) return [];
+    const ref = collection(db, 'vendors');
+    const snapshot = await getDocs(ref);
+    if (snapshot.empty) return [];
+    const list: VendorRecord[] = [];
+    snapshot.forEach((snap) => {
+      list.push({ id: snap.id, ...snap.data() } as VendorRecord);
+    });
+    return list;
+  } catch (error) {
+    console.warn('Error fetching vendors from Firestore:', error);
+    return [];
+  }
+}
+
+export async function saveFirestoreVendor(vendor: VendorRecord): Promise<void> {
+  try {
+    if (typeof window !== 'undefined') {
+      const token = sessionStorage.getItem('kalajay_staff_token') || localStorage.getItem('kalajay_staff_token') || '';
+      const res = await fetch('/api/admin/operations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ action: 'vendor_save', vendor }),
+      });
+      if (res.ok) return;
+    }
+    if (!db || !db.type) return;
+    const ref = doc(db, 'vendors', vendor.id);
+    await setDoc(ref, {
+      ...vendor,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (error) {
+    console.error('Error saving vendor to Firestore:', error);
+  }
+}
+
+export async function getFirestoreBudgets(): Promise<CategoryBudget[]> {
+  try {
+    if (!db || !db.type) return [];
+    const ref = doc(db, 'settings', 'category_budgets');
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return [];
+    return (snap.data()?.items as CategoryBudget[]) || [];
+  } catch (error) {
+    console.warn('Error fetching category budgets:', error);
+    return [];
+  }
+}
+
+export async function saveFirestoreBudgets(budgets: CategoryBudget[]): Promise<void> {
+  try {
+    if (!db || !db.type) return;
+    const ref = doc(db, 'settings', 'category_budgets');
+    await setDoc(ref, {
+      items: budgets,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (error) {
+    console.error('Error saving category budgets:', error);
+  }
+}
+
+/* ===============================================================
+   8C. ARTISAN COLLECTIVE DIRECTORY (/artisans)
+   =============================================================== */
+
+export async function getFirestoreArtisans(): Promise<ArtisanProfile[]> {
+  try {
+    if (!db || !db.type) return [];
+    const ref = collection(db, 'artisans');
+    const snapshot = await getDocs(ref);
+    if (snapshot.empty) return [];
+    const list: ArtisanProfile[] = [];
+    snapshot.forEach((snap) => {
+      list.push({ id: snap.id, ...snap.data() } as ArtisanProfile);
+    });
+    return list;
+  } catch (error) {
+    console.warn('Error fetching artisans from Firestore:', error);
+    return [];
+  }
+}
+
+export async function saveFirestoreArtisan(artisan: ArtisanProfile): Promise<void> {
+  try {
+    if (typeof window !== 'undefined') {
+      const token = sessionStorage.getItem('kalajay_staff_token') || localStorage.getItem('kalajay_staff_token') || '';
+      const res = await fetch('/api/admin/operations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ action: 'artisan_save', artisan }),
+      });
+      if (res.ok) return;
+    }
+    if (!db || !db.type) return;
+    const ref = doc(db, 'artisans', artisan.id);
+    await setDoc(ref, {
+      ...artisan,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (error) {
+    console.error('Error saving artisan to Firestore:', error);
   }
 }
 

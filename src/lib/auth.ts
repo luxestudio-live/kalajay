@@ -14,8 +14,15 @@ import {
 } from 'firebase/auth';
 import { auth } from './firebase';
 
-const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: 'select_account' });
+// Lazy provider initialized on demand
+let googleProviderInstance: GoogleAuthProvider | null = null;
+function getGoogleProvider() {
+  if (!googleProviderInstance) {
+    googleProviderInstance = new GoogleAuthProvider();
+    googleProviderInstance.setCustomParameters({ prompt: 'select_account' });
+  }
+  return googleProviderInstance;
+}
 
 /**
  * Sign In with Email and Password
@@ -46,7 +53,7 @@ export async function registerWithEmailFirebase(
  */
 export async function loginWithGoogleFirebase() {
   if (!auth.name) throw new Error('Firebase Auth is not initialized.');
-  return await signInWithPopup(auth, googleProvider);
+  return await signInWithPopup(auth, getGoogleProvider());
 }
 
 /**

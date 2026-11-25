@@ -98,3 +98,7 @@ firestore-backup-*.json
 firestore-sync-receipt-*.json
 
 .vercel
+
+# Local Netlify folder
+.netlify
+lighthouse-report.html

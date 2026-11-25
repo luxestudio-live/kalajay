@@ -1,0 +1,77 @@
+Field No,Module / Domain,Legacy ERP Field,V2 Schema Location,Field Type,Status,Implementation / Parity Detail
+1,Master Inventory,product_code,inventory.sku,String,IMPLEMENTED,Primary identifier across all stock ledger views and movements
+2,Master Inventory,product_name,inventory.name,String,IMPLEMENTED,Handcrafted luxury product name
+3,Master Inventory,category,inventory.category,String,IMPLEMENTED,Artisanal collection category (Vanity & Desk, Handbags, etc.)
+4,Master Inventory,opening_stock,inventory.openingStock,Integer,IMPLEMENTED,Opening inventory balance accumulator at start of period
+5,Master Inventory,stock_in,inventory.stockIn,Integer,IMPLEMENTED,Supplier & procurement inward movement accumulator
+6,Master Inventory,quantity_made,inventory.quantityMade,Integer,IMPLEMENTED,Loom craft production inward movement accumulator
+7,Master Inventory,quantity_sold,inventory.quantitySold,Integer,IMPLEMENTED,Customer sales outward movement accumulator
+8,Master Inventory,damaged,inventory.damaged,Integer,IMPLEMENTED,Artisan tension defects and transit write-offs accumulator
+9,Master Inventory,marketing_qty,inventory.marketingQty,Integer,IMPLEMENTED,Studio PR samples and bridal display allocations
+10,Master Inventory,adjustment_qty,inventory.adjustmentQty,Integer,IMPLEMENTED,Physical audit count variance accumulator
+11,Master Inventory,on_hand,inventory.onHand,Integer,IMPLEMENTED,Immutable 7-counter balance equation strictly enforced
+12,Master Inventory,reserved_stock,inventory.reserved,Integer,PRESERVED_V2,Pending checkout hold quantity for concurrent safety
+13,Master Inventory,available_stock,inventory.available,Integer,IMPLEMENTED,Available to Sell (ATS): max(0, onHand - reserved)
+14,Master Inventory,reorder_point,inventory.reorderPoint,Integer,IMPLEMENTED,Dynamic threshold triggering replenishment watchlist
+15,Master Inventory,unit_cost,inventory.unitCost,Number,IMPLEMENTED,Cost Price per unit in INR
+16,Master Inventory,retail_price,inventory.retailPrice,Number,IMPLEMENTED,Selling Price per unit in INR
+17,Master Inventory,mrp,inventory.mrp,Number,IMPLEMENTED,Maximum Retail Price establishing perceived tag discount buffer
+18,Master Inventory,stock_valuation_cost,inventory.stockValue,Number,IMPLEMENTED,Current onHand valued at unitCost
+19,Master Inventory,stock_valuation_retail,inventory.retailValuation,Number,IMPLEMENTED,Current onHand valued at retailPrice
+20,Master Inventory,gross_margin_pct,inventory.grossMarginPct,Number,IMPLEMENTED,((retailPrice - unitCost) / retailPrice) * 100
+21,Master Inventory,markup_pct,inventory.markupPct,Number,IMPLEMENTED,((retailPrice - unitCost) / unitCost) * 100
+22,Master Inventory,hub_location,inventory.location,String,IMPLEMENTED,Dual-hub routing: Mumbai Atelier vs Bihar Craft House
+23,Master Inventory,stock_status,inventory.status,String,IMPLEMENTED,in_stock | low_stock | out_of_stock | backorder
+24,Stock Ledger,movement_id,inventory_movements.id,String,IMPLEMENTED,Unique immutable movement ledger ID
+25,Stock Ledger,movement_sku,inventory_movements.sku,String,IMPLEMENTED,Referenced product SKU
+26,Stock Ledger,movement_type,inventory_movements.movementType,String,IMPLEMENTED,PURCHASE_IN | PRODUCTION_IN | SALES_OUT | DAMAGE_OUT | MARKETING_OUT | MANUAL_ADJUSTMENT | RESERVATION_HOLD | RESERVATION_RELEASE
+27,Stock Ledger,movement_qty,inventory_movements.quantity,Integer,IMPLEMENTED,Movement quantity magnitude
+28,Stock Ledger,source_entity,inventory_movements.sourceEntity,String,IMPLEMENTED,purchase_order | work_order | order | damage_report | marketing_event | physical_audit
+29,Stock Ledger,source_id,inventory_movements.sourceId,String,IMPLEMENTED,Reference document or order ID
+30,Stock Ledger,movement_timestamp,inventory_movements.createdAt,Timestamp,IMPLEMENTED,ISO 8601 audit timestamp
+31,Stock Ledger,operator_id,inventory_movements.userId,String,IMPLEMENTED,Logged staff user ID with RBAC enforcement
+32,Stock Ledger,movement_notes,inventory_movements.notes,String,IMPLEMENTED,Contextual audit explanation
+33,Costing & Pricing,bead_weight_kg,catalogue.beadWeightKg,Number,IMPLEMENTED,Net glass/crystal bead weight per item in kg
+34,Costing & Pricing,bead_cost_per_kg,catalogue.beadCostPerKg,Number,IMPLEMENTED,Procurement cost per kg of beads in INR
+35,Costing & Pricing,labor_hours,catalogue.laborHours,Number,IMPLEMENTED,Artisan handcraft loom hours per piece
+36,Costing & Pricing,hourly_labor_rate,catalogue.hourlyLaborRate,Number,IMPLEMENTED,Standard artisan wage rate (default ₹50/hr)
+37,Costing & Pricing,other_material_cost,catalogue.otherMaterialCost,Number,IMPLEMENTED,Frames, wires, velvet lining, hardware costs in INR
+38,Costing & Pricing,calculated_cost_price,catalogue.calculatedCostPrice,Number,IMPLEMENTED,(beadKg * beadCostKg) + (hours * 50) + otherMaterials
+39,Costing & Pricing,manual_override_cost,catalogue.manualOverrideCostPrice,Number,IMPLEMENTED,Explicit operator override taking mathematical precedence
+40,Costing & Pricing,effective_cost_price,catalogue.effectiveCostPrice,Number,IMPLEMENTED,manualOverrideCostPrice || calculatedCostPrice
+41,Variants,variant_id,catalogue.variants.id,String,PRESERVED_V2,Unique variant SKU identifier
+42,Variants,variant_colorway,catalogue.variants.colorway,String,PRESERVED_V2,Handcrafted color palette
+43,Variants,variant_metal_finish,catalogue.variants.metalFinish,String,PRESERVED_V2,Frame hardware finish (Antique Brass, Gold, Silver)
+44,Variants,variant_size,catalogue.variants.dimensions,String,PRESERVED_V2,Artisanal physical dimensions
+45,Variants,variant_stock,catalogue.variants.stock,Integer,IMPLEMENTED,Variant inventory count
+46,Variants,variant_sum_safeguard,catalogue.onHand,Integer,IMPLEMENTED,Parent stock strictly equals sum of child variant stock
+47,Finance & Expenses,expense_id,expenses.id,String,IMPLEMENTED,Unique expense voucher ID (EXP-YYYY-XXXX)
+48,Finance & Expenses,expense_category,expenses.category,String,IMPLEMENTED,Materials | Artisan Wages | Packaging | Freight | Studio Rent | Marketing | Utilities | Machinery
+49,Finance & Expenses,expense_treatment,expenses.treatment,String,IMPLEMENTED,OPEX (Operational) vs CAPEX (Capital Asset Investment)
+50,Finance & Expenses,expense_amount,expenses.amount,Number,IMPLEMENTED,Total voucher amount in INR
+51,Finance & Expenses,expense_vendor,expenses.vendorId,String,IMPLEMENTED,Linked registered vendor profile
+52,Finance & Expenses,expense_receipt_url,expenses.receiptUrl,String,IMPLEMENTED,Cloudinary receipt image / invoice PDF URL
+53,Finance & Expenses,expense_status,expenses.status,String,IMPLEMENTED,pending | approved | paid | void
+54,Finance & Expenses,expense_date,expenses.date,String,IMPLEMENTED,Voucher transaction date
+55,Vendor Master,vendor_id,vendors.id,String,IMPLEMENTED,Unique vendor ID (VND-XXXX)
+56,Vendor Master,vendor_name,vendors.name,String,IMPLEMENTED,Vendor / Guild legal business name
+57,Vendor Master,vendor_contact_person,vendors.contactPerson,String,IMPLEMENTED,Direct representative name
+58,Vendor Master,vendor_phone,vendors.phone,String,IMPLEMENTED,Primary contact mobile number
+59,Vendor Master,vendor_gstin,vendors.gstin,String,IMPLEMENTED,GSTIN 15-character tax identifier
+60,Vendor Master,vendor_rating,vendors.rating,Number,IMPLEMENTED,Material quality & reliability score (1.0 - 5.0)
+61,Artisan Collective,artisan_id,artisans.id,String,IMPLEMENTED,Unique craftswoman record ID (ART-BIH-XXX)
+62,Artisan Collective,artisan_name,artisans.fullName,String,IMPLEMENTED,Artisan full name
+63,Artisan Collective,artisan_craft_specialty,artisans.specialty,String,IMPLEMENTED,Loom Weaving | Micro-Bead Embroidery | Frame Assembly | QC
+64,Artisan Collective,artisan_village_hub,artisans.hubLocation,String,IMPLEMENTED,Bihar Craft House Looms vs Mumbai Finishing Studio
+65,Artisan Collective,artisan_emergency_contact,artisans.emergencyContact,String,IMPLEMENTED,Village elder / family emergency phone
+66,Artisan Collective,artisan_loom_number,artisans.assignedLoom,String,IMPLEMENTED,Specific wooden loom frame workstation number
+67,Artisan Collective,artisan_software_isolation,auth.role,Boolean,IMPLEMENTED,Strict isolation: artisans have no admin logins or software access
+68,Analytics,category_profitability,reports.categoryProfitability,Object,IMPLEMENTED,Real-time revenue, cost, gross profit, and margin % by category
+69,Analytics,sku_defect_rate,reports.damageAnalysis,Object,IMPLEMENTED,(damaged / (open + made)) * 100 with loom tension alerts
+70,Analytics,mrp_headroom,reports.executiveMetrics.avgHeadroom,Number,IMPLEMENTED,Average (MRP - Retail Price) across active catalogue
+71,Analytics,loom_capacity_absorption,reports.executiveMetrics.fulfillmentRatio,Number,IMPLEMENTED,(unitsSold / unitsMade) * 100 capacity balance
+72,Excel Bulk Management,excel_catalogue_export,inventory.exportTemplate,Action,IMPLEMENTED,7-column CSV/Excel export matching catalogue_excel.py
+73,Excel Bulk Management,excel_catalogue_import,inventory.importSheet,Action,IMPLEMENTED,Client-side parser with delta preview and validation
+74,Excel Bulk Management,excel_diff_modal,inventory.diffModal,Component,IMPLEMENTED,Interactive before-and-after table highlighting modifications
+75,Excel Bulk Management,excel_atomic_application,inventory.applyBatch,Action,IMPLEMENTED,Atomically adjusts stock via movements and updates prices
+76,Security & RBAC,server_rbac_enforcement,api.operations.route,Middleware,IMPLEMENTED,Staff permission check on all inventory, expense, and artisan writes

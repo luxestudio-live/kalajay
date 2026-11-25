@@ -3,6 +3,12 @@
 import React, { useState, useMemo } from 'react';
 import {
   Landmark,
+  ReceiptText,
+  Wallet,
+  Users2,
+  Paperclip,
+  ExternalLink,
+  BarChart3,
   Download,
   CreditCard,
   Building,
@@ -33,7 +39,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
-import { TaxSlab, OfflineOrder, OfflineOrderItem } from '@/data/adminTypes';
+import { TaxSlab, OfflineOrder, OfflineOrderItem, ExpenseRecord, VendorRecord, CategoryBudget, ExpenseTreatment } from '@/data/adminTypes';
 import { PRODUCTS } from '@/data/catalogue';
 
 interface SettlementItem {
@@ -71,10 +77,25 @@ export default function FinanceView() {
     createOfflineOrder,
     updateOfflineOrderStatus,
     showModal,
+    expenses,
+    createExpense,
+    updateExpense,
+    deleteExpense,
+    vendors,
+    createVendor,
+    updateVendor,
+    categoryBudgets,
+    updateCategoryBudget,
   } = useAdminStore();
 
-  const activeTab: 'overview' | 'offline' | 'gst' =
-    activeSubPage === 'finance.offline'
+  const activeTab: 'overview' | 'expenses' | 'vendors' | 'budgets' | 'offline' | 'gst' =
+    activeSubPage === 'finance.expenses'
+      ? 'expenses'
+      : activeSubPage === 'finance.vendors'
+      ? 'vendors'
+      : activeSubPage === 'finance.budgets'
+      ? 'budgets'
+      : activeSubPage === 'finance.offline'
       ? 'offline'
       : activeSubPage === 'finance.gst'
       ? 'gst'
@@ -85,6 +106,143 @@ export default function FinanceView() {
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  // --- Phase 2C: Expense Book State & Modals ---
+  const [expenseSearch, setExpenseSearch] = useState('');
+  const [expenseTreatmentFilter, setExpenseTreatmentFilter] = useState<'all' | 'OPEX' | 'CAPEX'>('all');
+  const [expenseCategoryFilter, setExpenseCategoryFilter] = useState<string>('all');
+  const [expenseStatusFilter, setExpenseStatusFilter] = useState<string>('all');
+  const [isRecordExpenseModalOpen, setIsRecordExpenseModalOpen] = useState(false);
+
+  // New Expense Form State
+  const [newExpenseParty, setNewExpenseParty] = useState('');
+  const [newExpenseCategory, setNewExpenseCategory] = useState('Raw Materials & Minerals');
+  const [newExpenseSubcategory, setNewExpenseSubcategory] = useState('');
+  const [newExpenseAmount, setNewExpenseAmount] = useState<number>(5000);
+  const [newExpenseTax, setNewExpenseTax] = useState<number>(250);
+  const [newExpenseMethod, setNewExpenseMethod] = useState<ExpenseRecord['paymentMethod']>('Bank Transfer / NEFT');
+  const [newExpenseTreatment, setNewExpenseTreatment] = useState<ExpenseTreatment>('OPEX');
+  const [newExpenseInvoiceRef, setNewExpenseInvoiceRef] = useState('');
+  const [newExpenseReceiptUrl, setNewExpenseReceiptUrl] = useState('');
+  const [newExpenseNotes, setNewExpenseNotes] = useState('');
+
+  // --- Phase 2C: Vendor Master State & Modals ---
+  const [vendorSearch, setVendorSearch] = useState('');
+  const [isRecordVendorModalOpen, setIsRecordVendorModalOpen] = useState(false);
+  const [newVendorName, setNewVendorName] = useState('');
+  const [newVendorGstin, setNewVendorGstin] = useState('');
+  const [newVendorContact, setNewVendorContact] = useState('');
+  const [newVendorPhone, setNewVendorPhone] = useState('');
+  const [newVendorEmail, setNewVendorEmail] = useState('');
+  const [newVendorAddress, setNewVendorAddress] = useState('');
+  const [newVendorCategory, setNewVendorCategory] = useState<VendorRecord['category']>('raw_materials');
+  const [newVendorContracts, setNewVendorContracts] = useState('');
+  const [newVendorNotes, setNewVendorNotes] = useState('');
+
+  // Filtered Expenses
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter(exp => {
+      if (expenseTreatmentFilter !== 'all' && exp.treatment !== expenseTreatmentFilter) return false;
+      if (expenseCategoryFilter !== 'all' && exp.category !== expenseCategoryFilter) return false;
+      if (expenseStatusFilter !== 'all' && exp.status !== expenseStatusFilter) return false;
+      if (expenseSearch.trim()) {
+        const q = expenseSearch.toLowerCase();
+        const matchParty = exp.party.toLowerCase().includes(q);
+        const matchDesc = exp.description.toLowerCase().includes(q);
+        const matchRef = (exp.invoiceRef || '').toLowerCase().includes(q);
+        if (!matchParty && !matchDesc && !matchRef) return false;
+      }
+      return true;
+    });
+  }, [expenses, expenseTreatmentFilter, expenseCategoryFilter, expenseStatusFilter, expenseSearch]);
+
+  // Aggregate Expense Totals
+  const expenseTotals = useMemo(() => {
+    let opex = 0;
+    let capex = 0;
+    let pending = 0;
+    filteredExpenses.forEach(exp => {
+      if (exp.status !== 'void') {
+        if (exp.treatment === 'OPEX') opex += exp.amount;
+        if (exp.treatment === 'CAPEX') capex += exp.amount;
+        if (exp.status === 'pending') pending += exp.amount;
+      }
+    });
+    return { opex, capex, total: opex + capex, pending };
+  }, [filteredExpenses]);
+
+  // Filtered Vendors
+  const filteredVendors = useMemo(() => {
+    return vendors.filter(v => {
+      if (vendorSearch.trim()) {
+        const q = vendorSearch.toLowerCase();
+        const matchName = v.name.toLowerCase().includes(q);
+        const matchContact = v.contactPerson.toLowerCase().includes(q);
+        const matchGst = (v.gstin || '').toLowerCase().includes(q);
+        if (!matchName && !matchContact && !matchGst) return false;
+      }
+      return true;
+    });
+  }, [vendors, vendorSearch]);
+
+  const handleCreateExpenseSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newExpenseParty.trim() || newExpenseAmount <= 0) {
+      showToast('Please provide vendor party name and valid expense amount');
+      return;
+    }
+    createExpense({
+      date: new Date().toISOString().slice(0, 10),
+      amount: Number(newExpenseAmount),
+      currency: 'INR',
+      type: 'expense',
+      status: 'paid',
+      category: newExpenseCategory,
+      subcategory: newExpenseSubcategory || undefined,
+      party: newExpenseParty.trim(),
+      description: newExpenseNotes || `Procurement from ${newExpenseParty}`,
+      paymentMethod: newExpenseMethod,
+      treatment: newExpenseTreatment,
+      taxAmount: Number(newExpenseTax) || 0,
+      invoiceRef: newExpenseInvoiceRef || undefined,
+      receipts: newExpenseReceiptUrl ? [newExpenseReceiptUrl.trim()] : [],
+      notes: newExpenseNotes || undefined,
+      createdBy: 'Pooja Nair (Finance)',
+    });
+    setIsRecordExpenseModalOpen(false);
+    showToast(`Logged ${newExpenseTreatment} expense of ₹${newExpenseAmount} for ${newExpenseParty}.`);
+    setNewExpenseParty('');
+    setNewExpenseAmount(5000);
+    setNewExpenseInvoiceRef('');
+    setNewExpenseReceiptUrl('');
+    setNewExpenseNotes('');
+  };
+
+  const handleCreateVendorSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newVendorName.trim() || !newVendorContact.trim()) {
+      showToast('Vendor name and contact person are required');
+      return;
+    }
+    createVendor({
+      name: newVendorName.trim(),
+      gstin: newVendorGstin.trim() || undefined,
+      contactPerson: newVendorContact.trim(),
+      phone: newVendorPhone.trim() || '+91 98000 00000',
+      email: newVendorEmail.trim() || 'vendor@example.com',
+      address: newVendorAddress.trim() || undefined,
+      category: newVendorCategory,
+      relationshipStart: new Date().toISOString().slice(0, 10),
+      contracts: newVendorContracts || undefined,
+      notes: newVendorNotes || undefined,
+      status: 'active',
+    });
+    setIsRecordVendorModalOpen(false);
+    showToast(`Registered vendor ${newVendorName} in supplier master.`);
+    setNewVendorName('');
+    setNewVendorContact('');
+    setNewVendorGstin('');
   };
 
   // --- Offline Sales State & Filters ---
@@ -395,6 +553,28 @@ export default function FinanceView() {
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
+          {activeTab === 'expenses' && (
+            <button
+              type="button"
+              onClick={() => setIsRecordExpenseModalOpen(true)}
+              className="px-4 py-2 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Log Expense Voucher</span>
+            </button>
+          )}
+
+          {activeTab === 'vendors' && (
+            <button
+              type="button"
+              onClick={() => setIsRecordVendorModalOpen(true)}
+              className="px-4 py-2 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Register Supplier</span>
+            </button>
+          )}
+
           {activeTab === 'offline' && (
             <button
               type="button"
@@ -444,6 +624,51 @@ export default function FinanceView() {
         >
           <CreditCard className="w-3.5 h-3.5" />
           <span>Financial Summary &amp; Treasury</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubPage('finance.expenses')}
+          className={`px-3.5 py-2 rounded-t-lg font-medium transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+            activeTab === 'expenses'
+              ? 'bg-white border-t-2 border-t-[#9E5430] border-x border-[#DED3C5] text-[#9E5430] font-semibold'
+              : 'text-[#76695F] hover:text-[#372921]'
+          }`}
+        >
+          <ReceiptText className="w-3.5 h-3.5" />
+          <span>Expense Book</span>
+          <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-[#9E5430]/10 text-[#9E5430]">
+            {expenses.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubPage('finance.vendors')}
+          className={`px-3.5 py-2 rounded-t-lg font-medium transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+            activeTab === 'vendors'
+              ? 'bg-white border-t-2 border-t-[#9E5430] border-x border-[#DED3C5] text-[#9E5430] font-semibold'
+              : 'text-[#76695F] hover:text-[#372921]'
+          }`}
+        >
+          <Users2 className="w-3.5 h-3.5" />
+          <span>Vendor Master</span>
+          <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-[#9E5430]/10 text-[#9E5430]">
+            {vendors.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubPage('finance.budgets')}
+          className={`px-3.5 py-2 rounded-t-lg font-medium transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+            activeTab === 'budgets'
+              ? 'bg-white border-t-2 border-t-[#9E5430] border-x border-[#DED3C5] text-[#9E5430] font-semibold'
+              : 'text-[#76695F] hover:text-[#372921]'
+          }`}
+        >
+          <BarChart3 className="w-3.5 h-3.5" />
+          <span>Category Budgets</span>
         </button>
 
         <button
@@ -1688,6 +1913,290 @@ export default function FinanceView() {
                 <span className="text-[10px] text-[#76695F] italic">Computer Generated Tax Invoice</span>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* =========================================================================
+          MODAL 4: RECORD EXPENSE VOUCHER MODAL (Phase 2C)
+          ========================================================================= */}
+      {isRecordExpenseModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="relative w-full max-w-lg bg-[#FCFAF6] rounded-2xl shadow-2xl border border-[#DED3C5] overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-[#EAE2D8] bg-[#F7F3EC] flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-mono uppercase tracking-widest text-[#9E5430] font-bold">
+                  Treasury Voucher
+                </span>
+                <h3 className="font-serif text-lg font-bold text-[#372921] mt-0.5">
+                  Record Expense Book Entry
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRecordExpenseModalOpen(false)}
+                className="p-1.5 rounded-full hover:bg-[#EAE2D8] text-[#76695F]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateExpenseSubmit} className="p-6 space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Vendor / Party *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Bohemian Crystal Imports"
+                    value={newExpenseParty}
+                    onChange={e => setNewExpenseParty(e.target.value)}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Accounting Treatment</label>
+                  <select
+                    value={newExpenseTreatment}
+                    onChange={e => setNewExpenseTreatment(e.target.value as ExpenseTreatment)}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921]"
+                  >
+                    <option value="OPEX">OPEX (Operating Material / Freight)</option>
+                    <option value="CAPEX">CAPEX (Loom Frame / Equipment Asset)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Expense Category</label>
+                  <select
+                    value={newExpenseCategory}
+                    onChange={e => setNewExpenseCategory(e.target.value)}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921]"
+                  >
+                    <option value="Raw Materials & Minerals">Raw Materials &amp; Minerals</option>
+                    <option value="Packaging & Luxury Presentation">Packaging &amp; Luxury Presentation</option>
+                    <option value="Atelier Capital Equipment">Atelier Capital Equipment</option>
+                    <option value="Logistics & Courier Delivery">Logistics &amp; Courier Delivery</option>
+                    <option value="Brand, PR & Photoshoots">Brand, PR &amp; Photoshoots</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Payment Method</label>
+                  <select
+                    value={newExpenseMethod}
+                    onChange={e => setNewExpenseMethod(e.target.value as any)}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921]"
+                  >
+                    <option value="Bank Transfer / NEFT">Bank Transfer / NEFT</option>
+                    <option value="Direct UPI">Direct UPI</option>
+                    <option value="Corporate Card">Corporate Card</option>
+                    <option value="Cash / Petty">Cash / Petty Cash</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Gross Amount (₹) *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={newExpenseAmount}
+                    onChange={e => setNewExpenseAmount(Number(e.target.value))}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Bill / Invoice Reference</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. BILL-BC-8921"
+                    value={newExpenseInvoiceRef}
+                    onChange={e => setNewExpenseInvoiceRef(e.target.value)}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#372921] mb-1">Bill / Receipt URL Attachment</label>
+                <input
+                  type="text"
+                  placeholder="e.g. /docs/receipts/bill_bc_8921.pdf"
+                  value={newExpenseReceiptUrl}
+                  onChange={e => setNewExpenseReceiptUrl(e.target.value)}
+                  className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#372921] mb-1">Justification / Notes</label>
+                <textarea
+                  rows={2}
+                  value={newExpenseNotes}
+                  onChange={e => setNewExpenseNotes(e.target.value)}
+                  placeholder="Record purpose or batch allocation..."
+                  className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921]"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-[#EAE2D8] flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setIsRecordExpenseModalOpen(false)}
+                  className="px-4 py-2 rounded-full border border-[#DED3C5] text-[#76695F]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white font-semibold flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Commit to Expense Book</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 5: REGISTER VENDOR MODAL (Phase 2C)
+          ========================================================================= */}
+      {isRecordVendorModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="relative w-full max-w-lg bg-[#FCFAF6] rounded-2xl shadow-2xl border border-[#DED3C5] overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-[#EAE2D8] bg-[#F7F3EC] flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-mono uppercase tracking-widest text-[#9E5430] font-bold">
+                  Supplier Master
+                </span>
+                <h3 className="font-serif text-lg font-bold text-[#372921] mt-0.5">
+                  Register Trade Vendor
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRecordVendorModalOpen(false)}
+                className="p-1.5 rounded-full hover:bg-[#EAE2D8] text-[#76695F]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateVendorSubmit} className="p-6 space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Company / Vendor Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Firozabad Glass Works"
+                    value={newVendorName}
+                    onChange={e => setNewVendorName(e.target.value)}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">GSTIN Number</label>
+                  <input
+                    type="text"
+                    placeholder="27AABCB1234F1Z5"
+                    value={newVendorGstin}
+                    onChange={e => setNewVendorGstin(e.target.value.toUpperCase())}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Contact Person *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Rajesh Sharma"
+                    value={newVendorContact}
+                    onChange={e => setNewVendorContact(e.target.value)}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Vendor Category</label>
+                  <select
+                    value={newVendorCategory}
+                    onChange={e => setNewVendorCategory(e.target.value as any)}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921]"
+                  >
+                    <option value="raw_materials">Raw Materials</option>
+                    <option value="beads_glass">Beads &amp; Czech Glass</option>
+                    <option value="packaging_boxes">Packaging &amp; Rigid Boxes</option>
+                    <option value="logistics_freight">Logistics &amp; Courier</option>
+                    <option value="tools_looms">Tools &amp; Loom Frames</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Phone Number</label>
+                  <input
+                    type="text"
+                    placeholder="+91 98200 00000"
+                    value={newVendorPhone}
+                    onChange={e => setNewVendorPhone(e.target.value)}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Email Address</label>
+                  <input
+                    type="email"
+                    placeholder="orders@vendor.com"
+                    value={newVendorEmail}
+                    onChange={e => setNewVendorEmail(e.target.value)}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#372921] mb-1">Office / Factory Address</label>
+                <input
+                  type="text"
+                  placeholder="Plot number, industrial area, city, pin..."
+                  value={newVendorAddress}
+                  onChange={e => setNewVendorAddress(e.target.value)}
+                  className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921]"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-[#EAE2D8] flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setIsRecordVendorModalOpen(false)}
+                  className="px-4 py-2 rounded-full border border-[#DED3C5] text-[#76695F]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white font-semibold flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Register Supplier Entity</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

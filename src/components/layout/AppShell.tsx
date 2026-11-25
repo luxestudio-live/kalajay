@@ -1,21 +1,23 @@
 'use client';
 
 import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { MessageCircle } from 'lucide-react';
 import Navbar from './Navbar';
 import Footer from './Footer';
-import CartDrawer from '../cart/CartDrawer';
-import SearchModal from '../ui/SearchModal';
 
 import SmoothScroll from '../motion/SmoothScroll';
 import TheThread from '../motion/TheThread';
-import CustomCursor from '../ui/CustomCursor';
 import Preloader from '../ui/Preloader';
 import PageTransitionCurtain from '../ui/PageTransitionCurtain';
-import PWAInstallPrompt from '../ui/PWAInstallPrompt';
-import DPDPConsentBanner from '../ui/DPDPConsentBanner';
-import FAQConcierge from '../ui/FAQConcierge';
+
+// Defer non-critical client overlays from initial main-thread hydration bundle
+const CartDrawer = dynamic(() => import('../cart/CartDrawer'), { ssr: false });
+const SearchModal = dynamic(() => import('../ui/SearchModal'), { ssr: false });
+const PWAInstallPrompt = dynamic(() => import('../ui/PWAInstallPrompt'), { ssr: false });
+const DPDPConsentBanner = dynamic(() => import('../ui/DPDPConsentBanner'), { ssr: false });
+const FAQConcierge = dynamic(() => import('../ui/FAQConcierge'), { ssr: false });
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -35,7 +37,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <SmoothScroll>
       <Preloader />
       <PageTransitionCurtain />
-      <CustomCursor />
       <TheThread />
 
       <Navbar onOpenSearch={() => setIsSearchOpen(true)} />
@@ -44,7 +45,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </main>
       <Footer />
       <CartDrawer />
-      <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      {isSearchOpen && <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />}
       <PWAInstallPrompt />
       <DPDPConsentBanner />
       <FAQConcierge />

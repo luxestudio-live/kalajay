@@ -23,15 +23,23 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
   const [mobileShopExpanded, setMobileShopExpanded] = useState(false);
   const [categoriesList, setCategoriesList] = useState<Collection[]>(COLLECTIONS);
 
-  // Sync live categories from Firestore
+  // Sync live categories from Firestore during idle time to prevent initial render blocking
   useEffect(() => {
-    getFirestoreCategories().then(liveCats => {
-      if (liveCats && liveCats.length > 0) {
-        const slugSet = new Set(liveCats.map(c => c.slug));
-        const combined = [...liveCats, ...COLLECTIONS.filter(c => !slugSet.has(c.slug))];
-        setCategoriesList(combined);
-      }
-    }).catch(() => {});
+    const fetchCats = () => {
+      getFirestoreCategories().then(liveCats => {
+        if (liveCats && liveCats.length > 0) {
+          const slugSet = new Set(liveCats.map(c => c.slug));
+          const combined = [...liveCats, ...COLLECTIONS.filter(c => !slugSet.has(c.slug))];
+          setCategoriesList(combined);
+        }
+      }).catch(() => {});
+    };
+
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(fetchCats);
+    } else {
+      setTimeout(fetchCats, 3000);
+    }
   }, []);
 
   useEffect(() => {

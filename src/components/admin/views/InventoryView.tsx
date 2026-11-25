@@ -2,6 +2,8 @@
 
 import React, { useState, useMemo } from 'react';
 import {
+  Download,
+  Upload,
   Boxes,
   AlertTriangle,
   FileSpreadsheet,
@@ -23,9 +25,15 @@ import {
   ShieldAlert,
   ClipboardList,
   Check,
+  History,
+  ArrowLeftRight,
+  Tag,
+  Percent,
+  Coins,
+  Hammer,
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
-import { StockAdjustment, InventoryItem } from '@/data/adminTypes';
+import { StockAdjustment, InventoryItem, InventoryMovement, InventoryMovementType } from '@/data/adminTypes';
 
 interface ToastState {
   show: boolean;
@@ -46,18 +54,37 @@ const REASON_TILES: Array<{
   { id: 'shrinkage', label: 'Ledger Shrinkage', desc: 'Unaccounted atelier loss requiring audit review' },
 ];
 
+const MOVEMENT_TYPE_CONFIG: Record<
+  InventoryMovementType,
+  { label: string; sign: '+' | '-' | '±'; badgeColor: string; description: string }
+> = {
+  OPENING_BALANCE: { label: 'Opening Balance', sign: '+', badgeColor: 'bg-blue-50 text-blue-800 border-blue-200', description: 'Cutover opening stock' },
+  PURCHASE_IN: { label: 'Purchase In (Vendor)', sign: '+', badgeColor: 'bg-emerald-50 text-emerald-800 border-emerald-200', description: 'Components / goods received from vendor' },
+  PRODUCTION_IN: { label: 'Production In (Loom Output)', sign: '+', badgeColor: 'bg-teal-50 text-teal-800 border-teal-200', description: 'Batch finished by master artisans' },
+  SALE_OUT: { label: 'Sale Deduction', sign: '-', badgeColor: 'bg-purple-50 text-purple-800 border-purple-200', description: 'Fulfilled customer / studio order' },
+  DAMAGE_OUT: { label: 'Damage Write-Off', sign: '-', badgeColor: 'bg-rose-50 text-rose-800 border-rose-200', description: 'Defect or transit loss scrapped' },
+  MARKETING_OUT: { label: 'Marketing / PR Sample', sign: '-', badgeColor: 'bg-amber-50 text-amber-800 border-amber-200', description: 'Editorial loan or client gifting' },
+  MANUAL_ADJUSTMENT: { label: 'Cycle Count Audit', sign: '±', badgeColor: 'bg-indigo-50 text-indigo-800 border-indigo-200', description: 'Audit variance correction' },
+  RETURN_IN: { label: 'Patron Return Restock', sign: '+', badgeColor: 'bg-emerald-50 text-emerald-800 border-emerald-200', description: 'Returned in pristine condition' },
+  TRANSFER_IN: { label: 'Inter-Hub Transfer In', sign: '+', badgeColor: 'bg-cyan-50 text-cyan-800 border-cyan-200', description: 'Received from Bihar / Mumbai hub' },
+  TRANSFER_OUT: { label: 'Inter-Hub Transfer Out', sign: '-', badgeColor: 'bg-cyan-50 text-cyan-800 border-cyan-200', description: 'Dispatched to partner hub' },
+  RESERVATION: { label: 'Checkout Hold', sign: '±', badgeColor: 'bg-stone-50 text-stone-700 border-stone-200', description: 'Temporary patron cart hold' },
+  RESERVATION_RELEASE: { label: 'Hold Released', sign: '±', badgeColor: 'bg-stone-50 text-stone-700 border-stone-200', description: 'Hold expired or cancelled' },
+};
+
 export default function InventoryView() {
   const {
     inventory,
     stockAdjustments,
+    inventoryMovements,
     adjustStock,
+    logMovement,
     createInventoryItem,
     updateInventoryItem,
     deleteInventoryItem,
     can,
     activeSubPage,
     setActiveSubPage,
-    showModal,
   } = useAdminStore();
 
   const activeTab: 'master' | 'low_stock' | 'adjustments' | 'raw_materials' =
@@ -82,6 +109,249 @@ export default function InventoryView() {
   const [search, setSearch] = useState('');
   const [locationFilter, setLocationFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
+  const [movementViewMode, setMovementViewMode] = useState<'movements' | 'audits'>('movements');
+
+    // Phase 2F: Excel Batch Management State
+  const [excelModalOpen, setExcelModalOpen] = useState(false);
+  const [excelDiffs, setExcelDiffs] = useState<Array<{
+    sku: string;
+    name: string;
+    category: string;
+    currentQty: number;
+    newQty: number | null;
+    currentPrice: number;
+    newPrice: number | null;
+    qtyDelta: number;
+    priceDelta: number;
+    status: 'changed' | 'unchanged' | 'invalid' | 'unknown';
+    errorMsg?: string;
+  }>>([]);
+  const [excelStats, setExcelStats] = useState({ total: 0, changed: 0, unchanged: 0, invalid: 0 });
+  const [excelFileName, setExcelFileName] = useState('');
+
+  // Phase 2F: Export Catalogue Template (Exact 7 columns from catalogue_excel.py)
+  const handleExportExcelTemplate = () => {
+    try {
+      const headers = ['Product code', 'Product name', 'Category', 'Current quantity', 'New quantity', 'Current price (INR)', 'New price (INR)'];
+      const rows = inventory.map(item => [
+        `"${item.sku}"`,
+        `"${(item.name || '').replace(/"/g, '""')}"`,
+        `"${(item.category || '').replace(/"/g, '""')}"`,
+        item.onHand ?? 0,
+        '', // New quantity (blank = no change)
+        item.retailPrice ?? 0,
+        '', // New price (blank = no change)
+      ].join(','));
+
+      const csvContent = [
+        '# Kalajay catalogue updates - Downloaded from ERP Master Inventory',
+        '# Fill New quantity and New price columns only. Blank = no change; new quantity 0 = sold out.',
+        headers.join(','),
+        ...rows,
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `Kalajay_Catalogue_Updates_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showToast('Downloaded 7-column Catalogue Excel/CSV template.', 'success');
+    } catch (err: any) {
+      showToast('Failed to export catalogue template: ' + err.message, 'warning');
+    }
+  };
+
+  // Phase 2F: Parse Excel / CSV File and Generate Diff
+  const handleExcelFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setExcelFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (!text) return;
+
+      const lines = text.split(/\r?\n/).filter(line => line.trim() && !line.startsWith('#'));
+      if (lines.length < 2) {
+        showToast('Uploaded file does not contain valid data rows.', 'warning');
+        return;
+      }
+
+      // Check header row
+      const headerLine = lines[0];
+      const dataRows = lines.slice(1);
+
+      const existingMap = new Map(inventory.map(i => [i.sku, i]));
+      const diffList: typeof excelDiffs = [];
+      let changed = 0;
+      let unchanged = 0;
+      let invalid = 0;
+
+      for (let i = 0; i < dataRows.length; i++) {
+        const line = dataRows[i].trim();
+        if (!line) continue;
+
+        // Robust CSV splitter preserving empty cells and respecting quoted strings
+        const cells = line.split(/,(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)/).map(c => c.trim().replace(/^"|"$/g, ''));
+        if (cells.length < 3) continue;
+
+        const code = cells[0];
+        const name = cells[1] || '';
+        const category = cells[2] || '';
+        const rawNewQty = cells[4];
+        const rawNewPrice = cells[6];
+
+        const target = existingMap.get(code);
+        if (!target) {
+          invalid++;
+          diffList.push({
+            sku: code,
+            name,
+            category,
+            currentQty: 0,
+            newQty: null,
+            currentPrice: 0,
+            newPrice: null,
+            qtyDelta: 0,
+            priceDelta: 0,
+            status: 'unknown',
+            errorMsg: 'Unknown SKU not in catalogue',
+          });
+          continue;
+        }
+
+        let newQty: number | null = null;
+        let newPrice: number | null = null;
+        let hasError = false;
+        let errorMsg = '';
+
+        if (rawNewQty !== undefined && rawNewQty !== '') {
+          const parsed = Number(rawNewQty);
+          if (isNaN(parsed) || parsed < 0 || !Number.isInteger(parsed)) {
+            hasError = true;
+            errorMsg = 'Invalid quantity';
+          } else {
+            newQty = parsed;
+          }
+        }
+
+        if (rawNewPrice !== undefined && rawNewPrice !== '') {
+          const parsed = Number(rawNewPrice);
+          if (isNaN(parsed) || parsed < 0) {
+            hasError = true;
+            errorMsg = errorMsg ? errorMsg + ', invalid price' : 'Invalid price';
+          } else {
+            newPrice = Math.round(parsed * 100) / 100;
+          }
+        }
+
+        const currentPrice = target.retailPrice || 0;
+        if (hasError) {
+          invalid++;
+          diffList.push({
+            sku: code,
+            name: target.name,
+            category: target.category,
+            currentQty: target.onHand,
+            newQty: null,
+            currentPrice,
+            newPrice: null,
+            qtyDelta: 0,
+            priceDelta: 0,
+            status: 'invalid',
+            errorMsg,
+          });
+          continue;
+        }
+
+        const qtyDelta = newQty !== null ? newQty - target.onHand : 0;
+        const priceDelta = newPrice !== null ? newPrice - currentPrice : 0;
+        const isModified = (newQty !== null && newQty !== target.onHand) || (newPrice !== null && newPrice !== currentPrice);
+
+        if (isModified) {
+          changed++;
+          diffList.push({
+            sku: code,
+            name: target.name,
+            category: target.category,
+            currentQty: target.onHand,
+            newQty,
+            currentPrice,
+            newPrice,
+            qtyDelta,
+            priceDelta,
+            status: 'changed',
+          });
+        } else {
+          unchanged++;
+          diffList.push({
+            sku: code,
+            name: target.name,
+            category: target.category,
+            currentQty: target.onHand,
+            newQty,
+            currentPrice,
+            newPrice,
+            qtyDelta: 0,
+            priceDelta: 0,
+            status: 'unchanged',
+          });
+        }
+      }
+
+      setExcelDiffs(diffList);
+      setExcelStats({ total: diffList.length, changed, unchanged, invalid });
+      setExcelModalOpen(true);
+    };
+
+    reader.readAsText(file);
+    // Reset file input value so same file can be chosen again
+    e.target.value = '';
+  };
+
+  // Phase 2F: Apply Batch Updates into Master Ledger & Catalogue
+  const handleApplyBatchUpdates = () => {
+    const actionable = excelDiffs.filter(d => d.status === 'changed');
+    if (actionable.length === 0) {
+      showToast('No modifications detected to apply.', 'info');
+      setExcelModalOpen(false);
+      return;
+    }
+
+    actionable.forEach(item => {
+      // 1. Stock quantity update via atomic ledger movement
+      if (item.newQty !== null && item.newQty !== item.currentQty) {
+        adjustStock(
+          item.sku,
+          item.newQty,
+          'count_variance',
+          `Batch Excel import (${item.qtyDelta > 0 ? '+' : ''}${item.qtyDelta} pcs via ${excelFileName || 'catalogue sheet'})`
+        );
+      }
+
+      // 2. Retail price update
+      if (item.newPrice !== null && item.newPrice !== item.currentPrice) {
+        const existing = inventory.find(i => i.sku === item.sku);
+        if (existing) {
+          updateInventoryItem(existing.id, {
+            retailPrice: item.newPrice,
+            stockValue: (existing.onHand || 0) * (existing.unitCost || 0),
+            grossMarginPct: existing.unitCost > 0 ? Math.round(((item.newPrice - existing.unitCost) / item.newPrice) * 100 * 10) / 10 : 0,
+          });
+        }
+      }
+    });
+
+    setExcelModalOpen(false);
+    showToast(`Successfully applied ${actionable.length} batch updates to ERP stock ledger.`, 'success');
+  };
+
 
   // Toast feedback
   const [toast, setToast] = useState<ToastState>({ show: false, message: '', type: 'success' });
@@ -102,7 +372,7 @@ export default function InventoryView() {
   const [newSkuData, setNewSkuData] = useState<Omit<InventoryItem, 'id'>>({
     sku: '',
     name: '',
-    category: 'Vanity Boxes',
+    category: 'Organisers',
     location: 'Mumbai Atelier',
     type: 'finished_good',
     onHand: 10,
@@ -110,105 +380,227 @@ export default function InventoryView() {
     available: 10,
     reorderPoint: 5,
     unitCost: 1200,
-    supplier: 'In-House Bihar Atelier',
+    retailPrice: 2899,
+    mrp: 3499,
+    supplier: 'Bihar Craft House Hub',
     status: 'in_stock',
     unit: 'pcs',
+    hsnCode: '7117.90',
+    taxRate: 3.0,
+    openingStock: 10,
+    stockIn: 0,
+    quantityMade: 0,
+    quantitySold: 0,
+    damaged: 0,
+    marketingQty: 0,
+    adjustmentQty: 0,
+    grossMarginPct: 58.6,
+    stockValue: 12000,
   });
 
   // 3. Edit SKU Modal State
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
 
-  // 4. Delete / Archive SKU Confirmation State
+  // 4. Delete SKU Modal State
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingItem, setDeletingItem] = useState<InventoryItem | null>(null);
 
-  const canAdjustStock = can('inventory.master', 'adjust_stock');
-  const canEdit = can('inventory.master', 'edit');
+  // 5. Post Inventory Movement Modal State (Phase 2A)
+  const [movementModalOpen, setMovementModalOpen] = useState(false);
+  const [movementSku, setMovementSku] = useState<string>('');
+  const [movementType, setMovementType] = useState<InventoryMovementType>('PURCHASE_IN');
+  const [movementQuantity, setMovementQuantity] = useState<number>(5);
+  const [movementNotes, setMovementNotes] = useState<string>('');
+  const [movementSourceId, setMovementSourceId] = useState<string>('');
 
-  // Target item for adjustment
-  const activeAdjustItem = useMemo(() => {
-    return inventory.find(i => i.sku === selectedSku) || inventory[0];
-  }, [inventory, selectedSku]);
+  // 6. Movement History Drawer State
+  const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
+  const [historySku, setHistorySku] = useState<string>('');
 
-  // Filtered inventory with null-safe defensive checks
-  const filteredItems = inventory.filter(item => {
-    if (!item) return false;
-    const nameStr = (item.name || item.sku || '').toLowerCase();
-    const skuStr = (item.sku || '').toLowerCase();
-    const searchLower = (search || '').toLowerCase();
-    const matchesSearch = nameStr.includes(searchLower) || skuStr.includes(searchLower);
-    const matchesLoc = locationFilter === 'All' || item.location === locationFilter;
-    const matchesType = typeFilter === 'All' || item.type === typeFilter;
-    const isLowOnly = activeTab === 'low_stock' ? item.status === 'low_stock' || item.status === 'out_of_stock' : true;
-    const isRawOnly = activeTab === 'raw_materials' ? item.type === 'raw_material' : true;
+  const canAdjustStock = can('inventory.all', 'adjust_stock');
 
-    return matchesSearch && matchesLoc && matchesType && isLowOnly && isRawOnly;
-  });
+  // Filtered Items
+  const filteredItems = useMemo(() => {
+    return inventory.filter(item => {
+      if (activeTab === 'raw_materials') {
+        if (item.type !== 'raw_material') return false;
+      } else if (activeTab === 'low_stock') {
+        if (item.status === 'in_stock') return false;
+      } else if (activeTab === 'master') {
+        if (typeFilter !== 'All' && item.type !== typeFilter) return false;
+      }
 
+      if (locationFilter !== 'All' && item.location !== locationFilter) return false;
+
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const matchSku = item.sku.toLowerCase().includes(q);
+        const matchName = item.name.toLowerCase().includes(q);
+        const matchCat = item.category.toLowerCase().includes(q);
+        const matchHsn = (item.hsnCode || '').toLowerCase().includes(q);
+        if (!matchSku && !matchName && !matchCat && !matchHsn) return false;
+      }
+
+      return true;
+    });
+  }, [inventory, activeTab, typeFilter, locationFilter, search]);
+
+  // Aggregate Totals
+  const totals = useMemo(() => {
+    let totalOnHand = 0;
+    let totalReserved = 0;
+    let totalAvailable = 0;
+    let totalValuation = 0;
+    let totalRetailValue = 0;
+
+    filteredItems.forEach(item => {
+      const onHand = item.onHand || 0;
+      const reserved = item.reserved || 0;
+      const available = item.available || Math.max(0, onHand - reserved);
+      const cost = item.unitCost || 0;
+      const retail = item.retailPrice || 0;
+
+      totalOnHand += onHand;
+      totalReserved += reserved;
+      totalAvailable += available;
+      totalValuation += onHand * cost;
+      totalRetailValue += onHand * retail;
+    });
+
+    const blendedMargin =
+      totalRetailValue > 0
+        ? Math.round(((totalRetailValue - totalValuation) / totalRetailValue) * 100 * 10) / 10
+        : 0;
+
+    return {
+      totalOnHand,
+      totalReserved,
+      totalAvailable,
+      totalValuation,
+      totalRetailValue,
+      blendedMargin,
+      skuCount: filteredItems.length,
+    };
+  }, [filteredItems]);
+
+  // SKU Movements
+  const currentSkuMovements = useMemo(() => {
+    if (!historySku) return [];
+    return inventoryMovements.filter(m => m.sku === historySku);
+  }, [inventoryMovements, historySku]);
+
+  // Open Adjust Modal
   const handleOpenAdjust = (sku?: string) => {
-    if (sku) {
-      setSelectedSku(sku);
-      const target = inventory.find(i => i.sku === sku);
-      if (target) setNewQty(target.onHand);
-    } else if (inventory[0]) {
-      setSelectedSku(inventory[0].sku);
-      setNewQty(inventory[0].onHand);
-    }
+    const targetSku = sku || inventory[0]?.sku || '';
+    const item = inventory.find(i => i.sku === targetSku);
+    setSelectedSku(targetSku);
+    setNewQty(item?.onHand || 0);
+    setAdjReason('count_variance');
     setAdjNotes('');
     setAdjustModalOpen(true);
   };
 
+  // Submit Stock Adjustment
   const handleAdjustSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeAdjustItem) return;
-    adjustStock(selectedSku, Number(newQty), adjReason, adjNotes || 'Operational reconciliation verified by atelier coordinator.');
+    if (!selectedSku) return;
+    adjustStock(selectedSku, Number(newQty), adjReason, adjNotes);
     setAdjustModalOpen(false);
-    showToast(`Stock ledger updated for ${activeAdjustItem.name} (${selectedSku}) to ${newQty} ${activeAdjustItem.unit}.`, 'success');
+    showToast(`Stock adjustment logged for SKU ${selectedSku}. Ledger balance updated.`, 'success');
   };
 
+  // Open Log Movement Modal
+  const handleOpenMovement = (sku: string) => {
+    setMovementSku(sku);
+    setMovementType('PURCHASE_IN');
+    setMovementQuantity(5);
+    setMovementNotes('');
+    setMovementSourceId('');
+    setMovementModalOpen(true);
+  };
+
+  // Submit Movement
+  const handleMovementSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!movementSku || movementQuantity <= 0) return;
+    const targetItem = inventory.find(i => i.sku === movementSku);
+    if (!targetItem) return;
+
+    logMovement({
+      sku: movementSku,
+      productName: targetItem.name,
+      location: targetItem.location,
+      movementType,
+      quantity: Number(movementQuantity),
+      sourceEntity:
+        movementType === 'PURCHASE_IN'
+          ? 'purchase_order'
+          : movementType === 'PRODUCTION_IN'
+          ? 'work_order'
+          : movementType === 'DAMAGE_OUT'
+          ? 'damage_report'
+          : movementType === 'MARKETING_OUT'
+          ? 'marketing_event'
+          : 'manual_audit',
+      sourceId: movementSourceId || undefined,
+      unitCost: targetItem.unitCost,
+      notes: movementNotes || `Logged ${MOVEMENT_TYPE_CONFIG[movementType].label}`,
+    });
+
+    setMovementModalOpen(false);
+    showToast(`Logged ${MOVEMENT_TYPE_CONFIG[movementType].label} (${movementQuantity} ${targetItem.unit}) for ${movementSku}.`, 'success');
+  };
+
+  // Open History Drawer
+  const handleOpenHistory = (sku: string) => {
+    setHistorySku(sku);
+    setHistoryDrawerOpen(true);
+  };
+
+  // Create Item Submit
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSkuData.sku || !newSkuData.name) {
-      showModal({
-        title: 'Validation Incomplete',
-        message: 'Please provide both an inventory SKU code and item name before registering this master asset.',
-        icon: 'warning',
-      });
+      showToast('Please fill in required SKU code and title', 'warning');
       return;
     }
-    const computedAvailable = Math.max(0, newSkuData.onHand - newSkuData.reserved);
-    const computedStatus: InventoryItem['status'] =
-      newSkuData.onHand === 0
-        ? 'out_of_stock'
-        : newSkuData.onHand <= newSkuData.reorderPoint
-        ? 'low_stock'
-        : 'in_stock';
+
+    const onHand = Number(newSkuData.onHand) || 0;
+    const reserved = Number(newSkuData.reserved) || 0;
+    const available = Math.max(0, onHand - reserved);
+    const unitCost = Number(newSkuData.unitCost) || 0;
+    const retailPrice = Number(newSkuData.retailPrice) || 0;
+    const mrp = Number(newSkuData.mrp) || retailPrice * 1.25;
+    const grossMarginPct =
+      retailPrice > 0 ? Math.round(((retailPrice - unitCost) / retailPrice) * 100 * 10) / 10 : 0;
+    const stockValue = onHand * unitCost;
 
     createInventoryItem({
       ...newSkuData,
-      available: computedAvailable,
-      status: computedStatus,
+      onHand,
+      reserved,
+      available,
+      unitCost,
+      retailPrice,
+      mrp,
+      grossMarginPct,
+      stockValue,
+      openingStock: onHand,
+      stockIn: 0,
+      quantityMade: 0,
+      quantitySold: 0,
+      damaged: 0,
+      marketingQty: 0,
+      adjustmentQty: 0,
+      status: onHand === 0 ? 'out_of_stock' : onHand <= newSkuData.reorderPoint ? 'low_stock' : 'in_stock',
     });
+
     setCreateModalOpen(false);
-    showToast(`New SKU ${newSkuData.sku} (${newSkuData.name}) added to ${newSkuData.location} ledger.`, 'success');
-    setNewSkuData({
-      sku: '',
-      name: '',
-      category: 'Vanity Boxes',
-      location: 'Mumbai Atelier',
-      type: 'finished_good',
-      onHand: 10,
-      reserved: 0,
-      available: 10,
-      reorderPoint: 5,
-      unitCost: 1200,
-      supplier: 'In-House Bihar Atelier',
-      status: 'in_stock',
-      unit: 'pcs',
-    });
+    showToast(`Registered SKU ${newSkuData.sku} in master inventory ledger.`, 'success');
   };
 
+  // Edit Submit
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem) return;
@@ -219,11 +611,18 @@ export default function InventoryView() {
         : editingItem.onHand <= editingItem.reorderPoint
         ? 'low_stock'
         : 'in_stock';
+    const computedStockValue = editingItem.onHand * editingItem.unitCost;
+    const computedMargin =
+      editingItem.retailPrice && editingItem.retailPrice > 0
+        ? Math.round(((editingItem.retailPrice - editingItem.unitCost) / editingItem.retailPrice) * 100 * 10) / 10
+        : editingItem.grossMarginPct;
 
     updateInventoryItem(editingItem.id, {
       ...editingItem,
       available: computedAvailable,
       status: computedStatus,
+      stockValue: computedStockValue,
+      grossMarginPct: computedMargin,
     });
     setEditModalOpen(false);
     showToast(`Updated specifications for ${editingItem.name} (${editingItem.sku}).`, 'success');
@@ -240,7 +639,7 @@ export default function InventoryView() {
   const lowStockCount = inventory.filter(i => i.status !== 'in_stock').length;
 
   return (
-    <div className="space-y-6 animate-fade-in pb-12">
+    <div className="space-y-6 animate-fade-in pb-16">
       {/* Toast Notification */}
       {toast.show && (
         <div className="fixed top-20 right-6 z-50 flex items-center gap-2.5 bg-[#372921] text-[#F7F3EC] px-4 py-3 rounded-xl shadow-xl border border-[#9E5430]/40 text-xs animate-fade-in">
@@ -254,17 +653,37 @@ export default function InventoryView() {
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#9E5430]/10 text-[#9E5430] text-[10.5px] uppercase tracking-wider font-semibold mb-1">
             <Boxes className="w-3.5 h-3.5" />
-            <span>Master Operations &amp; ERP Ledger</span>
+            <span>Master Operations &amp; Authoritative ERP Ledger</span>
           </div>
           <h1 className="font-serif text-2xl sm:text-3xl text-[#372921] font-semibold">
-            Inventory &amp; Stock Ledger
+            Master Inventory &amp; Stock Ledger
           </h1>
           <p className="text-xs sm:text-sm text-[#76695F] mt-1">
-            Dual-hub inventory spanning Mumbai Finishing Atelier and Bihar Craft House looms.
+            Immutable 7-counter inventory ledger with dual-hub tracking across Mumbai Finishing Atelier and Bihar Craft House looms.
           </p>
         </div>
 
         <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+          {/* Phase 2F: Excel Batch Export & Import Buttons */}
+          <button
+            type="button"
+            onClick={handleExportExcelTemplate}
+            className="px-3.5 py-2 rounded-full border border-[#DED3C5] bg-white hover:bg-[#F7F3EC] text-[#372921] text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5 text-[#9E5430]" />
+            <span>Export Catalogue Sheet (CSV)</span>
+          </button>
+
+          <label className="px-3.5 py-2 rounded-full border border-[#DED3C5] bg-white hover:bg-[#F7F3EC] text-[#372921] text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer">
+            <Upload className="w-3.5 h-3.5 text-[#9E5430]" />
+            <span>Import Excel Updates</span>
+            <input
+              type="file"
+              accept=".csv,.xlsx,.tsv"
+              onChange={handleExcelFileUpload}
+              className="hidden"
+            />
+          </label>
           <button
             type="button"
             onClick={() => setCreateModalOpen(true)}
@@ -281,7 +700,7 @@ export default function InventoryView() {
             className="px-4 py-2 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-40 cursor-pointer"
           >
             <Boxes className="w-3.5 h-3.5" />
-            <span>Log Stock Adjustment</span>
+            <span>Log Physical Audit Adjustment</span>
           </button>
         </div>
       </div>
@@ -292,11 +711,11 @@ export default function InventoryView() {
           { id: 'master', label: `Master Ledger (${inventory.length})` },
           {
             id: 'low_stock',
-            label: `Low Stock Alerts (${lowStockCount})`,
+            label: `Replenishment Watchlist (${lowStockCount})`,
             badge: lowStockCount > 0 ? `${lowStockCount} Low` : undefined,
           },
           { id: 'raw_materials', label: 'Raw Materials & Minerals' },
-          { id: 'adjustments', label: `Adjustments Audit Trail (${stockAdjustments.length})` },
+          { id: 'adjustments', label: `Authoritative Ledger Trail (${inventoryMovements.length})` },
         ].map(tab => (
           <button
             key={tab.id}
@@ -327,7 +746,7 @@ export default function InventoryView() {
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search by SKU, item name, minerals..."
+              placeholder="Search by SKU, item name, HSN code, materials..."
               className="w-full bg-[#F7F3EC] border border-[#DED3C5] rounded-lg pl-8 pr-3 py-1.5 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
             />
           </div>
@@ -345,128 +764,215 @@ export default function InventoryView() {
             </select>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-[#76695F] font-semibold">Classification:</span>
-            <select
-              value={typeFilter}
-              onChange={e => setTypeFilter(e.target.value)}
-              className="bg-[#F7F3EC] border border-[#DED3C5] rounded-lg px-2.5 py-1.5 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
-            >
-              <option value="All">All Inventory Types</option>
-              <option value="finished_good">Finished Heirloom Goods</option>
-              <option value="raw_material">Raw Craft Materials</option>
-            </select>
-          </div>
+          {activeTab === 'master' && (
+            <div className="flex items-center gap-2">
+              <span className="text-[#76695F] font-semibold">Classification:</span>
+              <select
+                value={typeFilter}
+                onChange={e => setTypeFilter(e.target.value)}
+                className="bg-[#F7F3EC] border border-[#DED3C5] rounded-lg px-2.5 py-1.5 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+              >
+                <option value="All">All Inventory Types</option>
+                <option value="finished_good">Finished Heirloom Goods</option>
+                <option value="raw_material">Raw Craft Materials</option>
+              </select>
+            </div>
+          )}
         </div>
       )}
 
-      {/* 4. INVENTORY TABLE OR ADJUSTMENTS LOG */}
-      {activeTab !== 'adjustments' ? (
+      {/* 4. MASTER LEDGER TABLE */}
+      {activeTab !== 'adjustments' && (
         <div className="bg-white rounded-2xl border border-[#DED3C5] shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[640px]">
             <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-[#F7F3EC] text-[#76695F] border-b border-[#DED3C5] text-[10.5px] uppercase tracking-wider font-semibold">
+              <thead className="bg-[#F7F3EC] text-[#76695F] border-b border-[#DED3C5] text-[10px] uppercase tracking-wider font-semibold sticky top-0 z-20 shadow-2xs">
                 <tr>
-                  <th className="py-3 px-4">Item SKU &amp; Name</th>
-                  <th className="py-3 px-4">Hub Location</th>
-                  <th className="py-3 px-4 text-center">On-Hand</th>
-                  <th className="py-3 px-4 text-center">Reserved</th>
-                  <th className="py-3 px-4 text-center">Available</th>
-                  <th className="py-3 px-4 text-right">Unit Cost</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
+                  <th className="py-3 px-3 w-8 text-center bg-[#F7F3EC]">#</th>
+                  <th className="py-3 px-4 min-w-[220px] sticky left-0 z-30 bg-[#F7F3EC] shadow-r">SKU &amp; Product Details</th>
+                  <th className="py-3 px-3">Hub</th>
+                  <th className="py-3 px-3">HSN / Tax</th>
+                  <th className="py-3 px-2 text-center text-[#685B52]" title="Initial stock baseline">Open</th>
+                  <th className="py-3 px-2 text-center text-emerald-800" title="Purchases / Restock in">+ In</th>
+                  <th className="py-3 px-2 text-center text-teal-800" title="Pieces woven & completed from looms">+ Made</th>
+                  <th className="py-3 px-2 text-center text-purple-800" title="Total customer & offline sales">- Sold</th>
+                  <th className="py-3 px-2 text-center text-rose-800" title="Tension defects & damaged in transit">- Dmg</th>
+                  <th className="py-3 px-2 text-center text-indigo-800" title="Net physical audit variance">± Adj</th>
+                  <th className="py-3 px-3 text-center font-bold text-[#372921] bg-[#F4EFE6]/60">On-Hand</th>
+                  <th className="py-3 px-3 text-center text-[#76695F]">Reserved</th>
+                  <th className="py-3 px-3 text-center font-bold text-[#9E5430] bg-[#9E5430]/5">Available</th>
+                  {activeTab === 'low_stock' && (
+                    <>
+                      <th className="py-3 px-3 text-center text-amber-800">Reorder</th>
+                      <th className="py-3 px-3 text-center text-rose-800 font-bold">Deficit</th>
+                      <th className="py-3 px-3 text-center text-teal-800 font-bold">Suggest Make</th>
+                    </>
+                  )}
+                  <th className="py-3 px-3 text-right">Cost (₹)</th>
+                  <th className="py-3 px-3 text-right">Price (₹)</th>
+                  <th className="py-3 px-3 text-center">Margin %</th>
+                  <th className="py-3 px-3 text-right font-semibold">Valuation</th>
+                  <th className="py-3 px-3 text-center">Status</th>
+                  <th className="py-3 px-4 text-right min-w-[150px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EAE2D8]">
-                {filteredItems.map(item => (
-                  <tr key={item.id} className="hover:bg-[#FFFCF7] transition-colors">
-                    <td className="py-3 px-4">
-                      <strong className="text-[#372921] font-semibold block">{item.name}</strong>
-                      <span className="text-[10.5px] text-[#76695F] font-mono">
-                        {item.sku} · {item.category}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="inline-flex items-center gap-1 text-[11px] text-[#76695F]">
-                        <Warehouse className="w-3 h-3 text-[#9E5430]" />
-                        <span>{item.location}</span>
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center font-mono font-bold text-[#372921]">
-                      {item.onHand} {item.unit}
-                    </td>
-                    <td className="py-3 px-4 text-center font-mono text-[#76695F]">
-                      {item.reserved} {item.unit}
-                    </td>
-                    <td className="py-3 px-4 text-center font-mono font-bold text-[#9E5430]">
-                      {item.available} {item.unit}
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono text-[#372921]">
-                      {item.unitCost != null && !isNaN(Number(item.unitCost)) && Number(item.unitCost) > 0 ? (
-                        `₹${Number(item.unitCost).toLocaleString('en-IN')}`
-                      ) : item.unitCost === 0 ? (
-                        <span className="text-[#76695F] italic" title="Explicitly recorded as zero cost">₹0.00</span>
-                      ) : (
-                        <span className="text-[#A09383] italic text-[11px]" title="Procurement cost unrecorded">—</span>
+                {filteredItems.map((item, idx) => {
+                  const margin = item.grossMarginPct ?? (item.retailPrice && item.unitCost ? Math.round(((item.retailPrice - item.unitCost) / item.retailPrice) * 100 * 10) / 10 : 0);
+                  const deficit = Math.max(0, item.reorderPoint - item.available);
+                  const suggestedMake = Math.max(0, item.reorderPoint * 2 - item.onHand);
+
+                  return (
+                    <tr key={item.id} className="hover:bg-[#FFFCF7] transition-colors">
+                      <td className="py-3 px-3 text-center font-mono text-[10px] text-[#A99583]">
+                        {idx + 1}
+                      </td>
+                      <td className="py-3 px-4 sticky left-0 z-10 bg-white hover:bg-[#FFFCF7] shadow-r">
+                        <strong className="text-[#372921] font-semibold block text-xs">{item.name}</strong>
+                        <div className="flex items-center gap-1.5 text-[10px] text-[#76695F] font-mono mt-0.5">
+                          <span className="text-[#9E5430] font-bold">{item.sku}</span>
+                          <span>·</span>
+                          <span>{item.category}</span>
+                          {item.costing?.enabled && (
+                            <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 text-[9px] font-sans font-semibold">
+                              Craft Formula
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 text-[11px] text-[#76695F]">
+                          <Warehouse className="w-3 h-3 text-[#9E5430]" />
+                          <span>{item.location === 'Mumbai Atelier' ? 'Mumbai' : 'Bihar Hub'}</span>
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 font-mono text-[10px] text-[#76695F] whitespace-nowrap">
+                        <span>{item.hsnCode || '7117.90'}</span>
+                        <span className="text-[#A99583] block text-[9.5px]">{item.taxRate || 3}% GST</span>
+                      </td>
+                      <td className="py-3 px-2 text-center font-mono text-[#685B52]">
+                        {item.openingStock ?? item.onHand}
+                      </td>
+                      <td className="py-3 px-2 text-center font-mono text-emerald-800 font-semibold">
+                        {item.stockIn ?? 0}
+                      </td>
+                      <td className="py-3 px-2 text-center font-mono text-teal-800 font-semibold">
+                        {item.quantityMade ?? 0}
+                      </td>
+                      <td className="py-3 px-2 text-center font-mono text-purple-800">
+                        {item.quantitySold ?? 0}
+                      </td>
+                      <td className="py-3 px-2 text-center font-mono text-rose-800 font-semibold">
+                        {item.damaged ?? 0}
+                      </td>
+                      <td className="py-3 px-2 text-center font-mono text-indigo-800">
+                        {item.adjustmentQty && item.adjustmentQty > 0
+                          ? `+${item.adjustmentQty}`
+                          : item.adjustmentQty ?? 0}
+                      </td>
+                      <td className="py-3 px-3 text-center font-mono font-bold text-[#372921] bg-[#F4EFE6]/40">
+                        {item.onHand} <span className="text-[9px] font-normal text-[#76695F]">{item.unit}</span>
+                      </td>
+                      <td className="py-3 px-3 text-center font-mono text-[#76695F]">
+                        {item.reserved}
+                      </td>
+                      <td className="py-3 px-3 text-center font-mono font-bold text-[#9E5430] bg-[#9E5430]/5">
+                        {item.available}
+                      </td>
+                      {activeTab === 'low_stock' && (
+                        <>
+                          <td className="py-3 px-3 text-center font-mono text-amber-800">
+                            {item.reorderPoint}
+                          </td>
+                          <td className="py-3 px-3 text-center font-mono font-bold text-rose-800 bg-rose-50/50">
+                            {deficit > 0 ? `-${deficit}` : '0'}
+                          </td>
+                          <td className="py-3 px-3 text-center font-mono font-bold text-teal-800 bg-teal-50/50">
+                            {suggestedMake > 0 ? `+${suggestedMake}` : '0'}
+                          </td>
+                        </>
                       )}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span
-                        className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full uppercase font-mono ${
-                          item.status === 'in_stock'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : item.status === 'low_stock'
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-rose-100 text-rose-800'
-                        }`}
-                      >
-                        {item.status.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <div className="inline-flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenAdjust(item.sku)}
-                          disabled={!canAdjustStock}
-                          className="px-2.5 py-1.5 rounded-lg bg-[#F7F3EC] hover:bg-[#EAE2D8] text-[11px] text-[#9E5430] font-semibold transition-colors cursor-pointer min-h-[32px] flex items-center"
-                          title="Log Stock Adjustment"
-                          aria-label={`Adjust stock for ${item.name}`}
+                      <td className="py-3 px-3 text-right font-mono text-[#372921]">
+                        ₹{item.unitCost?.toLocaleString('en-IN') || 0}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-[#372921]">
+                        {item.retailPrice ? `₹${item.retailPrice.toLocaleString('en-IN')}` : '—'}
+                      </td>
+                      <td className="py-3 px-3 text-center font-mono">
+                        {margin > 0 ? (
+                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                            {margin}%
+                          </span>
+                        ) : (
+                          <span className="text-[#A99583] text-[10px]">0%</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono font-semibold text-[#372921]">
+                        ₹{(item.stockValue || item.onHand * item.unitCost).toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        <span
+                          className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full uppercase font-mono ${
+                            item.status === 'in_stock'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : item.status === 'low_stock'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-rose-100 text-rose-800'
+                          }`}
                         >
-                          Adjust
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingItem({ ...item });
-                            setEditModalOpen(true);
-                          }}
-                          className="p-2 min-w-[36px] min-h-[36px] rounded-lg hover:bg-[#F0E9DF] text-[#76695F] hover:text-[#372921] transition-colors cursor-pointer flex items-center justify-center"
-                          title="Edit Item Details"
-                          aria-label={`Edit ${item.name}`}
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDeletingItem(item);
-                            setDeleteModalOpen(true);
-                          }}
-                          className="p-2 min-w-[36px] min-h-[36px] rounded-lg hover:bg-rose-50 text-[#76695F] hover:text-rose-600 transition-colors cursor-pointer flex items-center justify-center"
-                          title="Archive / Remove Item"
-                          aria-label={`Archive ${item.name}`}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {item.status.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="inline-flex items-center gap-1 justify-end">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenMovement(item.sku)}
+                            disabled={!canAdjustStock}
+                            className="px-2 py-1 rounded-md bg-[#9E5430]/10 hover:bg-[#9E5430]/20 text-[10.5px] text-[#9E5430] font-semibold transition-colors cursor-pointer"
+                            title="Post Signed Movement (Purchase, Production, Damage, PR)"
+                          >
+                            Post
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenHistory(item.sku)}
+                            className="p-1.5 rounded-md hover:bg-[#F0E9DF] text-[#76695F] hover:text-[#372921] transition-colors cursor-pointer"
+                            title="View Authoritative Movement Trail"
+                          >
+                            <History className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingItem({ ...item });
+                              setEditModalOpen(true);
+                            }}
+                            className="p-1.5 rounded-md hover:bg-[#F0E9DF] text-[#76695F] hover:text-[#372921] transition-colors cursor-pointer"
+                            title="Edit Specifications"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDeletingItem(item);
+                              setDeleteModalOpen(true);
+                            }}
+                            className="p-1.5 rounded-md hover:bg-rose-50 text-[#76695F] hover:text-rose-600 transition-colors cursor-pointer"
+                            title="Archive Item"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
 
                 {filteredItems.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-[#76695F]">
+                    <td colSpan={19} className="py-12 text-center text-[#76695F]">
                       <Boxes className="w-8 h-8 text-[#DED3C5] mx-auto mb-2" />
                       <p className="text-sm font-semibold text-[#372921]">No matching inventory items found</p>
                       <p className="text-xs text-[#76695F] mt-0.5">Try adjusting your filters or search keywords.</p>
@@ -474,294 +980,544 @@ export default function InventoryView() {
                   </tr>
                 )}
               </tbody>
-            </table>
-          </div>
-        </div>
-      ) : (
-        /* ADJUSTMENTS AUDIT TRAIL */
-        <div className="bg-white rounded-2xl border border-[#DED3C5] shadow-xs overflow-hidden">
-          <div className="p-4 border-b border-[#EAE2D8] bg-[#FFFCF7] flex items-center justify-between">
-            <div>
-              <h3 className="font-serif text-base font-semibold text-[#372921]">
-                Stock Variance &amp; Adjustment Audit Trail
-              </h3>
-              <p className="text-xs text-[#76695F] mt-0.5">
-                Immutable ERP reconciliation ledger recording count adjustments, artisan tension defect scrap, and PR loans.
-              </p>
-            </div>
-            <span className="text-[11px] text-[#76695F] font-mono bg-[#F7F3EC] px-2.5 py-1 rounded-full border border-[#DED3C5]">
-              Total Records: {stockAdjustments.length}
-            </span>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#F7F3EC] text-[#76695F] border-b border-[#DED3C5] text-[10.5px] uppercase tracking-wider font-semibold">
+              {/* AUTHORITATIVE FOOTER TOTALS */}
+              <tfoot className="bg-[#F7F3EC] border-t-2 border-[#DED3C5] text-[#372921] font-semibold text-xs sticky bottom-0 z-20 shadow-lg">
                 <tr>
-                  <th className="py-3 px-4">SKU &amp; Product</th>
-                  <th className="py-3 px-4">Variance</th>
-                  <th className="py-3 px-4">Reason Code</th>
-                  <th className="py-3 px-4">Logged By</th>
-                  <th className="py-3 px-4">Timestamp</th>
-                  <th className="py-3 px-4">Mandatory Audit Notes</th>
+                  <td colSpan={2} className="py-3 px-4 font-serif text-sm">
+                    Total: {totals.skuCount} Registered SKUs
+                  </td>
+                  <td colSpan={8} className="py-3 px-3 text-right text-[11px] text-[#76695F] font-sans">
+                    Warehouse Sum Total:
+                  </td>
+                  <td className="py-3 px-3 text-center font-mono font-bold text-[#372921] bg-[#F4EFE6]">
+                    {totals.totalOnHand.toLocaleString('en-IN')} units
+                  </td>
+                  <td className="py-3 px-3 text-center font-mono text-[#76695F]">
+                    {totals.totalReserved.toLocaleString('en-IN')}
+                  </td>
+                  <td className="py-3 px-3 text-center font-mono font-bold text-[#9E5430] bg-[#9E5430]/10">
+                    {totals.totalAvailable.toLocaleString('en-IN')}
+                  </td>
+                  {activeTab === 'low_stock' && <td colSpan={3}></td>}
+                  <td colSpan={2} className="py-3 px-3 text-right text-[11px] text-[#76695F]">
+                    Blended Margin:
+                  </td>
+                  <td className="py-3 px-3 text-center font-mono font-bold text-emerald-800">
+                    {totals.blendedMargin}%
+                  </td>
+                  <td className="py-3 px-3 text-right font-mono font-bold text-base text-[#372921]">
+                    ₹{totals.totalValuation.toLocaleString('en-IN')}
+                  </td>
+                  <td colSpan={2}></td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-[#EAE2D8]">
-                {stockAdjustments.map(adj => (
-                  <tr key={adj.id} className="hover:bg-[#FFFCF7] transition-colors">
-                    <td className="py-3 px-4">
-                      <strong className="text-[#372921] font-semibold block">{adj.productName}</strong>
-                      <span className="text-[10.5px] text-[#76695F] font-mono">{adj.sku}</span>
-                    </td>
-                    <td className="py-3 px-4 font-mono">
-                      <span className="text-[#76695F]">{adj.previousQty} → </span>
-                      <strong className="text-[#372921]">{adj.adjustedQty}</strong>
-                      <span
-                        className={`ml-1.5 font-bold px-1.5 py-0.2 rounded text-[10px] ${
-                          adj.difference > 0
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : adj.difference < 0
-                            ? 'bg-rose-100 text-rose-800'
-                            : 'bg-stone-100 text-stone-700'
-                        }`}
-                      >
-                        {adj.difference > 0 ? `+${adj.difference}` : adj.difference}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-[10px] bg-[#F0E9DF] text-[#372921] px-2 py-0.5 rounded font-mono font-semibold uppercase">
-                        {adj.reason.replace(/_/g, ' ')}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-[#372921] font-medium">{adj.loggedBy}</td>
-                    <td className="py-3 px-4 text-[#76695F] font-mono text-[10.5px]">
-                      {new Date(adj.timestamp).toLocaleString()}
-                    </td>
-                    <td className="py-3 px-4 text-[#76695F] italic text-[11px] max-w-xs">
-                      &ldquo;{adj.notes}&rdquo;
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
+              </tfoot>
             </table>
           </div>
         </div>
       )}
 
-      {/* =========================================================================
-          MODAL 1: REDESIGNED LUXURY STOCK ADJUSTMENT MODAL
-          ========================================================================= */}
-      {adjustModalOpen && activeAdjustItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="relative w-full max-w-xl bg-[#FCFAF6] rounded-2xl shadow-2xl border border-[#DED3C5] overflow-hidden flex flex-col max-h-[90vh]">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-[#EAE2D8] bg-[#F7F3EC] flex items-center justify-between shrink-0">
-              <div>
-                <span className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-[#9E5430] font-bold">
-                  <Boxes className="w-3.5 h-3.5" />
-                  Atelier &amp; Warehouse Ledger
-                </span>
-                <h3 className="font-serif text-lg font-bold text-[#372921] mt-0.5">
-                  Log Operational Stock Adjustment
-                </h3>
-              </div>
+      {/* 5. AUTHORITATIVE ADJUSTMENTS & MOVEMENTS AUDIT TRAIL */}
+      {activeTab === 'adjustments' && (
+        <div className="bg-white rounded-2xl border border-[#DED3C5] shadow-xs overflow-hidden">
+          <div className="p-4 border-b border-[#EAE2D8] bg-[#FFFCF7] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="font-serif text-base font-semibold text-[#372921]">
+                Authoritative Inventory Movements Ledger &amp; Physical Audits
+              </h3>
+              <p className="text-xs text-[#76695F] mt-0.5">
+                Immutable ERP audit trail recording purchases, production output, sales deductions, defect scrap, and cycle variances.
+              </p>
+            </div>
 
+            <div className="flex items-center gap-2 bg-[#F7F3EC] p-1 rounded-xl border border-[#DED3C5]">
               <button
                 type="button"
-                onClick={() => setAdjustModalOpen(false)}
-                className="p-1.5 rounded-full hover:bg-[#EAE2D8] text-[#76695F] hover:text-[#372921] transition-colors cursor-pointer"
-                aria-label="Close dialog"
+                onClick={() => setMovementViewMode('movements')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  movementViewMode === 'movements'
+                    ? 'bg-white shadow-xs text-[#9E5430]'
+                    : 'text-[#76695F] hover:text-[#372921]'
+                }`}
+              >
+                Movement Ledger ({inventoryMovements.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setMovementViewMode('audits')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  movementViewMode === 'audits'
+                    ? 'bg-white shadow-xs text-[#9E5430]'
+                    : 'text-[#76695F] hover:text-[#372921]'
+                }`}
+              >
+                Physical Audit Variances ({stockAdjustments.length})
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            {movementViewMode === 'movements' ? (
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#F7F3EC] text-[#76695F] border-b border-[#DED3C5] text-[10px] uppercase tracking-wider font-semibold">
+                  <tr>
+                    <th className="py-3 px-4">Timestamp</th>
+                    <th className="py-3 px-4">Movement ID</th>
+                    <th className="py-3 px-4">Item SKU &amp; Name</th>
+                    <th className="py-3 px-4">Hub Location</th>
+                    <th className="py-3 px-4">Movement Type</th>
+                    <th className="py-3 px-4 text-center">Delta</th>
+                    <th className="py-3 px-4 text-center">Previous</th>
+                    <th className="py-3 px-4 text-center font-bold">New Balance</th>
+                    <th className="py-3 px-4">Source Ref</th>
+                    <th className="py-3 px-4">Operator</th>
+                    <th className="py-3 px-4">Reason / Notes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EAE2D8]">
+                  {inventoryMovements.map(mov => {
+                    const cfg = MOVEMENT_TYPE_CONFIG[mov.movementType] || {
+                      label: mov.movementType,
+                      sign: '±',
+                      badgeColor: 'bg-stone-100 text-stone-800',
+                    };
+                    const isPositive = mov.quantity > 0;
+
+                    return (
+                      <tr key={mov.id} className="hover:bg-[#FFFCF7] transition-colors">
+                        <td className="py-3 px-4 text-[11px] text-[#76695F] font-mono whitespace-nowrap">
+                          {new Date(mov.timestamp).toLocaleString('en-IN', {
+                            dateStyle: 'short',
+                            timeStyle: 'short',
+                          })}
+                        </td>
+                        <td className="py-3 px-4 font-mono font-bold text-[10.5px] text-[#372921]">
+                          {mov.id}
+                        </td>
+                        <td className="py-3 px-4">
+                          <strong className="text-[#372921] block">{mov.productName || mov.sku}</strong>
+                          <span className="text-[10px] font-mono text-[#76695F]">{mov.sku}</span>
+                        </td>
+                        <td className="py-3 px-4 text-[#76695F] whitespace-nowrap">
+                          {mov.location}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.badgeColor}`}
+                          >
+                            <span>{cfg.label}</span>
+                          </span>
+                        </td>
+                        <td className={`py-3 px-4 text-center font-mono font-bold ${
+                          isPositive ? 'text-emerald-700' : 'text-rose-700'
+                        }`}>
+                          {isPositive ? `+${mov.quantity}` : mov.quantity}
+                        </td>
+                        <td className="py-3 px-4 text-center font-mono text-[#76695F]">
+                          {mov.previousBalance}
+                        </td>
+                        <td className="py-3 px-4 text-center font-mono font-bold text-[#372921] bg-[#F7F3EC]/50">
+                          {mov.newBalance}
+                        </td>
+                        <td className="py-3 px-4 font-mono text-[10.5px] text-[#76695F]">
+                          {mov.sourceId || '—'}
+                        </td>
+                        <td className="py-3 px-4 text-[#372921] font-medium">
+                          {mov.actor}
+                        </td>
+                        <td className="py-3 px-4 text-[#76695F] max-w-xs truncate" title={mov.notes}>
+                          {mov.notes}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#F7F3EC] text-[#76695F] border-b border-[#DED3C5] text-[10px] uppercase tracking-wider font-semibold">
+                  <tr>
+                    <th className="py-3 px-4">Timestamp</th>
+                    <th className="py-3 px-4">Audit ID</th>
+                    <th className="py-3 px-4">SKU &amp; Product</th>
+                    <th className="py-3 px-4 text-center">Previous Qty</th>
+                    <th className="py-3 px-4 text-center">Adjusted Qty</th>
+                    <th className="py-3 px-4 text-center">Variance (Diff)</th>
+                    <th className="py-3 px-4">Audit Reason</th>
+                    <th className="py-3 px-4">Logged By</th>
+                    <th className="py-3 px-4">Audit Notes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EAE2D8]">
+                  {stockAdjustments.map(adj => {
+                    const isPositive = adj.difference > 0;
+                    return (
+                      <tr key={adj.id} className="hover:bg-[#FFFCF7] transition-colors">
+                        <td className="py-3 px-4 text-[11px] text-[#76695F] font-mono whitespace-nowrap">
+                          {new Date(adj.timestamp).toLocaleString('en-IN', {
+                            dateStyle: 'short',
+                            timeStyle: 'short',
+                          })}
+                        </td>
+                        <td className="py-3 px-4 font-mono font-bold text-[10.5px] text-[#372921]">
+                          {adj.id}
+                        </td>
+                        <td className="py-3 px-4">
+                          <strong className="text-[#372921] block">{adj.productName}</strong>
+                          <span className="text-[10px] font-mono text-[#76695F]">{adj.sku}</span>
+                        </td>
+                        <td className="py-3 px-4 text-center font-mono text-[#76695F]">
+                          {adj.previousQty}
+                        </td>
+                        <td className="py-3 px-4 text-center font-mono font-bold text-[#372921]">
+                          {adj.adjustedQty}
+                        </td>
+                        <td className={`py-3 px-4 text-center font-mono font-bold ${
+                          isPositive ? 'text-emerald-700' : 'text-rose-700'
+                        }`}>
+                          {isPositive ? `+${adj.difference}` : adj.difference}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-200 uppercase font-mono">
+                            {adj.reason.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-[#372921] font-medium">
+                          {adj.loggedBy}
+                        </td>
+                        <td className="py-3 px-4 text-[#76695F] max-w-xs truncate" title={adj.notes}>
+                          {adj.notes || '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 1: POST INVENTORY MOVEMENT (PURCHASE, PRODUCTION, DAMAGE, PR)
+          ========================================================================= */}
+      {movementModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="relative w-full max-w-lg bg-[#FCFAF6] rounded-2xl shadow-2xl border border-[#DED3C5] overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-[#EAE2D8] bg-[#F7F3EC] flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-mono uppercase tracking-widest text-[#9E5430] font-bold">
+                  Authoritative Ledger Posting
+                </span>
+                <h3 className="font-serif text-lg font-bold text-[#372921] mt-0.5">
+                  Post Inventory Movement
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMovementModalOpen(false)}
+                className="p-1.5 rounded-full hover:bg-[#EAE2D8] text-[#76695F]"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <form id="stockAdjustForm" onSubmit={handleAdjustSubmit} className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
-              {/* 1. Target SKU Selector */}
+            <form onSubmit={handleMovementSubmit} className="p-6 space-y-4 text-xs">
               <div>
-                <label className="block text-xs font-semibold text-[#372921] mb-1.5">
-                  Target Inventory SKU / Material
-                </label>
-                <div className="relative">
-                  <select
-                    value={selectedSku}
-                    onChange={e => {
-                      setSelectedSku(e.target.value);
-                      const target = inventory.find(i => i.sku === e.target.value);
-                      if (target) setNewQty(target.onHand);
-                    }}
-                    className="w-full max-w-full truncate text-ellipsis bg-white border border-[#DED3C5] rounded-xl pl-3.5 pr-9 py-2.5 text-xs text-[#372921] font-medium focus:outline-none focus:border-[#9E5430] focus:ring-1 focus:ring-[#9E5430] transition-colors appearance-none cursor-pointer"
-                  >
-                    {inventory.map(item => (
-                      <option key={item.sku} value={item.sku} className="truncate">
-                        [{item.sku}] {item.name.length > 30 ? item.name.slice(0, 30) + '…' : item.name} · {item.onHand} {item.unit}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#76695F]">
-                    <ArrowDownRight className="w-4 h-4" />
-                  </div>
+                <label className="block text-xs font-semibold text-[#372921] mb-1">Target SKU</label>
+                <select
+                  value={movementSku}
+                  onChange={e => setMovementSku(e.target.value)}
+                  className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                >
+                  {inventory.map(item => (
+                    <option key={item.sku} value={item.sku}>
+                      {item.sku} — {item.name} (Current: {item.onHand} {item.unit})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#372921] mb-1">Movement Classification</label>
+                <select
+                  value={movementType}
+                  onChange={e => setMovementType(e.target.value as InventoryMovementType)}
+                  className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                >
+                  <option value="PURCHASE_IN">+ PURCHASE_IN: Vendor / Procurement Component Inward</option>
+                  <option value="PRODUCTION_IN">+ PRODUCTION_IN: Loom Output Completed &amp; QC Passed</option>
+                  <option value="SALE_OUT">- SALE_OUT: Direct Storefront or Offline POS Sale</option>
+                  <option value="DAMAGE_OUT">- DAMAGE_OUT: Artisan Tension Defect or Transit Damage Write-Off</option>
+                  <option value="MARKETING_OUT">- MARKETING_OUT: Photoshoot Loan or VIP Editorial Sample</option>
+                  <option value="RETURN_IN">+ RETURN_IN: Customer Restock Return</option>
+                </select>
+                <p className="text-[10.5px] text-[#76695F] mt-1">
+                  {MOVEMENT_TYPE_CONFIG[movementType]?.description}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Quantity</label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={movementQuantity}
+                    onChange={e => setMovementQuantity(Number(e.target.value))}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                  />
                 </div>
 
-                {/* Selected Item Summary Card */}
-                <div className="mt-2.5 p-3.5 rounded-xl bg-white border border-[#EAE2D8] shadow-2xs flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-[#9E5430]/10 text-[#9E5430]">
-                        {activeAdjustItem.sku}
-                      </span>
-                      <span className="text-[10px] text-[#76695F] font-mono">{activeAdjustItem.category}</span>
-                    </div>
-                    <h4 className="font-serif font-bold text-[#372921] text-xs truncate mt-1">
-                      {activeAdjustItem.name}
-                    </h4>
-                    <span className="text-[10.5px] text-[#76695F] flex items-center gap-1 mt-0.5">
-                      <Warehouse className="w-3 h-3 text-[#9E5430]" />
-                      <span>{activeAdjustItem.location}</span>
-                    </span>
-                  </div>
-
-                  <div className="text-right shrink-0">
-                    <span className="text-[9.5px] uppercase font-mono text-[#76695F] block">Current Available</span>
-                    <span className="font-serif text-base font-bold text-[#372921]">
-                      {activeAdjustItem.available} {activeAdjustItem.unit}
-                    </span>
-                    <span className="text-[10px] text-[#76695F] block font-mono">
-                      (Total On-Hand: {activeAdjustItem.onHand})
-                    </span>
-                  </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Source / Reference ID</label>
+                  <input
+                    type="text"
+                    value={movementSourceId}
+                    onChange={e => setMovementSourceId(e.target.value)}
+                    placeholder="e.g. PO-8921, WO-088, PR-01"
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                  />
                 </div>
               </div>
 
-              {/* 2. Side-by-Side Stock Delta Calculator */}
-              <div className="p-4 bg-[#F7F3EC] rounded-xl border border-[#DED3C5] space-y-3">
-                <div className="grid grid-cols-2 gap-3 items-center">
-                  <div>
-                    <span className="text-[10.5px] uppercase font-semibold text-[#76695F] block mb-1">
-                      Current Ledger Count
-                    </span>
-                    <div className="bg-white border border-[#DED3C5] rounded-xl px-3.5 py-2 font-mono text-sm font-bold text-[#76695F]">
-                      {activeAdjustItem.onHand} {activeAdjustItem.unit}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10.5px] uppercase font-semibold text-[#372921] mb-1">
-                      New Verified Count <span className="text-[#9E5430]">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min={0}
-                      value={newQty}
-                      onChange={e => setNewQty(Number(e.target.value))}
-                      className="w-full bg-white border border-[#9E5430] rounded-xl px-3.5 py-2 font-mono text-sm font-bold text-[#372921] focus:outline-none focus:ring-2 focus:ring-[#9E5430]/30"
-                    />
-                  </div>
-                </div>
-
-                {/* Net Variance Indicator */}
-                <div className="flex items-center justify-between pt-2 border-t border-[#EAE2D8] text-xs">
-                  <span className="text-[#76695F] font-medium">Reconciliation Variance:</span>
-                  {(() => {
-                    const diff = Number(newQty) - activeAdjustItem.onHand;
-                    if (diff > 0) {
-                      return (
-                        <span className="inline-flex items-center gap-1 font-mono font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full text-[11px]">
-                          <ArrowUpRight className="w-3.5 h-3.5" />
-                          <span>+{diff} {activeAdjustItem.unit} (Addition to Ledger)</span>
-                        </span>
-                      );
-                    }
-                    if (diff < 0) {
-                      return (
-                        <span className="inline-flex items-center gap-1 font-mono font-bold text-rose-800 bg-rose-100 px-2.5 py-0.5 rounded-full text-[11px]">
-                          <ArrowDownRight className="w-3.5 h-3.5" />
-                          <span>{diff} {activeAdjustItem.unit} (Ledger Deduction)</span>
-                        </span>
-                      );
-                    }
-                    return (
-                      <span className="inline-flex items-center gap-1 font-mono text-stone-600 bg-stone-100 px-2.5 py-0.5 rounded-full text-[11px]">
-                        <span>0 {activeAdjustItem.unit} (No Variance)</span>
-                      </span>
-                    );
-                  })()}
-                </div>
-              </div>
-
-              {/* 3. Reason Code Interactive Tiles */}
               <div>
-                <label className="block text-xs font-semibold text-[#372921] mb-2">
-                  Adjustment Reason Code <span className="text-[#9E5430]">*</span>
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {REASON_TILES.map(tile => {
-                    const isSelected = adjReason === tile.id;
-                    return (
-                      <button
-                        key={tile.id}
-                        type="button"
-                        onClick={() => setAdjReason(tile.id)}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                          isSelected
-                            ? 'bg-[#9E5430]/10 border-[#9E5430] shadow-2xs'
-                            : 'bg-white border-[#DED3C5] hover:border-[#9E5430]/50'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span
-                            className={`text-xs font-semibold ${
-                              isSelected ? 'text-[#9E5430]' : 'text-[#372921]'
-                            }`}
-                          >
-                            {tile.label}
-                          </span>
-                          {isSelected && <Check className="w-3.5 h-3.5 text-[#9E5430]" />}
-                        </div>
-                        <p className="text-[10px] text-[#76695F] mt-1 line-clamp-1">{tile.desc}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* 4. Mandatory Audit Justification */}
-              <div>
-                <label className="block text-xs font-semibold text-[#372921] mb-1.5">
-                  Mandatory Audit Justification <span className="text-[#9E5430]">*</span>
-                </label>
+                <label className="block text-xs font-semibold text-[#372921] mb-1">Audit Notes / Reason</label>
                 <textarea
                   rows={2}
-                  required
-                  value={adjNotes}
-                  onChange={e => setAdjNotes(e.target.value)}
-                  placeholder="e.g. Cycle count conducted by Bihar Atelier Lead verified 2 units damaged during bead stringing..."
-                  className="w-full bg-white border border-[#DED3C5] rounded-xl p-3 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430] focus:ring-1 focus:ring-[#9E5430]"
+                  value={movementNotes}
+                  onChange={e => setMovementNotes(e.target.value)}
+                  placeholder="State the justification, batch number, or voucher reference..."
+                  className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
                 />
-                <span className="text-[10px] text-[#A99583] mt-1 block">
-                  This note will be logged immutably under your staff signature in the Audit Trail.
-                </span>
+              </div>
+
+              <div className="pt-4 border-t border-[#EAE2D8] flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setMovementModalOpen(false)}
+                  className="px-4 py-2 rounded-full border border-[#DED3C5] text-[#76695F] font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white font-semibold flex items-center gap-1.5 shadow-sm"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Commit Movement to Ledger</span>
+                </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
 
-            {/* Pinned Modal Footer */}
-            <div className="px-6 py-3.5 border-t border-[#EAE2D8] bg-[#F7F3EC] flex items-center justify-between shrink-0">
+      {/* =========================================================================
+          MODAL 2: PHYSICAL AUDIT ADJUSTMENT MODAL
+          ========================================================================= */}
+      {adjustModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="relative w-full max-w-lg bg-[#FCFAF6] rounded-2xl shadow-2xl border border-[#DED3C5] overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-[#EAE2D8] bg-[#F7F3EC] flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-mono uppercase tracking-widest text-[#9E5430] font-bold">
+                  Physical Cycle Count Variance
+                </span>
+                <h3 className="font-serif text-lg font-bold text-[#372921] mt-0.5">
+                  Log Physical Count Audit
+                </h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setAdjustModalOpen(false)}
-                className="px-4 py-2 rounded-full border border-[#DED3C5] bg-white text-[#76695F] hover:text-[#372921] text-xs font-semibold transition-colors cursor-pointer"
+                className="p-1.5 rounded-full hover:bg-[#EAE2D8] text-[#76695F]"
               >
-                Cancel
+                <X className="w-5 h-5" />
               </button>
+            </div>
+
+            <form onSubmit={handleAdjustSubmit} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block text-xs font-semibold text-[#372921] mb-1">Target SKU</label>
+                <select
+                  value={selectedSku}
+                  onChange={e => {
+                    setSelectedSku(e.target.value);
+                    const item = inventory.find(i => i.sku === e.target.value);
+                    if (item) setNewQty(item.onHand);
+                  }}
+                  className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                >
+                  {inventory.map(item => (
+                    <option key={item.sku} value={item.sku}>
+                      {item.sku} — {item.name} (Current: {item.onHand} {item.unit})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#372921] mb-1">
+                  Verified Physical Count in Warehouse
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  required
+                  value={newQty}
+                  onChange={e => setNewQty(Number(e.target.value))}
+                  className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#372921] mb-1">Audit Discrepancy Reason</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {REASON_TILES.map(tile => (
+                    <button
+                      key={tile.id}
+                      type="button"
+                      onClick={() => setAdjReason(tile.id)}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        adjReason === tile.id
+                          ? 'border-[#9E5430] bg-[#9E5430]/10 text-[#372921]'
+                          : 'border-[#DED3C5] bg-white text-[#76695F] hover:border-[#9E5430]/40'
+                      }`}
+                    >
+                      <strong className="block text-[11px] font-semibold text-[#372921]">{tile.label}</strong>
+                      <span className="text-[9.5px] leading-tight block text-[#76695F] mt-0.5">{tile.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#372921] mb-1">Audit Notes</label>
+                <textarea
+                  rows={2}
+                  value={adjNotes}
+                  onChange={e => setAdjNotes(e.target.value)}
+                  placeholder="Record auditor remarks or reconciliation memo..."
+                  className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-[#EAE2D8] flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setAdjustModalOpen(false)}
+                  className="px-4 py-2 rounded-full border border-[#DED3C5] text-[#76695F] font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white font-semibold flex items-center gap-1.5 shadow-sm"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Update Physical Ledger</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 3: MOVEMENT LEDGER HISTORY DRAWER
+          ========================================================================= */}
+      {historyDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="relative w-full max-w-xl h-full bg-[#FCFAF6] shadow-2xl border-l border-[#DED3C5] flex flex-col animate-slide-left">
+            <div className="px-6 py-5 border-b border-[#EAE2D8] bg-[#F7F3EC] flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-mono uppercase tracking-widest text-[#9E5430] font-bold">
+                  SKU Audit History
+                </span>
+                <h3 className="font-serif text-lg font-bold text-[#372921] mt-0.5">
+                  Ledger Trail for {historySku}
+                </h3>
+              </div>
               <button
-                type="submit"
-                form="stockAdjustForm"
-                className="px-5 py-2.5 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white text-xs font-semibold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+                type="button"
+                onClick={() => setHistoryDrawerOpen(false)}
+                className="p-1.5 rounded-full hover:bg-[#EAE2D8] text-[#76695F]"
               >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Commit Stock Adjustment</span>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {currentSkuMovements.map(mov => {
+                const cfg = MOVEMENT_TYPE_CONFIG[mov.movementType] || {
+                  label: mov.movementType,
+                  badgeColor: 'bg-stone-100 text-stone-800',
+                };
+                const isPositive = mov.quantity > 0;
+
+                return (
+                  <div
+                    key={mov.id}
+                    className="p-4 rounded-xl border border-[#EAE2D8] bg-white shadow-2xs space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.badgeColor}`}>
+                        {cfg.label}
+                      </span>
+                      <span className="text-[10px] font-mono text-[#76695F]">
+                        {new Date(mov.timestamp).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs pt-1">
+                      <span className="text-[#76695F]">
+                        Balance: <span className="font-mono">{mov.previousBalance}</span> →{' '}
+                        <strong className="text-[#372921] font-mono">{mov.newBalance}</strong>
+                      </span>
+                      <span
+                        className={`font-mono font-bold text-sm ${
+                          isPositive ? 'text-emerald-700' : 'text-rose-700'
+                        }`}
+                      >
+                        {isPositive ? `+${mov.quantity}` : mov.quantity}
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-[#685B52] bg-[#F7F3EC] p-2 rounded-lg border border-[#EAE2D8]">
+                      {mov.notes}
+                    </p>
+
+                    <div className="flex items-center justify-between text-[10px] text-[#A99583] font-mono pt-1">
+                      <span>Operator: {mov.actor}</span>
+                      <span>Ref: {mov.sourceId || mov.id}</span>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {currentSkuMovements.length === 0 && (
+                <div className="text-center py-16 text-[#76695F]">
+                  <History className="w-8 h-8 text-[#DED3C5] mx-auto mb-2" />
+                  <p className="font-semibold text-sm text-[#372921]">No discrete movements recorded yet</p>
+                  <p className="text-xs text-[#76695F] mt-1">
+                    This item holds its opening baseline balance. Post movements to record live ledger transactions.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-[#EAE2D8] bg-[#F7F3EC]">
+              <button
+                type="button"
+                onClick={() => {
+                  setHistoryDrawerOpen(false);
+                  handleOpenMovement(historySku);
+                }}
+                className="w-full py-2.5 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Post New Movement for {historySku}</span>
               </button>
             </div>
           </div>
@@ -769,7 +1525,7 @@ export default function InventoryView() {
       )}
 
       {/* =========================================================================
-          MODAL 2: ADD NEW INVENTORY SKU / MATERIAL MODAL
+          MODAL 4: CREATE NEW SKU / RAW MATERIAL MODAL
           ========================================================================= */}
       {createModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
@@ -780,41 +1536,42 @@ export default function InventoryView() {
                   New Ledger Entity
                 </span>
                 <h3 className="font-serif text-lg font-bold text-[#372921] mt-0.5">
-                  Register New SKU or Raw Material
+                  Register Master Inventory SKU
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setCreateModalOpen(false)}
-                className="p-1.5 rounded-full hover:bg-[#EAE2D8] text-[#76695F] hover:text-[#372921]"
+                className="p-1.5 rounded-full hover:bg-[#EAE2D8] text-[#76695F]"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateSubmit} className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+            <form onSubmit={handleCreateSubmit} className="p-6 space-y-4 text-xs overflow-y-auto">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-[#372921] mb-1">
-                    SKU Code <span className="text-[#9E5430]">*</span>
-                  </label>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Product SKU *</label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. KJ-BOX-002 or RM-BEAD-01"
+                    placeholder="e.g. KJ-BAG-009"
                     value={newSkuData.sku}
                     onChange={e => setNewSkuData(prev => ({ ...prev, sku: e.target.value.toUpperCase() }))}
-                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono font-bold text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921] focus:outline-none focus:border-[#9E5430]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[#372921] mb-1">
-                    Classification
-                  </label>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Entity Type</label>
                   <select
                     value={newSkuData.type}
-                    onChange={e => setNewSkuData(prev => ({ ...prev, type: e.target.value as any }))}
+                    onChange={e =>
+                      setNewSkuData(prev => ({
+                        ...prev,
+                        type: e.target.value as 'finished_good' | 'raw_material',
+                      }))
+                    }
                     className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
                   >
                     <option value="finished_good">Finished Heirloom Good</option>
@@ -824,13 +1581,11 @@ export default function InventoryView() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#372921] mb-1">
-                  Item / Mineral Name <span className="text-[#9E5430]">*</span>
-                </label>
+                <label className="block text-xs font-semibold text-[#372921] mb-1">Item Title *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Luminous Baroque Freshwater Pearls (8mm)"
+                  placeholder="e.g. Luminous Crystal Envelope Clutch"
                   value={newSkuData.name}
                   onChange={e => setNewSkuData(prev => ({ ...prev, name: e.target.value }))}
                   className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
@@ -839,41 +1594,68 @@ export default function InventoryView() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-[#372921] mb-1">
-                    Hub Location
-                  </label>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Category</label>
+                  <select
+                    value={newSkuData.category}
+                    onChange={e => setNewSkuData(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                  >
+                    <option value="Organisers">Organisers &amp; Vanity Boxes</option>
+                    <option value="Purses">Purses &amp; Evening Bags</option>
+                    <option value="Clutches">Luminous Clutches</option>
+                    <option value="AirPod Cases">AirPod Charm Cases</option>
+                    <option value="Lanterns">Tealight Lanterns</option>
+                    <option value="Raw Materials">Raw Craft Materials</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Hub Location</label>
                   <select
                     value={newSkuData.location}
-                    onChange={e => setNewSkuData(prev => ({ ...prev, location: e.target.value as 'Mumbai Atelier' | 'Bihar Craft House' }))}
+                    onChange={e =>
+                      setNewSkuData(prev => ({
+                        ...prev,
+                        location: e.target.value as 'Mumbai Atelier' | 'Bihar Craft House',
+                      }))
+                    }
                     className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
                   >
                     <option value="Mumbai Atelier">Mumbai Atelier</option>
                     <option value="Bihar Craft House">Bihar Craft House</option>
                   </select>
                 </div>
+              </div>
 
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-[#372921] mb-1">
-                    Category
-                  </label>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">HSN Code</label>
                   <input
                     type="text"
-                    value={newSkuData.category}
-                    onChange={e => setNewSkuData(prev => ({ ...prev, category: e.target.value }))}
-                    placeholder="e.g. Vanity Boxes, Raw Materials"
-                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                    value={newSkuData.hsnCode || ''}
+                    onChange={e => setNewSkuData(prev => ({ ...prev, hsnCode: e.target.value }))}
+                    placeholder="7117.90"
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">GST Rate (%)</label>
+                  <input
+                    type="number"
+                    value={newSkuData.taxRate || 3}
+                    onChange={e => setNewSkuData(prev => ({ ...prev, taxRate: Number(e.target.value) }))}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921] focus:outline-none focus:border-[#9E5430]"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-[#372921] mb-1">
-                    Initial On-Hand
-                  </label>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Initial Stock</label>
                   <input
                     type="number"
-                    min={0}
+                    min="0"
                     value={newSkuData.onHand}
                     onChange={e => setNewSkuData(prev => ({ ...prev, onHand: Number(e.target.value) }))}
                     className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921] focus:outline-none focus:border-[#9E5430]"
@@ -881,40 +1663,33 @@ export default function InventoryView() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[#372921] mb-1">
-                    Unit of Measure
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="pcs, kg, meters, spools"
-                    value={newSkuData.unit}
-                    onChange={e => setNewSkuData(prev => ({ ...prev, unit: e.target.value }))}
-                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[#372921] mb-1">
-                    Reorder Point
-                  </label>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Reorder Level</label>
                   <input
                     type="number"
-                    min={0}
+                    min="1"
                     value={newSkuData.reorderPoint}
                     onChange={e => setNewSkuData(prev => ({ ...prev, reorderPoint: Number(e.target.value) }))}
                     className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921] focus:outline-none focus:border-[#9E5430]"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Unit</label>
+                  <input
+                    type="text"
+                    value={newSkuData.unit}
+                    onChange={e => setNewSkuData(prev => ({ ...prev, unit: e.target.value }))}
+                    placeholder="pcs, kg, spools"
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                  />
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-[#372921] mb-1">
-                    Unit Cost (₹)
-                  </label>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Unit Cost (₹)</label>
                   <input
                     type="number"
-                    min={0}
                     value={newSkuData.unitCost}
                     onChange={e => setNewSkuData(prev => ({ ...prev, unitCost: Number(e.target.value) }))}
                     className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921] focus:outline-none focus:border-[#9E5430]"
@@ -922,15 +1697,22 @@ export default function InventoryView() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-[#372921] mb-1">
-                    Supplier / Source Guild
-                  </label>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Selling Price (₹)</label>
                   <input
-                    type="text"
-                    placeholder="e.g. In-House Bihar Atelier"
-                    value={newSkuData.supplier || ''}
-                    onChange={e => setNewSkuData(prev => ({ ...prev, supplier: e.target.value }))}
-                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                    type="number"
+                    value={newSkuData.retailPrice || 0}
+                    onChange={e => setNewSkuData(prev => ({ ...prev, retailPrice: Number(e.target.value) }))}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">MRP Tag (₹)</label>
+                  <input
+                    type="number"
+                    value={newSkuData.mrp || 0}
+                    onChange={e => setNewSkuData(prev => ({ ...prev, mrp: Number(e.target.value) }))}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921] focus:outline-none focus:border-[#9E5430]"
                   />
                 </div>
               </div>
@@ -939,13 +1721,13 @@ export default function InventoryView() {
                 <button
                   type="button"
                   onClick={() => setCreateModalOpen(false)}
-                  className="px-4 py-2 rounded-full border border-[#DED3C5] text-[#76695F] hover:bg-white text-xs font-semibold"
+                  className="px-4 py-2 rounded-full border border-[#DED3C5] text-[#76695F]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white text-xs font-semibold shadow-sm flex items-center gap-1.5 cursor-pointer"
+                  className="px-5 py-2 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white font-semibold flex items-center gap-1.5"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Register Entity in Ledger</span>
@@ -957,7 +1739,7 @@ export default function InventoryView() {
       )}
 
       {/* =========================================================================
-          MODAL 3: EDIT SKU SPECIFICATIONS MODAL
+          MODAL 5: EDIT SKU SPECIFICATIONS MODAL
           ========================================================================= */}
       {editModalOpen && editingItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
@@ -987,7 +1769,7 @@ export default function InventoryView() {
                   type="text"
                   required
                   value={editingItem.name}
-                  onChange={e => setEditingItem(prev => prev ? { ...prev, name: e.target.value } : null)}
+                  onChange={e => setEditingItem(prev => (prev ? { ...prev, name: e.target.value } : null))}
                   className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
                 />
               </div>
@@ -997,7 +1779,11 @@ export default function InventoryView() {
                   <label className="block text-xs font-semibold text-[#372921] mb-1">Hub Location</label>
                   <select
                     value={editingItem.location}
-                    onChange={e => setEditingItem(prev => prev ? { ...prev, location: e.target.value as 'Mumbai Atelier' | 'Bihar Craft House' } : null)}
+                    onChange={e =>
+                      setEditingItem(prev =>
+                        prev ? { ...prev, location: e.target.value as 'Mumbai Atelier' | 'Bihar Craft House' } : null
+                      )
+                    }
                     className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
                   >
                     <option value="Mumbai Atelier">Mumbai Atelier</option>
@@ -1010,7 +1796,29 @@ export default function InventoryView() {
                   <input
                     type="number"
                     value={editingItem.unitCost}
-                    onChange={e => setEditingItem(prev => prev ? { ...prev, unitCost: Number(e.target.value) } : null)}
+                    onChange={e => setEditingItem(prev => (prev ? { ...prev, unitCost: Number(e.target.value) } : null))}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Selling Price (₹)</label>
+                  <input
+                    type="number"
+                    value={editingItem.retailPrice || 0}
+                    onChange={e => setEditingItem(prev => (prev ? { ...prev, retailPrice: Number(e.target.value) } : null))}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">MRP Tag (₹)</label>
+                  <input
+                    type="number"
+                    value={editingItem.mrp || 0}
+                    onChange={e => setEditingItem(prev => (prev ? { ...prev, mrp: Number(e.target.value) } : null))}
                     className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921] focus:outline-none focus:border-[#9E5430]"
                   />
                 </div>
@@ -1022,7 +1830,7 @@ export default function InventoryView() {
                   <input
                     type="number"
                     value={editingItem.reorderPoint}
-                    onChange={e => setEditingItem(prev => prev ? { ...prev, reorderPoint: Number(e.target.value) } : null)}
+                    onChange={e => setEditingItem(prev => (prev ? { ...prev, reorderPoint: Number(e.target.value) } : null))}
                     className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921] focus:outline-none focus:border-[#9E5430]"
                   />
                 </div>
@@ -1032,7 +1840,7 @@ export default function InventoryView() {
                   <input
                     type="number"
                     value={editingItem.reserved}
-                    onChange={e => setEditingItem(prev => prev ? { ...prev, reserved: Number(e.target.value) } : null)}
+                    onChange={e => setEditingItem(prev => (prev ? { ...prev, reserved: Number(e.target.value) } : null))}
                     className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921] focus:outline-none focus:border-[#9E5430]"
                   />
                 </div>
@@ -1043,7 +1851,7 @@ export default function InventoryView() {
                 <input
                   type="text"
                   value={editingItem.supplier || ''}
-                  onChange={e => setEditingItem(prev => prev ? { ...prev, supplier: e.target.value } : null)}
+                  onChange={e => setEditingItem(prev => (prev ? { ...prev, supplier: e.target.value } : null))}
                   className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
                 />
               </div>
@@ -1069,7 +1877,166 @@ export default function InventoryView() {
       )}
 
       {/* =========================================================================
-          MODAL 4: DELETE / ARCHIVE SKU CONFIRMATION MODAL
+          PHASE 2F: MODAL 7: EXCEL BATCH UPDATE & DIFF PREVIEW MODAL
+          ========================================================================= */}
+      {excelModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl border border-[#DED3C5] max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-[#EAE2D8] bg-[#FFFCF7] flex items-center justify-between">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#9E5430]/10 text-[#9E5430] text-[10.5px] uppercase tracking-wider font-semibold mb-1">
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>Catalogue Excel Parity Engine</span>
+                </div>
+                <h3 className="font-serif text-xl font-bold text-[#372921]">
+                  Batch Catalogue Update Preview
+                </h3>
+                <p className="text-xs text-[#76695F] mt-0.5">
+                  File: <span className="font-mono text-[#372921] font-semibold">{excelFileName}</span> — Verify detected changes before committing to master ledger.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setExcelModalOpen(false)}
+                className="w-8 h-8 rounded-full border border-[#DED3C5] flex items-center justify-center text-[#76695F] hover:text-[#372921] cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Batch Stats Summary Cards */}
+            <div className="grid grid-cols-4 gap-3 p-6 pb-2 bg-[#FAF8F5] border-b border-[#EAE2D8]">
+              <div className="p-3 bg-white rounded-xl border border-[#DED3C5] text-center">
+                <span className="text-[10px] uppercase font-semibold text-[#76695F] block">Rows Scanned</span>
+                <span className="font-mono text-lg font-bold text-[#372921]">{excelStats.total}</span>
+              </div>
+              <div className="p-3 bg-white rounded-xl border border-emerald-200 text-center">
+                <span className="text-[10px] uppercase font-semibold text-emerald-700 block">Modifications</span>
+                <span className="font-mono text-lg font-bold text-emerald-800">+{excelStats.changed}</span>
+              </div>
+              <div className="p-3 bg-white rounded-xl border border-stone-200 text-center">
+                <span className="text-[10px] uppercase font-semibold text-[#76695F] block">Unchanged</span>
+                <span className="font-mono text-lg font-bold text-[#76695F]">{excelStats.unchanged}</span>
+              </div>
+              <div className="p-3 bg-white rounded-xl border border-rose-200 text-center">
+                <span className="text-[10px] uppercase font-semibold text-rose-700 block">Errors / Unknown</span>
+                <span className="font-mono text-lg font-bold text-rose-800">{excelStats.invalid}</span>
+              </div>
+            </div>
+
+            {/* Diff Table */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {excelDiffs.filter(d => d.status !== 'unchanged').length === 0 ? (
+                <div className="text-center py-12 text-[#76695F]">
+                  <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto mb-2 opacity-60" />
+                  <p className="text-sm font-medium">All rows in sheet match current ledger values. No modifications found.</p>
+                </div>
+              ) : (
+                <div className="border border-[#DED3C5] rounded-2xl overflow-hidden shadow-xs">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-[#F7F3EC] text-[#76695F] border-b border-[#DED3C5] text-[10px] uppercase tracking-wider font-semibold">
+                      <tr>
+                        <th className="py-3 px-4">Product Code &amp; Name</th>
+                        <th className="py-3 px-3">Category</th>
+                        <th className="py-3 px-3 text-center">Stock Change</th>
+                        <th className="py-3 px-3 text-right">Price Change</th>
+                        <th className="py-3 px-4 text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#EAE2D8]">
+                      {excelDiffs
+                        .filter(d => d.status !== 'unchanged')
+                        .map((diff, idx) => (
+                          <tr key={idx} className="hover:bg-[#FFFCF7] transition-colors">
+                            <td className="py-3 px-4">
+                              <strong className="text-[#372921] block">{diff.name}</strong>
+                              <span className="text-[10.5px] font-mono text-[#9E5430]">{diff.sku}</span>
+                            </td>
+                            <td className="py-3 px-3 text-[#76695F]">{diff.category}</td>
+                            <td className="py-3 px-3 text-center font-mono">
+                              {diff.newQty !== null ? (
+                                <div className="inline-flex items-center gap-1.5">
+                                  <span className="text-[#76695F] line-through">{diff.currentQty}</span>
+                                  <ArrowRight className="w-3 h-3 text-[#9E5430]" />
+                                  <span className="font-bold text-[#372921]">{diff.newQty}</span>
+                                  <span
+                                    className={`text-[10px] font-semibold px-1.5 py-0.2 rounded ${
+                                      diff.qtyDelta > 0
+                                        ? 'bg-emerald-100 text-emerald-800'
+                                        : diff.qtyDelta < 0
+                                        ? 'bg-rose-100 text-rose-800'
+                                        : 'text-[#76695F]'
+                                    }`}
+                                  >
+                                    {diff.qtyDelta > 0 ? '+' : ''}{diff.qtyDelta}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-[#76695F]">{diff.currentQty} pcs (Unchanged)</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono">
+                              {diff.newPrice !== null ? (
+                                <div className="inline-flex items-center gap-1.5 justify-end">
+                                  <span className="text-[#76695F] line-through">₹{diff.currentPrice.toLocaleString('en-IN')}</span>
+                                  <ArrowRight className="w-3 h-3 text-[#9E5430]" />
+                                  <span className="font-bold text-[#372921]">₹{diff.newPrice.toLocaleString('en-IN')}</span>
+                                </div>
+                              ) : (
+                                <span className="text-[#76695F]">₹{diff.currentPrice.toLocaleString('en-IN')}</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              {diff.status === 'changed' ? (
+                                <span className="px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                  Ready to Update
+                                </span>
+                              ) : diff.status === 'invalid' ? (
+                                <span className="px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-rose-100 text-rose-800 border border-rose-200" title={diff.errorMsg}>
+                                  {diff.errorMsg || 'Validation Error'}
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                                  Unknown SKU
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="p-4 sm:p-6 border-t border-[#EAE2D8] bg-[#FFFCF7] flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setExcelModalOpen(false)}
+                className="px-5 py-2.5 rounded-full border border-[#DED3C5] text-xs font-semibold text-[#76695F] hover:text-[#372921]"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleApplyBatchUpdates}
+                disabled={excelStats.changed === 0}
+                className="px-6 py-2.5 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white text-xs font-semibold transition-colors flex items-center gap-2 shadow-sm disabled:opacity-40 cursor-pointer"
+              >
+                <Check className="w-4 h-4" />
+                <span>Apply {excelStats.changed} Updates to Master Ledger</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 6: DELETE / ARCHIVE SKU CONFIRMATION MODAL
           ========================================================================= */}
       {deleteModalOpen && deletingItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
@@ -1079,9 +2046,7 @@ export default function InventoryView() {
             </div>
 
             <div className="text-center space-y-1">
-              <h3 className="font-serif text-lg font-bold text-[#372921]">
-                Archive Inventory SKU?
-              </h3>
+              <h3 className="font-serif text-lg font-bold text-[#372921]">Archive Inventory SKU?</h3>
               <p className="text-xs text-[#76695F]">
                 Are you sure you want to archive <strong className="text-[#372921]">{deletingItem.name}</strong> ({deletingItem.sku})? It will be removed from active stock checks.
               </p>

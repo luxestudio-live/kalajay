@@ -21,6 +21,11 @@ import {
   TaxSlab,
   OfflineOrder,
   ProductBomItem,
+  InventoryMovement,
+  ExpenseRecord,
+  VendorRecord,
+  CategoryBudget,
+  ArtisanProfile,
 } from './adminTypes';
 import { ADMIN_MODULE_DEFINITIONS, SEED_ROLES } from './adminPermissions';
 import { adminFetch } from '@/lib/adminAuthClient';
@@ -31,6 +36,11 @@ import {
   SEED_BANNERS,
   SEED_INVENTORY_ITEMS,
   SEED_STOCK_ADJUSTMENTS,
+  SEED_INVENTORY_MOVEMENTS,
+  SEED_EXPENSES,
+  SEED_VENDORS,
+  SEED_BUDGETS,
+  SEED_ARTISANS,
   SEED_WORK_ORDERS,
   SEED_ORDERS,
   SEED_CUSTOM_REQUESTS,
@@ -62,6 +72,16 @@ import {
   getFirestoreInventory,
   saveFirestoreInventoryItem,
   logFirestoreStockAdjustment,
+  getInventoryMovements,
+  logFirestoreInventoryMovement,
+  getFirestoreExpenses,
+  saveFirestoreExpense,
+  getFirestoreVendors,
+  saveFirestoreVendor,
+  getFirestoreBudgets,
+  saveFirestoreBudgets,
+  getFirestoreArtisans,
+  saveFirestoreArtisan,
   deleteFirestoreInventoryItem,
   getFirestoreCoupons,
   saveFirestoreCoupon,
@@ -130,11 +150,15 @@ interface AdminStoreContextType {
   // Inventory & Stock Adjustments (ERP)
   inventory: InventoryItem[];
   stockAdjustments: StockAdjustment[];
+  inventoryMovements: InventoryMovement[];
   adjustStock: (
     sku: string,
     adjustedQty: number,
     reason: StockAdjustment['reason'],
     notes: string
+  ) => void;
+  logMovement: (
+    movement: Omit<InventoryMovement, 'id' | 'timestamp' | 'actor' | 'previousBalance' | 'newBalance'>
   ) => void;
   createInventoryItem: (item: Omit<InventoryItem, 'id'>) => void;
   updateInventoryItem: (id: string, updates: Partial<InventoryItem>) => void;
@@ -142,8 +166,22 @@ interface AdminStoreContextType {
 
   // Production & Work Orders (Bihar Hub)
   workOrders: WorkOrder[];
+  artisans: ArtisanProfile[];
   updateWorkOrderStage: (orderId: string, stage: WorkOrder['stage'], qcPassed?: boolean) => void;
   createWorkOrder: (order: Omit<WorkOrder, 'id'>) => void;
+  createArtisan: (artisan: Omit<ArtisanProfile, 'id' | 'createdAt'>) => void;
+  updateArtisan: (id: string, updates: Partial<ArtisanProfile>) => void;
+
+  // Expenses, Vendors & Budgets (Phase 2C)
+  expenses: ExpenseRecord[];
+  createExpense: (expense: Omit<ExpenseRecord, 'id' | 'createdAt'>) => void;
+  updateExpense: (id: string, updates: Partial<ExpenseRecord>) => void;
+  deleteExpense: (id: string) => void;
+  vendors: VendorRecord[];
+  createVendor: (vendor: Omit<VendorRecord, 'id' | 'createdAt'>) => void;
+  updateVendor: (id: string, updates: Partial<VendorRecord>) => void;
+  categoryBudgets: CategoryBudget[];
+  updateCategoryBudget: (category: string, monthlyBudget: number) => void;
 
   // Orders & Sales
   orders: AdminOrder[];
@@ -244,6 +282,13 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
   const [stockAdjustments, setStockAdjustments] = useState<StockAdjustment[]>(
     SEED_STOCK_ADJUSTMENTS
   );
+  const [inventoryMovements, setInventoryMovements] = useState<InventoryMovement[]>(
+    SEED_INVENTORY_MOVEMENTS
+  );
+  const [expenses, setExpenses] = useState<ExpenseRecord[]>(SEED_EXPENSES);
+  const [vendors, setVendors] = useState<VendorRecord[]>(SEED_VENDORS);
+  const [categoryBudgets, setCategoryBudgets] = useState<CategoryBudget[]>(SEED_BUDGETS);
+  const [artisans, setArtisans] = useState<ArtisanProfile[]>(SEED_ARTISANS);
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>(SEED_WORK_ORDERS);
   const [orders, setOrders] = useState<AdminOrder[]>(SEED_ORDERS);
   const [customRequests, setCustomRequests] = useState<CustomOrderRequest[]>(
@@ -295,6 +340,11 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
         if (parsed.banners) setBanners(parsed.banners);
         if (parsed.inventory) setInventory(parsed.inventory);
         if (parsed.stockAdjustments) setStockAdjustments(parsed.stockAdjustments);
+        if (parsed.inventoryMovements) setInventoryMovements(parsed.inventoryMovements);
+        if (parsed.expenses) setExpenses(parsed.expenses);
+        if (parsed.vendors) setVendors(parsed.vendors);
+        if (parsed.categoryBudgets) setCategoryBudgets(parsed.categoryBudgets);
+        if (parsed.artisans) setArtisans(parsed.artisans);
         if (parsed.workOrders) setWorkOrders(parsed.workOrders);
         if (parsed.orders) setOrders(parsed.orders);
         if (parsed.customRequests) setCustomRequests(parsed.customRequests);
@@ -851,11 +901,14 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     let previousQty = 0;
     let targetName = sku;
 
+    const diff = adjustedQty - (inventory.find(i => i.sku === sku)?.onHand ?? 0);
+
     const nextInventory = inventory.map(item => {
       if (item.sku === sku) {
         previousQty = item.onHand;
         targetName = item.name;
-        const diff = adjustedQty - previousQty;
+        const currentAdj = item.adjustmentQty ?? 0;
+        const newAdjustmentQty = currentAdj + diff;
         const newAvailable = Math.max(0, item.available + diff);
         const newStatus: InventoryItem['status'] =
           adjustedQty === 0
@@ -863,11 +916,17 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
             : adjustedQty <= item.reorderPoint
             ? 'low_stock'
             : 'in_stock';
+        const newDeficit = Math.max(0, item.reorderPoint - newAvailable);
+        const newSuggestedMake = Math.max(0, item.reorderPoint * 2 - adjustedQty);
         return {
           ...item,
           onHand: adjustedQty,
           available: newAvailable,
+          adjustmentQty: newAdjustmentQty,
           status: newStatus,
+          stockValue: adjustedQty * item.unitCost,
+          deficit: newDeficit,
+          suggestedMake: newSuggestedMake,
         };
       }
       return item;
@@ -879,17 +938,35 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       productName: targetName,
       previousQty,
       adjustedQty,
-      difference: adjustedQty - previousQty,
+      difference: diff,
       reason,
       loggedBy: currentUser.name,
       timestamp: new Date().toISOString(),
       notes,
     };
 
+    const newMovement: InventoryMovement = {
+      id: `MOV-${Date.now()}`,
+      sku,
+      productName: targetName,
+      location: (inventory.find(i => i.sku === sku)?.location as any) || 'Mumbai Atelier',
+      movementType: 'MANUAL_ADJUSTMENT',
+      quantity: diff,
+      previousBalance: previousQty,
+      newBalance: adjustedQty,
+      sourceEntity: 'manual_audit',
+      sourceId: newAdjustment.id,
+      notes: notes || `Physical audit count adjustment [Reason: ${reason}]`,
+      actor: currentUser.name,
+      timestamp: new Date().toISOString(),
+    };
+
     setInventory(nextInventory);
     const nextAdj = [newAdjustment, ...stockAdjustments];
+    const nextMovements = [newMovement, ...inventoryMovements];
     setStockAdjustments(nextAdj);
-    saveState({ inventory: nextInventory, stockAdjustments: nextAdj });
+    setInventoryMovements(nextMovements);
+    saveState({ inventory: nextInventory, stockAdjustments: nextAdj, inventoryMovements: nextMovements });
 
     // Sync to Firestore
     const changedItem = nextInventory.find(i => i.sku === sku);
@@ -897,12 +974,213 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
       saveFirestoreInventoryItem(changedItem).catch(() => {});
     }
     logFirestoreStockAdjustment(newAdjustment).catch(() => {});
+    logFirestoreInventoryMovement(newMovement).catch(() => {});
 
     logAction(
       'STOCK_ADJUSTMENT',
       'inventory',
       `Adjusted ${sku} (${targetName}) from ${previousQty} to ${adjustedQty} [Reason: ${reason}]`
     );
+  };
+
+  // Authoritative Inventory Movement Ledger Entry (Phase 2A)
+  const logMovement = (
+    movData: Omit<InventoryMovement, 'id' | 'timestamp' | 'actor' | 'previousBalance' | 'newBalance'>
+  ) => {
+    let prevOnHand = 0;
+    let targetName = movData.sku;
+
+    const nextInventory = inventory.map(item => {
+      if (item.sku === movData.sku) {
+        prevOnHand = item.onHand;
+        targetName = item.name;
+        let openingStock = item.openingStock ?? 0;
+        let stockIn = item.stockIn ?? 0;
+        let quantityMade = item.quantityMade ?? 0;
+        let quantitySold = item.quantitySold ?? 0;
+        let damaged = item.damaged ?? 0;
+        let marketingQty = item.marketingQty ?? 0;
+        let adjustmentQty = item.adjustmentQty ?? 0;
+
+        const qty = movData.quantity;
+        switch (movData.movementType) {
+          case 'OPENING_BALANCE':
+            openingStock = Math.max(0, qty);
+            break;
+          case 'PURCHASE_IN':
+            stockIn += Math.max(0, qty);
+            break;
+          case 'PRODUCTION_IN':
+            quantityMade += Math.max(0, qty);
+            break;
+          case 'SALE_OUT':
+            quantitySold += Math.max(0, Math.abs(qty));
+            break;
+          case 'DAMAGE_OUT':
+            damaged += Math.max(0, Math.abs(qty));
+            break;
+          case 'MARKETING_OUT':
+            marketingQty += Math.max(0, Math.abs(qty));
+            break;
+          case 'MANUAL_ADJUSTMENT':
+            adjustmentQty += qty;
+            break;
+          case 'RETURN_IN':
+            quantitySold = Math.max(0, quantitySold - Math.max(0, qty));
+            break;
+          default:
+            break;
+        }
+
+        const nextOnHand = Math.max(
+          0,
+          openingStock + stockIn + quantityMade - quantitySold - damaged - marketingQty + adjustmentQty
+        );
+        const nextAvailable = Math.max(0, nextOnHand - item.reserved);
+        const nextStatus: InventoryItem['status'] =
+          nextOnHand === 0
+            ? 'out_of_stock'
+            : nextOnHand <= item.reorderPoint
+            ? 'low_stock'
+            : 'in_stock';
+        const nextStockValue = nextOnHand * item.unitCost;
+        const nextDeficit = Math.max(0, item.reorderPoint - nextAvailable);
+        const nextSuggestedMake = Math.max(0, item.reorderPoint * 2 - nextOnHand);
+
+        return {
+          ...item,
+          openingStock,
+          stockIn,
+          quantityMade,
+          quantitySold,
+          damaged,
+          marketingQty,
+          adjustmentQty,
+          onHand: nextOnHand,
+          available: nextAvailable,
+          status: nextStatus,
+          stockValue: nextStockValue,
+          deficit: nextDeficit,
+          suggestedMake: nextSuggestedMake,
+        };
+      }
+      return item;
+    });
+
+    const targetItem = nextInventory.find(i => i.sku === movData.sku);
+    const newMovement: InventoryMovement = {
+      ...movData,
+      id: `MOV-${Date.now()}`,
+      productName: targetName,
+      previousBalance: prevOnHand,
+      newBalance: targetItem?.onHand ?? prevOnHand,
+      actor: currentUser.name,
+      timestamp: new Date().toISOString(),
+    };
+
+    setInventory(nextInventory);
+    const nextMovements = [newMovement, ...inventoryMovements];
+    setInventoryMovements(nextMovements);
+    saveState({ inventory: nextInventory, inventoryMovements: nextMovements });
+
+    if (targetItem) {
+      saveFirestoreInventoryItem(targetItem).catch(() => {});
+    }
+    logFirestoreInventoryMovement(newMovement).catch(() => {});
+    logAction('LOG_INVENTORY_MOVEMENT', 'inventory', `Logged ${movData.movementType} (${movData.quantity}) for ${movData.sku}`);
+  };
+
+  // Phase 2C: Expenses, Vendors & Budgets
+  const createExpense = (expenseData: Omit<ExpenseRecord, 'id' | 'createdAt'>) => {
+    const newExp: ExpenseRecord = {
+      ...expenseData,
+      id: `EXP-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    const next = [newExp, ...expenses];
+    setExpenses(next);
+    saveState({ expenses: next });
+    saveFirestoreExpense(newExp).catch(() => {});
+    logAction('CREATE_EXPENSE', 'finance', `Logged ${newExp.treatment} expense: ₹${newExp.amount} for ${newExp.party}`);
+  };
+
+  const updateExpense = (id: string, updates: Partial<ExpenseRecord>) => {
+    const next = expenses.map(exp => (exp.id === id ? { ...exp, ...updates, updatedAt: new Date().toISOString() } : exp));
+    const target = next.find(exp => exp.id === id);
+    setExpenses(next);
+    saveState({ expenses: next });
+    if (target) {
+      saveFirestoreExpense(target).catch(() => {});
+    }
+    logAction('UPDATE_EXPENSE', 'finance', `Updated expense record ID: ${id}`);
+  };
+
+  const deleteExpense = (id: string) => {
+    const next = expenses.map(exp => (exp.id === id ? { ...exp, status: 'void' as const, updatedAt: new Date().toISOString() } : exp));
+    const target = next.find(exp => exp.id === id);
+    setExpenses(next);
+    saveState({ expenses: next });
+    if (target) {
+      saveFirestoreExpense(target).catch(() => {});
+    }
+    logAction('VOID_EXPENSE', 'finance', `Marked expense ID ${id} as void`);
+  };
+
+  const createVendor = (vendorData: Omit<VendorRecord, 'id' | 'createdAt'>) => {
+    const newVnd: VendorRecord = {
+      ...vendorData,
+      id: `VND-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    const next = [newVnd, ...vendors];
+    setVendors(next);
+    saveState({ vendors: next });
+    saveFirestoreVendor(newVnd).catch(() => {});
+    logAction('CREATE_VENDOR', 'finance', `Registered supplier: ${newVnd.name}`);
+  };
+
+  const updateVendor = (id: string, updates: Partial<VendorRecord>) => {
+    const next = vendors.map(v => (v.id === id ? { ...v, ...updates, updatedAt: new Date().toISOString() } : v));
+    const target = next.find(v => v.id === id);
+    setVendors(next);
+    saveState({ vendors: next });
+    if (target) {
+      saveFirestoreVendor(target).catch(() => {});
+    }
+    logAction('UPDATE_VENDOR', 'finance', `Updated vendor specifications: ${id}`);
+  };
+
+  const updateCategoryBudget = (category: string, monthlyBudget: number) => {
+    const next = categoryBudgets.map(b => (b.category === category ? { ...b, monthlyBudget, utilizationPct: Math.round((b.spent / monthlyBudget) * 100 * 10) / 10 } : b));
+    setCategoryBudgets(next);
+    saveState({ categoryBudgets: next });
+    saveFirestoreBudgets(next).catch(() => {});
+    logAction('UPDATE_BUDGET', 'finance', `Updated monthly budget for ${category} to ₹${monthlyBudget}`);
+  };
+
+  // Phase 2D: Artisan Collective Directory
+  const createArtisan = (artisanData: Omit<ArtisanProfile, 'id' | 'createdAt'>) => {
+    const newArtisan: ArtisanProfile = {
+      ...artisanData,
+      id: `art-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    const next = [newArtisan, ...artisans];
+    setArtisans(next);
+    saveState({ artisans: next });
+    saveFirestoreArtisan(newArtisan).catch(() => {});
+    logAction('CREATE_ARTISAN', 'production', `Registered artisan: ${newArtisan.name} (${newArtisan.memberCode})`);
+  };
+
+  const updateArtisan = (id: string, updates: Partial<ArtisanProfile>) => {
+    const next = artisans.map(a => (a.id === id ? { ...a, ...updates, updatedAt: new Date().toISOString() } : a));
+    const target = next.find(a => a.id === id);
+    setArtisans(next);
+    saveState({ artisans: next });
+    if (target) {
+      saveFirestoreArtisan(target).catch(() => {});
+    }
+    logAction('UPDATE_ARTISAN', 'production', `Updated artisan profile: ${id}`);
   };
 
   const createInventoryItem = (itemData: Omit<InventoryItem, 'id'>) => {
@@ -1522,6 +1800,11 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
     setBanners(SEED_BANNERS);
     setInventory(SEED_INVENTORY_ITEMS);
     setStockAdjustments(SEED_STOCK_ADJUSTMENTS);
+    setInventoryMovements(SEED_INVENTORY_MOVEMENTS);
+    setExpenses(SEED_EXPENSES);
+    setVendors(SEED_VENDORS);
+    setCategoryBudgets(SEED_BUDGETS);
+    setArtisans(SEED_ARTISANS);
     setWorkOrders(SEED_WORK_ORDERS);
     setOrders(SEED_ORDERS);
     setCustomRequests(SEED_CUSTOM_REQUESTS);
@@ -1576,13 +1859,27 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
         deleteBanner,
         inventory,
         stockAdjustments,
+        inventoryMovements,
         adjustStock,
+        logMovement,
         createInventoryItem,
         updateInventoryItem,
         deleteInventoryItem,
         workOrders,
+        artisans,
         updateWorkOrderStage,
         createWorkOrder,
+        createArtisan,
+        updateArtisan,
+        expenses,
+        createExpense,
+        updateExpense,
+        deleteExpense,
+        vendors,
+        createVendor,
+        updateVendor,
+        categoryBudgets,
+        updateCategoryBudget,
         orders,
         updateOrderStatus,
         createManualOrder,

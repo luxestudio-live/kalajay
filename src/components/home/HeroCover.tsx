@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useLayoutEffect, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Compass } from 'lucide-react';
 import { gsap } from 'gsap';
@@ -9,8 +9,6 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger);
 }
-
-const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 export default function HeroCover() {
   const pinWrapperRef = useRef<HTMLDivElement>(null);
@@ -22,7 +20,7 @@ export default function HeroCover() {
   const ctaRef = useRef<HTMLDivElement>(null);
   const headlineRef = useRef<HTMLHeadingElement>(null);
 
-  useIsomorphicLayoutEffect(() => {
+  useEffect(() => {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) return;
 
@@ -329,8 +327,12 @@ export default function HeroCover() {
             >
               <Link href="/shop" className="absolute inset-0 z-20" aria-label="Inspect Pearl Beaded Mini Tote" />
               <img
-                src="https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442713/kalajay/products/vskzgwmsrgxvfbwhtnrs.webp"
+                src="https://res.cloudinary.com/da6uncyb/image/upload/w_500,c_limit,f_auto,q_auto/v1795442713/kalajay/products/vskzgwmsrgxvfbwhtnrs.webp"
                 alt="Handcrafted Pearl Beaded Mini Tote Bag"
+                width={210}
+                height={262}
+                loading="eager"
+                decoding="async"
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
               <div
@@ -360,8 +362,12 @@ export default function HeroCover() {
               className="relative w-[168px] sm:w-[205px] lg:w-[230px] aspect-[4/5] rounded-[20px] sm:rounded-[22px] overflow-hidden bg-canvas border-2 border-[#9E5430] shadow-[0_18px_45px_rgba(55,41,33,0.14)] will-change-transform flex flex-col justify-between group z-20 select-none"
             >
               <img
-                src="https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442705/kalajay/catalogue/cagx2jryioijvapagk6a.jpg"
+                src="https://res.cloudinary.com/da6uncyb/image/upload/w_500,c_limit,f_auto,q_auto/v1795442705/kalajay/catalogue/cagx2jryioijvapagk6a.jpg"
                 alt="Pearl Beaded Vanity Box with interior mirror"
+                width={230}
+                height={288}
+                fetchPriority="high"
+                decoding="async"
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
               <div
@@ -406,8 +412,12 @@ export default function HeroCover() {
             >
               <Link href="/shop" className="absolute inset-0 z-20" aria-label="Inspect Rose Pink Crystal Butterfly Evening Clutch" />
               <img
-                src="https://res.cloudinary.com/da6uncyb/image/upload/f_auto,q_auto/v1795442712/kalajay/products/z2uyxgb13ucabgtpr1fi.webp"
+                src="https://res.cloudinary.com/da6uncyb/image/upload/w_500,c_limit,f_auto,q_auto/v1795442712/kalajay/products/z2uyxgb13ucabgtpr1fi.webp"
                 alt="Rose Pink Crystal Butterfly Evening Clutch"
+                width={210}
+                height={262}
+                loading="eager"
+                decoding="async"
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
               <div

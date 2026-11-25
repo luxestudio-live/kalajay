@@ -7,10 +7,15 @@ const nextConfig = {
   skipTrailingSlashRedirect: true,
   experimental: {
     serverComponentsExternalPackages: ['firebase-admin'],
+    optimizePackageImports: ['lucide-react', 'gsap'],
   },
   images: {
     unoptimized: true,
     remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+      },
       {
         protocol: 'https',
         hostname: 'www.kalajay.in',

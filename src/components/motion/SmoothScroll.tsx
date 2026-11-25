@@ -27,7 +27,11 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) return;
 
-    // Initialize Lenis smooth scroll
+    // Skip Lenis on mobile/coarse-pointer devices to preserve native hardware-accelerated touch scroll
+    const isTouchOrMobile = window.innerWidth < 1024 || window.matchMedia('(pointer: coarse)').matches;
+    if (isTouchOrMobile) return;
+
+    // Initialize Lenis smooth scroll for desktop wheel navigation
     const lenis = new Lenis({
       duration: 1.2,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // expo.out
@@ -35,7 +39,6 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
       gestureOrientation: 'vertical',
       smoothWheel: true,
       wheelMultiplier: 0.9,
-      touchMultiplier: 1.5,
       infinite: false,
     });
 
@@ -53,7 +56,6 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     };
 
     gsap.ticker.add(updateTicker);
-    gsap.ticker.lagSmoothing(0);
 
     return () => {
       gsap.ticker.remove(updateTicker);
@@ -66,11 +68,14 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
     };
   }, []);
 
-  // Reset scroll position on route change and refresh ScrollTrigger
+  // Reset scroll position on route change and refresh ScrollTrigger on desktop only
   useEffect(() => {
     if (lenisRef.current) {
       lenisRef.current.scrollTo(0, { immediate: true });
     }
+    const isTouchOrMobile = typeof window !== 'undefined' && (window.innerWidth < 1024 || window.matchMedia('(pointer: coarse)').matches);
+    if (isTouchOrMobile) return;
+
     const timer = setTimeout(() => {
       ScrollTrigger.refresh();
     }, 100);

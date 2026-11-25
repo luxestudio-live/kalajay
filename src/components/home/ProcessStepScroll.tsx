@@ -10,7 +10,7 @@ if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+const useIsomorphicLayoutEffect = useEffect;
 
 export default function ProcessStepScroll() {
   const pinWrapperRef = useRef<HTMLDivElement>(null);
@@ -57,7 +57,7 @@ export default function ProcessStepScroll() {
     },
   ];
 
-  useIsomorphicLayoutEffect(() => {
+  useEffect(() => {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) return;
 

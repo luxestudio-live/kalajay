@@ -18,6 +18,19 @@ export interface ProductAttribute {
   values: AttributeValue[];
 }
 
+export interface CraftCosting {
+  enabled: boolean;
+  beadsUsed?: string;
+  beadKg: number;
+  beadCostKg: number;
+  laborHours: number;
+  laborRatePerHour: number; // default 50
+  otherMaterialCost: number;
+  calculatedCostPrice: number;
+  manualOverrideCostPrice?: number;
+  notes?: string;
+}
+
 export interface ProductVariant {
   code: string;
   label: string;
@@ -35,6 +48,15 @@ export interface ProductVariant {
   leadTimeDays?: number;
   isAvailable?: boolean;
   isDefault?: boolean;
+  unitCost?: number;
+  costing?: CraftCosting;
+  openingStock?: number;
+  stockIn?: number;
+  quantityMade?: number;
+  quantitySold?: number;
+  damaged?: number;
+  marketingQty?: number;
+  adjustmentQty?: number;
   attributes?: Record<string, string>; // attributeId -> valueId
   attributeNames?: Record<string, string>; // attributeName -> valueLabel
 }
@@ -65,6 +87,19 @@ export interface Product {
   description: string;
   hsnCode?: string;
   taxRate?: number;
+  unit?: string;
+  unitCost?: number;
+  costing?: CraftCosting;
+  openingStock?: number;
+  stockIn?: number;
+  quantityMade?: number;
+  quantitySold?: number;
+  damaged?: number;
+  marketingQty?: number;
+  adjustmentQty?: number;
+  grossMarginPct?: number;
+  markupPct?: number;
+  stockValue?: number;
   status?: 'published' | 'active' | 'archived' | 'inactive' | 'draft';
   isActive?: boolean;
   active?: boolean;

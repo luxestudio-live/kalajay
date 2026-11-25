@@ -42,7 +42,15 @@ const rollbackFile = rollbackIndex !== -1 ? args[rollbackIndex + 1] : null;
 
 // Validate Firebase Admin Credentials
 function getServiceAccount() {
-  const credEnv = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  let credEnv = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  if (!credEnv) {
+    if (fs.existsSync('credentials/serviceAccountKey.json')) {
+      credEnv = 'credentials/serviceAccountKey.json';
+    } else if (fs.existsSync('C:/Users/Sonali/Downloads/kalajay-667ff-firebase-adminsdk-fbsvc-65836c67d5.json')) {
+      credEnv = 'C:/Users/Sonali/Downloads/kalajay-667ff-firebase-adminsdk-fbsvc-65836c67d5.json';
+    }
+  }
+
   if (!credEnv) {
     console.error('\n[SAFEGUARD BLOCKED] FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not defined.');
     console.error('To run this script against live Firestore, supply Firebase Admin credentials:\n');
@@ -91,12 +99,24 @@ async function executeRollback(db, backupPath) {
       if (entry.collection === 'products') {
         if (entry.original.coverImage !== undefined) restorePayload.coverImage = entry.original.coverImage;
         if (entry.original.images !== undefined) restorePayload.images = entry.original.images;
-        if (entry.original.variants !== undefined) restorePayload.variants = entry.original.variants;
+        // Strictly limit variant rollback to image fields to prevent overwriting concurrent Admin edits
+        if (entry.original.variants !== undefined) {
+          const currentVariants = snap.data().variants || [];
+          if (Array.isArray(currentVariants) && Array.isArray(entry.original.variants)) {
+            restorePayload.variants = currentVariants.map((cv, idx) => {
+              const origV = entry.original.variants.find(ov => ov.id === cv.id) || entry.original.variants[idx];
+              return origV && origV.image !== undefined ? { ...cv, image: origV.image } : cv;
+            });
+          } else {
+            restorePayload.variants = entry.original.variants;
+          }
+        }
       } else if (entry.collection === 'categories') {
         if (entry.original.image !== undefined) restorePayload.image = entry.original.image;
       }
 
       if (Object.keys(restorePayload).length > 0) {
+        restorePayload.updatedAt = new Date().toISOString();
         await docRef.update(restorePayload);
         results.restored++;
         console.log(`[RESTORED] ${entry.collection}/${entry.id}`);
@@ -126,6 +146,7 @@ async function executeSync(db) {
 
   const timestamp = Date.now();
   const backupEntries = [];
+  const updateQueue = [];
   const receipt = {
     startedAt: new Date(timestamp).toISOString(),
     isDryRun,
@@ -142,8 +163,8 @@ async function executeSync(db) {
     details: []
   };
 
-  // 1. Process Products
-  console.log('--- 1. AUDITING & SYNCING /products ---');
+  // 1. Audit Products
+  console.log('--- 1. AUDITING /products ---');
   for (const p of manifest.products) {
     const docId = p.id || p.code;
     const docRef = db.collection('products').doc(docId);
@@ -197,8 +218,7 @@ async function executeSync(db) {
         });
       }
 
-      // Record backup
-      backupEntries.push({
+      const backupEntry = {
         collection: 'products',
         id: docId,
         original: {
@@ -212,30 +232,30 @@ async function executeSync(db) {
           images: p.images,
           variants: updatedVariants
         }
-      });
+      };
 
-      if (!isDryRun) {
-        await docRef.update({
+      backupEntries.push(backupEntry);
+      updateQueue.push({
+        collection: 'products',
+        id: docId,
+        ref: docRef,
+        payload: {
           coverImage: p.coverImage,
           images: p.images,
           variants: updatedVariants,
           updatedAt: new Date().toISOString()
-        });
-      }
-
-      receipt.summary.productsUpdated++;
-      console.log(`[${isDryRun ? 'WOULD UPDATE' : 'UPDATED'}] Product: ${docId}`);
-      receipt.details.push({ collection: 'products', id: docId, status: isDryRun ? 'DRY_RUN_UPDATED' : 'UPDATED' });
+        }
+      });
 
     } catch (err) {
-      console.error(`[ERROR] Processing product ${docId}:`, err.message);
+      console.error(`[ERROR] Auditing product ${docId}:`, err.message);
       receipt.summary.errors++;
       receipt.details.push({ collection: 'products', id: docId, status: 'ERROR', error: err.message });
     }
   }
 
-  // 2. Process Categories
-  console.log('\n--- 2. AUDITING & SYNCING /categories ---');
+  // 2. Audit Categories
+  console.log('\n--- 2. AUDITING /categories ---');
   for (const c of manifest.categories) {
     const docRef = db.collection('categories').doc(c.slug);
 
@@ -268,43 +288,115 @@ async function executeSync(db) {
         continue;
       }
 
-      backupEntries.push({
+      const backupEntry = {
         collection: 'categories',
         id: c.slug,
         original: { image: originalImage, updatedAt: existingData.updatedAt || null },
         intended: { image: c.image }
-      });
+      };
 
-      if (!isDryRun) {
-        await docRef.update({
+      backupEntries.push(backupEntry);
+      updateQueue.push({
+        collection: 'categories',
+        id: c.slug,
+        ref: docRef,
+        payload: {
           image: c.image,
           updatedAt: new Date().toISOString()
-        });
-      }
-
-      receipt.summary.categoriesUpdated++;
-      console.log(`[${isDryRun ? 'WOULD UPDATE' : 'UPDATED'}] Category: ${c.slug}`);
-      receipt.details.push({ collection: 'categories', id: c.slug, status: isDryRun ? 'DRY_RUN_UPDATED' : 'UPDATED' });
+        }
+      });
 
     } catch (err) {
-      console.error(`[ERROR] Processing category ${c.slug}:`, err.message);
+      console.error(`[ERROR] Auditing category ${c.slug}:`, err.message);
       receipt.summary.errors++;
       receipt.details.push({ collection: 'categories', id: c.slug, status: 'ERROR', error: err.message });
     }
   }
 
-  // Save Backup & Receipt
-  receipt.completedAt = new Date().toISOString();
-  if (backupEntries.length > 0 && !isDryRun) {
+  // 3. Pre-Migration Backup Creation & Verification
+  if (!isDryRun && backupEntries.length > 0) {
     const backupFileName = `firestore-backup-${timestamp}.json`;
-    fs.writeFileSync(backupFileName, JSON.stringify({ createdAt: receipt.startedAt, entries: backupEntries }, null, 2));
-    console.log(`\n[BACKUP SAVED] Backup written to: ${backupFileName}`);
+    console.log(`\n--- 3. CREATING & VERIFYING PRE-MIGRATION BACKUP ---`);
+    const backupContent = {
+      createdAt: receipt.startedAt,
+      totalEntries: backupEntries.length,
+      entries: backupEntries
+    };
+    fs.writeFileSync(backupFileName, JSON.stringify(backupContent, null, 2), 'utf8');
+
+    // Strict verification of written backup
+    if (!fs.existsSync(backupFileName)) {
+      console.error(`[FATAL] Pre-migration backup file could not be verified on disk: ${backupFileName}`);
+      process.exit(1);
+    }
+    const readBackBackup = JSON.parse(fs.readFileSync(backupFileName, 'utf8'));
+    if (!readBackBackup.entries || readBackBackup.entries.length !== backupEntries.length) {
+      console.error(`[FATAL] Pre-migration backup verification mismatch! Expected ${backupEntries.length} entries, found ${readBackBackup.entries?.length}`);
+      process.exit(1);
+    }
+    console.log(`[PRE-MIGRATION BACKUP VERIFIED] ${backupEntries.length} documents safely backed up to ${backupFileName}`);
     receipt.backupFile = backupFileName;
   }
 
+  // 4. Execute Updates
+  console.log(`\n--- 4. EXECUTING SYNCHRONIZATION (${isDryRun ? 'DRY-RUN' : 'LIVE MUTATION'}) ---`);
+  for (const item of updateQueue) {
+    try {
+      if (!isDryRun) {
+        await item.ref.update(item.payload);
+      }
+      if (item.collection === 'products') receipt.summary.productsUpdated++;
+      if (item.collection === 'categories') receipt.summary.categoriesUpdated++;
+
+      console.log(`[${isDryRun ? 'WOULD UPDATE' : 'UPDATED'}] ${item.collection}/${item.id}`);
+      receipt.details.push({ collection: item.collection, id: item.id, status: isDryRun ? 'DRY_RUN_UPDATED' : 'UPDATED' });
+    } catch (err) {
+      console.error(`[ERROR] Updating ${item.collection}/${item.id}:`, err.message);
+      receipt.summary.errors++;
+      receipt.details.push({ collection: item.collection, id: item.id, status: 'ERROR', error: err.message });
+    }
+  }
+
+  // 5. Save Receipt
+  receipt.completedAt = new Date().toISOString();
   const receiptFileName = `firestore-sync-receipt-${timestamp}.json`;
-  fs.writeFileSync(receiptFileName, JSON.stringify(receipt, null, 2));
-  console.log(`[RECEIPT SAVED] Receipt written to: ${receiptFileName}`);
+  fs.writeFileSync(receiptFileName, JSON.stringify(receipt, null, 2), 'utf8');
+  console.log(`\n[RECEIPT SAVED] Receipt written to: ${receiptFileName}`);
+
+  // 6. Post-Sync Read-Only Verification
+  if (!isDryRun && receipt.summary.errors === 0) {
+    console.log(`\n--- 5. POST-SYNC READ-ONLY VERIFICATION ---`);
+    let verifiedCount = 0;
+    let failedVerificationCount = 0;
+
+    for (const item of updateQueue) {
+      const snap = await item.ref.get();
+      const currentData = snap.data();
+      if (item.collection === 'products') {
+        const coverMatches = currentData.coverImage === item.payload.coverImage;
+        const imagesMatch = Array.isArray(currentData.images) &&
+          currentData.images.length === item.payload.images.length &&
+          currentData.images.every((url, i) => url === item.payload.images[i]);
+        if (coverMatches && imagesMatch) {
+          verifiedCount++;
+        } else {
+          failedVerificationCount++;
+          console.error(`[VERIFICATION FAILED] Product ${item.id} image mismatch.`);
+        }
+      } else if (item.collection === 'categories') {
+        if (currentData.image === item.payload.image) {
+          verifiedCount++;
+        } else {
+          failedVerificationCount++;
+          console.error(`[VERIFICATION FAILED] Category ${item.id} image mismatch.`);
+        }
+      }
+    }
+
+    console.log(`[POST-SYNC VERIFICATION] Verified: ${verifiedCount} / ${updateQueue.length} documents match Cloudinary targets.`);
+    receipt.summary.verifiedDocuments = verifiedCount;
+    receipt.summary.failedVerifications = failedVerificationCount;
+  }
 
   console.log(`\n=== EXECUTION SUMMARY ===`);
   console.log(`Mode:                     ${isDryRun ? 'DRY-RUN' : 'LIVE'}`);
@@ -314,6 +406,9 @@ async function executeSync(db) {
   console.log(`Missing Skipped:          ${receipt.summary.missingDocumentsSkipped}`);
   console.log(`Conflicts Skipped:        ${receipt.summary.conflictsDetected}`);
   console.log(`Errors:                   ${receipt.summary.errors}`);
+  if (!isDryRun) {
+    console.log(`Verified Records:         ${receipt.summary.verifiedDocuments || 0} / ${updateQueue.length}`);
+  }
 }
 
 async function main() {

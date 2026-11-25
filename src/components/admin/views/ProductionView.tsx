@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Hammer,
   Plus,
@@ -31,10 +31,13 @@ import {
   ArrowUp,
   ArrowDown,
   HelpCircle,
+  HeartHandshake,
+  UserPlus,
+  PhoneCall,
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
 import { adminFetch } from '@/lib/adminAuthClient';
-import { WorkOrder } from '@/data/adminTypes';
+import { WorkOrder, ArtisanProfile, ArtisanCapacity, ArtisanMembership } from '@/data/adminTypes';
 import { PRODUCTS } from '@/data/catalogue';
 
 export interface ProductionStageDef {
@@ -141,10 +144,14 @@ export default function ProductionView() {
     setActiveSubPage,
     logAction,
     showModal,
+    artisans,
+    createArtisan,
+    updateArtisan,
   } = useAdminStore();
 
   const isQcView = activeSubPage === 'production.qc';
   const isStagesView = activeSubPage === 'production.stages';
+  const isArtisansView = activeSubPage === 'production.artisans';
 
   // Configurable Pipeline Stages
   const [stages, setStages] = useState<ProductionStageDef[]>(DEFAULT_STAGES);
@@ -194,6 +201,70 @@ export default function ProductionView() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'stages', stages: updated }),
     }).catch(() => {});
+  };
+
+  // --- Phase 2D: Artisan Collective Directory State ---
+  const [artisanSearch, setArtisanSearch] = useState('');
+  const [artisanHubFilter, setArtisanHubFilter] = useState('All');
+  const [isRecordArtisanModalOpen, setIsRecordArtisanModalOpen] = useState(false);
+
+  // New Artisan Form State
+  const [newArtisanCode, setNewArtisanCode] = useState(`KJ-ART-0${(artisans.length + 1).toString().padStart(2, '0')}`);
+  const [newArtisanName, setNewArtisanName] = useState('');
+  const [newArtisanCapacity, setNewArtisanCapacity] = useState<ArtisanCapacity>('Master Loom Weaver');
+  const [newArtisanMembership, setNewArtisanMembership] = useState<ArtisanMembership>('Master Craftswoman');
+  const [newArtisanPhone, setNewArtisanPhone] = useState('+91 94312 00000');
+  const [newArtisanEmergName, setNewArtisanEmergName] = useState('');
+  const [newArtisanEmergPhone, setNewArtisanEmergPhone] = useState('+91 94312 00001');
+  const [newArtisanAddress, setNewArtisanAddress] = useState('Village Ranti, Madhubani District, Bihar');
+  const [newArtisanHub, setNewArtisanHub] = useState<ArtisanProfile['villageHub']>('Bihar Craft House (Madhubani)');
+  const [newArtisanSkills, setNewArtisanSkills] = useState('Wire tensioning, Glass bead stringing');
+  const [newArtisanLoom, setNewArtisanLoom] = useState(`Loom #0${Math.floor(1 + Math.random() * 8)}`);
+  const [newArtisanMonthlyCapacity, setNewArtisanMonthlyCapacity] = useState<number>(20);
+
+  const filteredArtisans = useMemo(() => {
+    return artisans.filter(a => {
+      if (artisanHubFilter !== 'All' && !a.villageHub.includes(artisanHubFilter)) return false;
+      if (artisanSearch.trim()) {
+        const q = artisanSearch.toLowerCase();
+        const matchName = a.name.toLowerCase().includes(q);
+        const matchCode = a.memberCode.toLowerCase().includes(q);
+        const matchCapacity = a.capacity.toLowerCase().includes(q);
+        const matchHub = a.villageHub.toLowerCase().includes(q);
+        if (!matchName && !matchCode && !matchCapacity && !matchHub) return false;
+      }
+      return true;
+    });
+  }, [artisans, artisanHubFilter, artisanSearch]);
+
+  const handleCreateArtisanSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newArtisanName.trim()) {
+      showToast('Artisan full name is required', 'warning');
+      return;
+    }
+    createArtisan({
+      memberCode: newArtisanCode.trim().toUpperCase(),
+      name: newArtisanName.trim(),
+      capacity: newArtisanCapacity,
+      membershipType: newArtisanMembership,
+      phone: newArtisanPhone.trim(),
+      emergencyContactName: newArtisanEmergName.trim() || 'Family Member',
+      emergencyContactPhone: newArtisanEmergPhone.trim() || '+91 94000 00000',
+      address: newArtisanAddress.trim(),
+      villageHub: newArtisanHub,
+      joinDate: new Date().toISOString().slice(0, 10),
+      isActive: true,
+      skills: newArtisanSkills.split(',').map(s => s.trim()).filter(Boolean),
+      currentLoomAssignment: newArtisanLoom,
+      monthlyCapacityUnits: Number(newArtisanMonthlyCapacity) || 20,
+      unitsCraftedTotal: 0,
+      defectRatePct: 0.0,
+    });
+    setIsRecordArtisanModalOpen(false);
+    showToast(`Enrolled artisan ${newArtisanName} (${newArtisanCode}) in Craft House Collective.`, 'success');
+    setNewArtisanName('');
+    setNewArtisanCode(`KJ-ART-0${(artisans.length + 2).toString().padStart(2, '0')}`);
   };
 
   // Toast
@@ -573,6 +644,19 @@ export default function ProductionView() {
 
         <button
           type="button"
+          onClick={() => setActiveSubPage('production.artisans')}
+          className={`px-3.5 py-2 rounded-t-lg font-medium transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+            isArtisansView
+              ? 'bg-white border-t-2 border-t-[#9E5430] border-x border-[#DED3C5] text-[#9E5430] font-semibold'
+              : 'text-[#76695F] hover:text-[#372921]'
+          }`}
+        >
+          <HeartHandshake className="w-3.5 h-3.5" />
+          <span>Artisan Collective ({artisans.length})</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveSubPage('production.stages')}
           className={`px-3.5 py-2 rounded-t-lg font-medium transition-colors cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
             isStagesView
@@ -588,7 +672,7 @@ export default function ProductionView() {
       {/* =========================================================================
           VIEW A: WORK ORDERS & ATELIER LOOMS
           ========================================================================= */}
-      {!isQcView && !isStagesView && (
+      {!isQcView && !isStagesView && !isArtisansView && (
         <div className="space-y-6">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#DED3C5]">
@@ -2056,6 +2140,189 @@ export default function ProductionView() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* =========================================================================
+          MODAL 4: ENROLL NEW ARTISAN MODAL (Phase 2D)
+          ========================================================================= */}
+      {isRecordArtisanModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="relative w-full max-w-lg bg-[#FCFAF6] rounded-2xl shadow-2xl border border-[#DED3C5] overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-[#EAE2D8] bg-[#F7F3EC] flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-mono uppercase tracking-widest text-[#9E5430] font-bold">
+                  Artisan Collective Registry
+                </span>
+                <h3 className="font-serif text-lg font-bold text-[#372921] mt-0.5">
+                  Enroll Master Craftswoman
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRecordArtisanModalOpen(false)}
+                className="p-1.5 rounded-full hover:bg-[#EAE2D8] text-[#76695F]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateArtisanSubmit} className="p-6 space-y-4 text-xs max-h-[85vh] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Member Code *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newArtisanCode}
+                    onChange={e => setNewArtisanCode(e.target.value.toUpperCase())}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Craftswoman Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Radhika Devi"
+                    value={newArtisanName}
+                    onChange={e => setNewArtisanName(e.target.value)}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Craft Specialization</label>
+                  <select
+                    value={newArtisanCapacity}
+                    onChange={e => setNewArtisanCapacity(e.target.value as ArtisanCapacity)}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921]"
+                  >
+                    <option value="Master Loom Weaver">Master Loom Weaver</option>
+                    <option value="Wire Framework Sculptor">Wire Framework Sculptor</option>
+                    <option value="Czech Glass Stringer">Czech Glass Stringer</option>
+                    <option value="Silk Lining Finisher">Silk Lining Finisher</option>
+                    <option value="Wax Seal & QC Inspector">Wax Seal &amp; QC Inspector</option>
+                    <option value="Loom Apprentice">Loom Apprentice</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Membership Status</label>
+                  <select
+                    value={newArtisanMembership}
+                    onChange={e => setNewArtisanMembership(e.target.value as ArtisanMembership)}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921]"
+                  >
+                    <option value="Foundational 21 Artisan">Foundational 21 Artisan</option>
+                    <option value="Master Craftswoman">Master Craftswoman</option>
+                    <option value="Senior Artisan">Senior Artisan</option>
+                    <option value="Apprentice Artisan">Apprentice Artisan</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Village Craft Hub</label>
+                  <select
+                    value={newArtisanHub}
+                    onChange={e => setNewArtisanHub(e.target.value as any)}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921]"
+                  >
+                    <option value="Bihar Craft House (Madhubani)">Bihar Craft House (Madhubani)</option>
+                    <option value="Bihar Craft House (Darbhanga)">Bihar Craft House (Darbhanga)</option>
+                    <option value="Mumbai Finishing Atelier">Mumbai Finishing Atelier</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Assigned Loom Bench</label>
+                  <input
+                    type="text"
+                    value={newArtisanLoom}
+                    onChange={e => setNewArtisanLoom(e.target.value)}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Primary Phone</label>
+                  <input
+                    type="text"
+                    value={newArtisanPhone}
+                    onChange={e => setNewArtisanPhone(e.target.value)}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Monthly Capacity (Units)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={newArtisanMonthlyCapacity}
+                    onChange={e => setNewArtisanMonthlyCapacity(Number(e.target.value))}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Emergency Contact Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Ramesh Kumar (Spouse)"
+                    value={newArtisanEmergName}
+                    onChange={e => setNewArtisanEmergName(e.target.value)}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#372921] mb-1">Emergency Phone</label>
+                  <input
+                    type="text"
+                    value={newArtisanEmergPhone}
+                    onChange={e => setNewArtisanEmergPhone(e.target.value)}
+                    className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#372921] mb-1">Craft Skills (comma-separated)</label>
+                <input
+                  type="text"
+                  value={newArtisanSkills}
+                  onChange={e => setNewArtisanSkills(e.target.value)}
+                  className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs text-[#372921]"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-[#EAE2D8] flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setIsRecordArtisanModalOpen(false)}
+                  className="px-4 py-2 rounded-full border border-[#DED3C5] text-[#76695F]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white font-semibold flex items-center gap-1.5"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Enroll in Craft Collective</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -218,6 +218,37 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------
+    // 4B. ERP Parity Collections: Ledger Movements, Expenses, Vendors, Budgets, Artisans
+    // Read: Strictly restricted to verified Active Administrators & Atelier Staff.
+    // Write: ZERO DIRECT CLIENT MUTATIONS (allow write: if false;).
+    // All creations and mutations proceed via authoritative server API endpoints (/api/admin/operations).
+    // -------------------------------------------------------------
+    match /inventory_movements/{movId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /expenses/{expId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /vendors/{vendorId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /budgets/{budgetId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /artisans/{artisanId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // -------------------------------------------------------------
     // 5. Coupons & Promotions (/coupons/{couponId})
     // Public can read active coupons to validate promo codes at checkout.
     // Create/update/delete restricted to Store Managers & Super Admins.

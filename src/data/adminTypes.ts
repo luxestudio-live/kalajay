@@ -107,11 +107,58 @@ export interface BannerItem {
   isActive: boolean;
 }
 
+export type InventoryMovementType =
+  | 'OPENING_BALANCE'
+  | 'PURCHASE_IN'
+  | 'PRODUCTION_IN'
+  | 'SALE_OUT'
+  | 'DAMAGE_OUT'
+  | 'MARKETING_OUT'
+  | 'MANUAL_ADJUSTMENT'
+  | 'RETURN_IN'
+  | 'TRANSFER_IN'
+  | 'TRANSFER_OUT'
+  | 'RESERVATION'
+  | 'RESERVATION_RELEASE';
+
+export interface CraftCosting {
+  enabled: boolean;
+  beadsUsed?: string;
+  beadKg: number;
+  beadCostKg: number;
+  laborHours: number;
+  laborRatePerHour: number; // default 50
+  otherMaterialCost: number;
+  calculatedCostPrice: number;
+  manualOverrideCostPrice?: number;
+  notes?: string;
+}
+
+export interface InventoryMovement {
+  id: string;
+  sku: string;
+  productName?: string;
+  location: 'Mumbai Atelier' | 'Bihar Craft House';
+  movementType: InventoryMovementType;
+  quantity: number; // Signed: positive for additions, negative for deductions
+  previousBalance: number;
+  newBalance: number;
+  sourceEntity?: 'order' | 'work_order' | 'purchase_order' | 'damage_report' | 'marketing_event' | 'manual_audit' | 'excel_sync';
+  sourceId?: string;
+  idempotencyKey?: string;
+  unitCost?: number;
+  rate?: number;
+  notes: string;
+  actor: string;
+  timestamp: string;
+}
+
 export interface InventoryItem {
   id: string;
   sku: string;
   name: string;
   category: string;
+  categorySlug?: string;
   location: 'Mumbai Atelier' | 'Bihar Craft House';
   type: 'finished_good' | 'raw_material';
   onHand: number;
@@ -120,9 +167,34 @@ export interface InventoryItem {
   reorderPoint: number;
   unitCost: number;
   retailPrice?: number;
+  mrp?: number;
   supplier: string;
+  vendorId?: string;
   status: 'in_stock' | 'low_stock' | 'out_of_stock';
   unit: string;
+  hsnCode?: string;
+  taxRate?: number;
+  displayOrder?: number;
+  // 7 Persistent Ledger Accumulators for mathematical integrity
+  openingStock?: number;
+  stockIn?: number;
+  quantityMade?: number;
+  quantitySold?: number;
+  damaged?: number;
+  marketingQty?: number;
+  adjustmentQty?: number;
+  // Calculated & Derived Analytics
+  grossMarginPct?: number;
+  stockValue?: number;
+  deficit?: number;
+  suggestedMake?: number;
+  // Hierarchy & Variant Grouping
+  isVariantGroup?: boolean;
+  parentSku?: string;
+  variantLabel?: string;
+  variantAttributes?: Record<string, string>;
+  costing?: CraftCosting;
+  updatedAt?: any;
 }
 
 export interface StockAdjustment {
@@ -374,3 +446,148 @@ export interface OfflineOrder {
   createdAt: string;
 }
 
+// ==========================================
+// Phase 2C: Expense Book, Finance & Vendor Master
+// ==========================================
+
+export type ExpenseTreatment = 'OPEX' | 'CAPEX';
+export type ExpenseStatus = 'paid' | 'pending' | 'void';
+export type ExpenseType = 'expense' | 'income';
+
+export interface ExpenseRecord {
+  id: string;
+  date: string;
+  amount: number; // in INR (stored with 2 decimal precision)
+  currency: string; // 'INR'
+  type: ExpenseType;
+  status: ExpenseStatus;
+  category: string;
+  subcategory?: string;
+  party: string; // Vendor / Supplier Name
+  vendorId?: string;
+  description: string;
+  paymentMethod: 'Bank Transfer / NEFT' | 'Direct UPI' | 'Corporate Card' | 'Cash / Petty' | 'Cheque';
+  treatment: ExpenseTreatment;
+  quantity?: number;
+  unitPrice?: number;
+  taxAmount?: number;
+  invoiceRef?: string;
+  receipts: string[]; // Up to 3 bill/receipt document URLs
+  notes?: string;
+  createdBy: string;
+  updatedBy?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface VendorRecord {
+  id: string;
+  name: string;
+  gstin?: string;
+  contactPerson: string;
+  phone: string;
+  email: string;
+  address?: string;
+  category: 'raw_materials' | 'beads_glass' | 'packaging_boxes' | 'logistics_freight' | 'tools_looms' | 'services_marketing' | 'other';
+  relationshipStart: string;
+  contracts?: string;
+  notes?: string;
+  status: 'active' | 'inactive';
+  totalSpend?: number;
+  ordersCount?: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CategoryBudget {
+  category: string;
+  monthlyBudget: number;
+  spent: number;
+  treatment: ExpenseTreatment;
+  utilizationPct: number;
+}
+
+// ==========================================
+// Phase 2D: Rural Artisan Collective Directory
+// ==========================================
+
+export type ArtisanCapacity =
+  | 'Master Loom Weaver'
+  | 'Wire Framework Sculptor'
+  | 'Czech Glass Stringer'
+  | 'Silk Lining Finisher'
+  | 'Wax Seal & QC Inspector'
+  | 'Loom Apprentice';
+
+export type ArtisanMembership =
+  | 'Foundational 21 Artisan'
+  | 'Master Craftswoman'
+  | 'Senior Artisan'
+  | 'Apprentice Artisan';
+
+export interface ArtisanProfile {
+  id: string;
+  memberCode: string; // e.g. KJ-ART-001
+  name: string;
+  capacity: ArtisanCapacity;
+  membershipType: ArtisanMembership;
+  phone: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+  address: string;
+  villageHub: 'Bihar Craft House (Madhubani)' | 'Bihar Craft House (Darbhanga)' | 'Mumbai Finishing Atelier';
+  joinDate: string;
+  isActive: boolean;
+  skills: string[];
+  currentLoomAssignment?: string;
+  portraitUrl?: string;
+  monthlyCapacityUnits: number;
+  unitsCraftedTotal: number;
+  defectRatePct: number;
+  notes?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+// ==========================================
+// Phase 2F: Excel Bulk Management & Exchange
+// ==========================================
+
+export interface LegacyCatalogueExcelRow {
+  code: string;
+  name: string;
+  category: string;
+  currentQty: number;
+  newQty: number;
+  currentPrice: number;
+  newPrice: number;
+}
+
+export interface ExcelImportRowResult {
+  rowNumber: number;
+  sku: string;
+  name: string;
+  category: string;
+  oldQty: number;
+  newQty: number;
+  qtyDiff: number;
+  oldPrice: number;
+  newPrice: number;
+  priceDiff: number;
+  status: 'valid' | 'invalid' | 'unchanged' | 'not_found';
+  error?: string;
+}
+
+export interface ExcelImportBatch {
+  id: string;
+  fileName: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  totalRows: number;
+  validRows: number;
+  modifiedRows: number;
+  skippedRows: number;
+  errorRows: number;
+  status: 'preview' | 'applied' | 'rejected';
+  rows: ExcelImportRowResult[];
+}

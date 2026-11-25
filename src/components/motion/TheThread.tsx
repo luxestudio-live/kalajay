@@ -23,6 +23,9 @@ export default function TheThread() {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) return;
 
+    // The Thread is an editorial desktop gutter feature (hidden on mobile to prevent main-thread layout thrashing)
+    if (window.innerWidth < 1024) return;
+
     const ctx = gsap.context(() => {
       if (pathRef.current && containerRef.current) {
         const path = pathRef.current;

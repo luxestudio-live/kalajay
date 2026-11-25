@@ -219,6 +219,205 @@ export async function POST(request: Request) {
     }
 
     // ------------------------------------------
+    // ACTION 0B2: Authoritative Inventory Movement Ledger Entry
+    // ------------------------------------------
+    if (action === 'inventory_movement') {
+      const { movement } = body;
+      if (!movement || !movement.sku || !movement.movementType || typeof movement.quantity !== 'number') {
+        return NextResponse.json(
+          { success: false, error: 'Mandatory fields missing: movement, sku, movementType, and quantity are required.' },
+          { status: 400 }
+        );
+      }
+
+      const authCheck = await verifyStaffPermission(request, body, 'inventory.all', 'adjust_stock');
+      if (!authCheck.authorized) {
+        return NextResponse.json(
+          { success: false, error: authCheck.error, code: authCheck.code },
+          { status: authCheck.status }
+        );
+      }
+
+      const adminDb = getAdminFirestore();
+      if (adminDb) {
+        const invRef = adminDb.collection('inventory').doc(movement.sku);
+        const invSnap = await invRef.get();
+        const invData = invSnap.exists ? invSnap.data()! : {};
+
+        let openingStock = Number(invData.openingStock ?? 0);
+        let stockIn = Number(invData.stockIn ?? 0);
+        let quantityMade = Number(invData.quantityMade ?? 0);
+        let quantitySold = Number(invData.quantitySold ?? 0);
+        let damaged = Number(invData.damaged ?? 0);
+        let marketingQty = Number(invData.marketingQty ?? 0);
+        let adjustmentQty = Number(invData.adjustmentQty ?? 0);
+        const reserved = Number(invData.reserved ?? 0);
+        const reorderPoint = Number(invData.reorderPoint ?? 5);
+        const unitCost = Number(invData.unitCost ?? movement.unitCost ?? 0);
+
+        const qty = movement.quantity;
+        switch (movement.movementType) {
+          case 'OPENING_BALANCE':
+            openingStock = Math.max(0, qty);
+            break;
+          case 'PURCHASE_IN':
+            stockIn += Math.max(0, qty);
+            break;
+          case 'PRODUCTION_IN':
+            quantityMade += Math.max(0, qty);
+            break;
+          case 'SALE_OUT':
+            quantitySold += Math.max(0, Math.abs(qty));
+            break;
+          case 'DAMAGE_OUT':
+            damaged += Math.max(0, Math.abs(qty));
+            break;
+          case 'MARKETING_OUT':
+            marketingQty += Math.max(0, Math.abs(qty));
+            break;
+          case 'MANUAL_ADJUSTMENT':
+            adjustmentQty += qty;
+            break;
+          case 'RETURN_IN':
+            quantitySold = Math.max(0, quantitySold - Math.max(0, qty));
+            break;
+          default:
+            break;
+        }
+
+        const prevOnHand = Number(invData.onHand ?? 0);
+        const nextOnHand = Math.max(0, openingStock + stockIn + quantityMade - quantitySold - damaged - marketingQty + adjustmentQty);
+        const nextAvailable = Math.max(0, nextOnHand - reserved);
+        const nextStatus = nextOnHand === 0 ? 'out_of_stock' : nextOnHand <= reorderPoint ? 'low_stock' : 'in_stock';
+        const stockValue = nextOnHand * unitCost;
+
+        await invRef.set({
+          ...invData,
+          openingStock,
+          stockIn,
+          quantityMade,
+          quantitySold,
+          damaged,
+          marketingQty,
+          adjustmentQty,
+          onHand: nextOnHand,
+          available: nextAvailable,
+          status: nextStatus,
+          stockValue,
+          updatedAt: new Date().toISOString(),
+        }, { merge: true });
+
+        const movId = movement.id || `mov-${Date.now()}`;
+        await adminDb.collection('inventory_movements').doc(movId).set({
+          ...movement,
+          id: movId,
+          previousBalance: prevOnHand,
+          newBalance: nextOnHand,
+          actor: authCheck.staffUser?.name || 'Staff User',
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Inventory movement logged successfully for ${movement.sku}.`,
+      });
+    }
+
+    // ------------------------------------------
+    // ACTION 0B3: Expense Save (Phase 2C)
+    // ------------------------------------------
+    if (action === 'expense_save') {
+      const { expense } = body;
+      if (!expense || !expense.id || typeof expense.amount !== 'number') {
+        return NextResponse.json(
+          { success: false, error: 'Mandatory fields missing: valid expense object with id and amount is required.' },
+          { status: 400 }
+        );
+      }
+
+      const authCheck = await verifyStaffPermission(request, body, 'finance.overview', 'edit');
+      if (!authCheck.authorized) {
+        return NextResponse.json(
+          { success: false, error: authCheck.error, code: authCheck.code },
+          { status: authCheck.status }
+        );
+      }
+
+      const adminDb = getAdminFirestore();
+      if (adminDb) {
+        await adminDb.collection('expenses').doc(expense.id).set({
+          ...expense,
+          updatedAt: new Date().toISOString(),
+        }, { merge: true });
+      }
+
+      return NextResponse.json({ success: true, message: `Expense ${expense.id} persisted.` });
+    }
+
+    // ------------------------------------------
+    // ACTION 0B4: Vendor Save (Phase 2C)
+    // ------------------------------------------
+    if (action === 'vendor_save') {
+      const { vendor } = body;
+      if (!vendor || !vendor.id || !vendor.name) {
+        return NextResponse.json(
+          { success: false, error: 'Mandatory fields missing: vendor id and name are required.' },
+          { status: 400 }
+        );
+      }
+
+      const authCheck = await verifyStaffPermission(request, body, 'finance.overview', 'edit');
+      if (!authCheck.authorized) {
+        return NextResponse.json(
+          { success: false, error: authCheck.error, code: authCheck.code },
+          { status: authCheck.status }
+        );
+      }
+
+      const adminDb = getAdminFirestore();
+      if (adminDb) {
+        await adminDb.collection('vendors').doc(vendor.id).set({
+          ...vendor,
+          updatedAt: new Date().toISOString(),
+        }, { merge: true });
+      }
+
+      return NextResponse.json({ success: true, message: `Vendor ${vendor.name} persisted.` });
+    }
+
+    // ------------------------------------------
+    // ACTION 0B5: Artisan Save (Phase 2D)
+    // ------------------------------------------
+    if (action === 'artisan_save') {
+      const { artisan } = body;
+      if (!artisan || !artisan.id || !artisan.name || !artisan.memberCode) {
+        return NextResponse.json(
+          { success: false, error: 'Mandatory fields missing: artisan id, memberCode, and name are required.' },
+          { status: 400 }
+        );
+      }
+
+      const authCheck = await verifyStaffPermission(request, body, 'production.looms', 'edit');
+      if (!authCheck.authorized) {
+        return NextResponse.json(
+          { success: false, error: authCheck.error, code: authCheck.code },
+          { status: authCheck.status }
+        );
+      }
+
+      const adminDb = getAdminFirestore();
+      if (adminDb) {
+        await adminDb.collection('artisans').doc(artisan.id).set({
+          ...artisan,
+          updatedAt: new Date().toISOString(),
+        }, { merge: true });
+      }
+
+      return NextResponse.json({ success: true, message: `Artisan ${artisan.name} (${artisan.memberCode}) persisted.` });
+    }
+
+    // ------------------------------------------
     // ACTION 0C: Store Settings Save (Identity & Logistics)
     // ------------------------------------------
     if (action === 'store_settings_save') {

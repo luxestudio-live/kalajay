@@ -1,8 +1,38 @@
 import type { Metadata, Viewport } from 'next';
+import { Kurale, Cormorant_Garamond, Plus_Jakarta_Sans, Caveat } from 'next/font/google';
 import './globals.css';
 import { CartProvider } from '@/context/CartContext';
 import { AuthProvider } from '@/context/AuthContext';
 import AppShell from '@/components/layout/AppShell';
+
+const kurale = Kurale({
+  weight: '400',
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-kalajay',
+});
+
+const cormorant = Cormorant_Garamond({
+  weight: ['300', '400', '500', '600'],
+  style: ['normal', 'italic'],
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-serif',
+});
+
+const plusJakarta = Plus_Jakarta_Sans({
+  weight: ['300', '400', '500', '600', '700'],
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-sans',
+});
+
+const caveat = Caveat({
+  weight: ['400', '600'],
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-script',
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.kalajay.in'),
@@ -103,7 +133,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="bg-canvas text-ink antialiased">
+    <html lang="en" className={`${kurale.variable} ${cormorant.variable} ${plusJakarta.variable} ${caveat.variable} bg-canvas text-ink antialiased`}>
       <head>
         <script
           dangerouslySetInnerHTML={{

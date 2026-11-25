@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { BIG_ELEPHANT_SRC, SMALL_ELEPHANT_SRC, FLOWER_SRC } from './loaderAssets';
+import { BIG_ELEPHANT_SRC, SMALL_ELEPHANT_SRC, FLOWER_SRC, WORDMARK_SRC } from './loaderAssets';
 
 export default function Preloader() {
   const [dismissed, setDismissed] = useState(false);
@@ -15,17 +15,17 @@ export default function Preloader() {
         return;
       }
 
-      // Preloader runs for exactly 2.5s as requested by user,
-      // then smoothly fades out
+      // Preloader plays the full 1.6s elephant glide & lotus bloom animation,
+      // then smoothly glides away to unveil the luxury storefront
       const timer1 = setTimeout(() => {
         setFadeOut(true);
-      }, 2500);
+      }, 1650);
 
-      // Remove from DOM at 3.1s (after 600ms curtain transition)
+      // Unmount after smooth transition
       const timer2 = setTimeout(() => {
         sessionStorage.setItem('kalajay_preloader_seen', 'true');
         setDismissed(true);
-      }, 3100);
+      }, 2050);
 
       return () => {
         clearTimeout(timer1);
@@ -84,8 +84,10 @@ export default function Preloader() {
           <img
             src={BIG_ELEPHANT_SRC}
             alt=""
+            width={288}
+            height={288}
             loading="eager"
-            decoding="sync"
+            decoding="async"
             className="absolute inset-0 w-full h-full object-contain pointer-events-none layer-big"
           />
 
@@ -93,8 +95,10 @@ export default function Preloader() {
           <img
             src={SMALL_ELEPHANT_SRC}
             alt=""
+            width={288}
+            height={288}
             loading="eager"
-            decoding="sync"
+            decoding="async"
             className="absolute inset-0 w-full h-full object-contain pointer-events-none layer-small"
           />
 
@@ -105,17 +109,25 @@ export default function Preloader() {
           <img
             src={FLOWER_SRC}
             alt=""
+            width={288}
+            height={288}
             loading="eager"
-            decoding="sync"
+            decoding="async"
             className="absolute inset-0 w-full h-full object-contain pointer-events-none layer-flower"
           />
         </div>
 
-        {/* Brand Identity Wordmark */}
-        <div className="mt-1 flex flex-col items-center animate-brand-fade">
-          <h2 className="font-kalajay text-3xl sm:text-4xl tracking-wide text-[#372921] font-normal mb-1">
-            kalajay
-          </h2>
+        {/* Brand Identity Wordmark — Authentic Vector Wordmark directly from official logo */}
+        <div className="mt-2 flex flex-col items-center animate-brand-fade">
+          <img
+            src={WORDMARK_SRC}
+            alt="Kalajay"
+            width={160}
+            height={51}
+            loading="eager"
+            decoding="async"
+            className="h-8 sm:h-9 w-auto object-contain mb-1.5 pointer-events-none select-none"
+          />
           <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.32em] text-[#8C7A6B] font-sans font-medium">
             A World of Little Wonders
           </p>

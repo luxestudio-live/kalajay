@@ -48,7 +48,7 @@ import {
 import { uploadToCloudinary } from '@/lib/cloudinary';
 
 export default function CatalogueView() {
-  const { can, activeSubPage, setActiveSubPage, logAction, showModal } = useAdminStore();
+  const { can, activeSubPage, setActiveSubPage, logAction, showModal, inventory, updateInventoryItem } = useAdminStore();
 
   const activeTab: 'products' | 'collections' | 'reviews' =
     activeSubPage === 'catalogue.collections'
@@ -400,6 +400,23 @@ export default function CatalogueView() {
       isDraft: (editingProduct as any).isPublished === false,
       published: (editingProduct as any).isPublished !== false,
     };
+    // Phase 2B Safeguard: When variants are present, aggregate variant stocks to prevent parent double-counting
+    if (updated.variants && updated.variants.length > 0) {
+      const hasVariantStocks = updated.variants.some(v => v.stock != null && v.stock > 0);
+      if (hasVariantStocks) {
+        const totalVariantStock = updated.variants.reduce((acc, v) => acc + (Number(v.stock) || 0), 0);
+        const invMatch = inventory.find(i => i.sku === updated.code);
+        if (invMatch) {
+          updateInventoryItem(invMatch.id, {
+            onHand: totalVariantStock,
+            available: Math.max(0, totalVariantStock - invMatch.reserved),
+            status: totalVariantStock === 0 ? 'out_of_stock' : totalVariantStock <= invMatch.reorderPoint ? 'low_stock' : 'in_stock',
+            stockValue: totalVariantStock * invMatch.unitCost,
+          });
+        }
+      }
+    }
+
     setProducts(prev => prev.map(p => (p.id === updated.id ? updated : p)));
     setEditProductModalOpen(false);
     saveFirestoreProduct(updated).catch(() => {});
@@ -1729,6 +1746,219 @@ export default function CatalogueView() {
                       />
                       <p className="text-[10.5px] text-[#76695F] mt-1">If higher than selling price, displays strikethrough original price.</p>
                     </div>
+                  </div>
+
+                  {/* Phase 2B: Dedicated Artisan Craft Costing Engine */}
+                  <div className="p-4 bg-[#F7F3EC] rounded-2xl border border-[#DED3C5] space-y-4">
+                    <div className="flex items-center justify-between pb-2 border-b border-[#EAE2D8]">
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-[#9E5430]" />
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-[#372921]">
+                            Artisan Craft Costing &amp; Materials Engine
+                          </h4>
+                        </div>
+                        <p className="text-[10.5px] text-[#76695F] mt-0.5">
+                          Proprietary manufacturing costing formula: (Bead Kg × Cost/Kg) + (Labour Hours × ₹50/hr) + Other Materials.
+                        </p>
+                      </div>
+
+                      <label className="inline-flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-full border border-[#DED3C5]">
+                        <input
+                          type="checkbox"
+                          checked={editingProduct.costing?.enabled ?? false}
+                          onChange={e => {
+                            const isEn = e.target.checked;
+                            setEditingProduct(prev => {
+                              if (!prev) return null;
+                              const currentCosting = prev.costing || {
+                                enabled: false,
+                                beadKg: 0.45,
+                                beadCostKg: 600,
+                                laborHours: 14,
+                                laborRatePerHour: 50,
+                                otherMaterialCost: 200,
+                                calculatedCostPrice: 1170,
+                              };
+                              return {
+                                ...prev,
+                                costing: { ...currentCosting, enabled: isEn },
+                              };
+                            });
+                          }}
+                          className="rounded text-[#9E5430] focus:ring-[#9E5430]"
+                        />
+                        <span className="text-[11px] font-semibold text-[#372921]">Formula Active</span>
+                      </label>
+                    </div>
+
+                    {editingProduct.costing?.enabled ? (
+                      <div className="space-y-3 pt-1">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-medium text-[#76695F] mb-1">
+                              Bead Weight (kg)
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={editingProduct.costing.beadKg || 0}
+                              onChange={e => {
+                                const val = Number(e.target.value);
+                                setEditingProduct(prev => {
+                                  if (!prev || !prev.costing) return prev;
+                                  const c = prev.costing;
+                                  const calc = Math.round((val * c.beadCostKg + c.laborHours * c.laborRatePerHour + c.otherMaterialCost) * 100) / 100;
+                                  return { ...prev, costing: { ...c, beadKg: val, calculatedCostPrice: calc } };
+                                });
+                              }}
+                              className="w-full bg-white border border-[#DED3C5] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#372921]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-medium text-[#76695F] mb-1">
+                              Bead Cost (₹/kg)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={editingProduct.costing.beadCostKg || 0}
+                              onChange={e => {
+                                const val = Number(e.target.value);
+                                setEditingProduct(prev => {
+                                  if (!prev || !prev.costing) return prev;
+                                  const c = prev.costing;
+                                  const calc = Math.round((c.beadKg * val + c.laborHours * c.laborRatePerHour + c.otherMaterialCost) * 100) / 100;
+                                  return { ...prev, costing: { ...c, beadCostKg: val, calculatedCostPrice: calc } };
+                                });
+                              }}
+                              className="w-full bg-white border border-[#DED3C5] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#372921]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-medium text-[#76695F] mb-1">
+                              Labour Hours (hrs)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={editingProduct.costing.laborHours || 0}
+                              onChange={e => {
+                                const val = Number(e.target.value);
+                                setEditingProduct(prev => {
+                                  if (!prev || !prev.costing) return prev;
+                                  const c = prev.costing;
+                                  const calc = Math.round((c.beadKg * c.beadCostKg + val * c.laborRatePerHour + c.otherMaterialCost) * 100) / 100;
+                                  return { ...prev, costing: { ...c, laborHours: val, calculatedCostPrice: calc } };
+                                });
+                              }}
+                              className="w-full bg-white border border-[#DED3C5] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#372921]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-medium text-[#76695F] mb-1">
+                              Labour Rate (₹/hr)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={editingProduct.costing.laborRatePerHour || 50}
+                              onChange={e => {
+                                const val = Number(e.target.value);
+                                setEditingProduct(prev => {
+                                  if (!prev || !prev.costing) return prev;
+                                  const c = prev.costing;
+                                  const calc = Math.round((c.beadKg * c.beadCostKg + c.laborHours * val + c.otherMaterialCost) * 100) / 100;
+                                  return { ...prev, costing: { ...c, laborRatePerHour: val, calculatedCostPrice: calc } };
+                                });
+                              }}
+                              className="w-full bg-white border border-[#DED3C5] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#372921]"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                          <div>
+                            <label className="block text-[11px] font-medium text-[#76695F] mb-1">
+                              Other Materials (Wire, Silk, Clasps) ₹
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={editingProduct.costing.otherMaterialCost || 0}
+                              onChange={e => {
+                                const val = Number(e.target.value);
+                                setEditingProduct(prev => {
+                                  if (!prev || !prev.costing) return prev;
+                                  const c = prev.costing;
+                                  const calc = Math.round((c.beadKg * c.beadCostKg + c.laborHours * c.laborRatePerHour + val) * 100) / 100;
+                                  return { ...prev, costing: { ...c, otherMaterialCost: val, calculatedCostPrice: calc } };
+                                });
+                              }}
+                              className="w-full bg-white border border-[#DED3C5] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#372921]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-medium text-[#76695F] mb-1">
+                              Manual Cost Price Override (₹)
+                            </label>
+                            <input
+                              type="number"
+                              placeholder="Leave blank to use formula CP"
+                              value={editingProduct.costing.manualOverrideCostPrice || ''}
+                              onChange={e => {
+                                const val = e.target.value ? Number(e.target.value) : undefined;
+                                setEditingProduct(prev => {
+                                  if (!prev || !prev.costing) return prev;
+                                  return { ...prev, costing: { ...prev.costing, manualOverrideCostPrice: val } };
+                                });
+                              }}
+                              className="w-full bg-white border border-[#DED3C5] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#372921]"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Live Financial Metrics Card */}
+                        {(() => {
+                          const c = editingProduct.costing;
+                          const effectiveCp = c.manualOverrideCostPrice ?? c.calculatedCostPrice ?? 0;
+                          const sp = Number(editingProduct.price) || 0;
+                          const markupPct = effectiveCp > 0 ? Math.round(((sp - effectiveCp) / effectiveCp) * 100 * 10) / 10 : 0;
+                          const grossMarginPct = sp > 0 ? Math.round(((sp - effectiveCp) / sp) * 100 * 10) / 10 : 0;
+                          const headroom = (Number(editingProduct.originalPrice) || sp) - sp;
+
+                          return (
+                            <div className="mt-3 p-3 bg-white rounded-xl border border-[#DED3C5] grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+                              <div>
+                                <span className="text-[10px] text-[#76695F] block uppercase font-medium">Effective CP</span>
+                                <strong className="font-mono text-sm text-[#372921]">₹{effectiveCp.toLocaleString('en-IN')}</strong>
+                              </div>
+                              <div>
+                                <span className="text-[10px] text-[#76695F] block uppercase font-medium">Markup %</span>
+                                <strong className="font-mono text-sm text-indigo-700">{markupPct}%</strong>
+                              </div>
+                              <div>
+                                <span className="text-[10px] text-[#76695F] block uppercase font-medium">Gross Margin %</span>
+                                <strong className="font-mono text-sm text-emerald-700">{grossMarginPct}%</strong>
+                              </div>
+                              <div>
+                                <span className="text-[10px] text-[#76695F] block uppercase font-medium">MRP Headroom</span>
+                                <strong className="font-mono text-sm text-[#9E5430]">₹{headroom.toLocaleString('en-IN')}</strong>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-[#76695F] italic">
+                        Enable formula above to automatically compute Cost Price based on raw bead weight (kg), ₹50/hr artisan labour hours, and material consumption.
+                      </p>
+                    )}
                   </div>
 
                   <div className="pt-2">
