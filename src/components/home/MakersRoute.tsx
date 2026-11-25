@@ -9,10 +9,12 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger);
+  (window as any).ScrollTrigger = ScrollTrigger;
 }
 
 export default function MakersRoute() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const routeBoxRef = useRef<HTMLDivElement>(null);
   const routeLineRef = useRef<SVGPathElement>(null);
   const transitCircleRef = useRef<SVGCircleElement>(null);
   const countersRef = useRef<HTMLDivElement>(null);
@@ -23,53 +25,51 @@ export default function MakersRoute() {
 
     const ctx = gsap.context(() => {
       // Draw the Bihar-to-Mumbai route line on scroll
-      if (routeLineRef.current) {
+      if (routeLineRef.current && routeBoxRef.current) {
         const path = routeLineRef.current;
-        const length = path.getTotalLength();
+        const arcLength = 144.2;
 
         gsap.set(path, {
-          strokeDasharray: length,
-          strokeDashoffset: length,
+          strokeDasharray: arcLength,
+          strokeDashoffset: arcLength,
         });
 
         gsap.to(path, {
           strokeDashoffset: 0,
           ease: 'none',
           scrollTrigger: {
-            trigger: containerRef.current,
+            trigger: routeBoxRef.current,
             start: 'top 75%',
-            end: 'center center',
+            end: 'bottom 40%',
             scrub: 1,
+            invalidateOnRefresh: true,
           },
         });
 
         // Animated moving circle traversing from Origin 01 to Origin 02
         if (transitCircleRef.current) {
           const circle = transitCircleRef.current;
-          const initialPoint = path.getPointAtLength(0);
-          circle.setAttribute('cx', String(initialPoint.x));
-          circle.setAttribute('cy', String(initialPoint.y));
+          circle.setAttribute('cx', '10');
+          circle.setAttribute('cy', '20');
 
-          const progressObj = { progress: 0 };
-          gsap.to(progressObj, {
-            progress: 1,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: containerRef.current,
-              start: 'top 75%',
-              end: 'center center',
-              scrub: 1,
-              onUpdate: (self) => {
-                const point = path.getPointAtLength(self.progress * length);
-                circle.setAttribute('cx', String(point.x));
-                circle.setAttribute('cy', String(point.y));
-              },
+          ScrollTrigger.create({
+            trigger: routeBoxRef.current,
+            start: 'top 75%',
+            end: 'bottom 40%',
+            invalidateOnRefresh: true,
+            onUpdate: (self) => {
+              const t = self.progress;
+              const oneMinusT = 1 - t;
+              const x = oneMinusT * oneMinusT * 10 + 2 * oneMinusT * t * 80 + t * t * 150;
+              const y = oneMinusT * oneMinusT * 20 + 2 * oneMinusT * t * (-10) + t * t * 20;
+              circle.setAttribute('cx', x.toFixed(2));
+              circle.setAttribute('cy', y.toFixed(2));
             },
           });
         }
       }
 
-      // Animate statistical counters
+      // Animate statistical counters when clearly in focus
       if (countersRef.current) {
         const counters = countersRef.current.querySelectorAll('.counter-val');
         counters.forEach((el) => {
@@ -79,18 +79,27 @@ export default function MakersRoute() {
             { textContent: '0' },
             {
               textContent: target,
-              duration: 1.8,
+              duration: 2,
               snap: { textContent: 1 },
               ease: 'power2.out',
               scrollTrigger: {
                 trigger: countersRef.current,
-                start: 'top 85%',
+                start: 'top 65%',
                 toggleActions: 'play none none none',
+                invalidateOnRefresh: true,
               },
             }
           );
         });
       }
+
+      const refreshTimer = setTimeout(() => {
+        ScrollTrigger.refresh();
+      }, 600);
+
+      return () => {
+        clearTimeout(refreshTimer);
+      };
     }, containerRef);
 
     return () => ctx.revert();
@@ -174,7 +183,10 @@ export default function MakersRoute() {
         </div>
 
         {/* Bihar to Mumbai Illustrated Route Journey */}
-        <div className="mb-16 p-8 sm:p-12 bg-canvas-dark text-canvas rounded-image border border-canvas/20 shadow-2xl relative overflow-hidden">
+        <div
+          ref={routeBoxRef}
+          className="mb-16 p-8 sm:p-12 bg-canvas-dark text-canvas rounded-image border border-canvas/20 shadow-2xl relative overflow-hidden"
+        >
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center relative z-10">
             {/* Origin: Bihar */}
             <div className="md:col-span-5 space-y-3">

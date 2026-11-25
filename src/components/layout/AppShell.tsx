@@ -9,8 +9,10 @@ import Footer from './Footer';
 
 import SmoothScroll from '../motion/SmoothScroll';
 import TheThread from '../motion/TheThread';
-import Preloader from '../ui/Preloader';
 import PageTransitionCurtain from '../ui/PageTransitionCurtain';
+
+// Mount Preloader strictly on the client so CSS animations play once and never restart on SSR hydration
+const Preloader = dynamic(() => import('../ui/Preloader'), { ssr: false });
 
 // Defer non-critical client overlays from initial main-thread hydration bundle
 const CartDrawer = dynamic(() => import('../cart/CartDrawer'), { ssr: false });

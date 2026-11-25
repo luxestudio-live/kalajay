@@ -4,7 +4,14 @@ import React, { useEffect, useState, useRef } from 'react';
 import { BIG_ELEPHANT_SRC, SMALL_ELEPHANT_SRC, FLOWER_SRC, WORDMARK_SRC } from './loaderAssets';
 
 export default function Preloader() {
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return Boolean(sessionStorage.getItem('kalajay_preloader_seen'));
+    } catch {
+      return false;
+    }
+  });
   const [fadeOut, setFadeOut] = useState(false);
   const initialized = useRef(false);
 
