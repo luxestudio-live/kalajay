@@ -4,14 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { BIG_ELEPHANT_SRC, SMALL_ELEPHANT_SRC, FLOWER_SRC, WORDMARK_SRC } from './loaderAssets';
 
 export default function Preloader() {
-  const [dismissed, setDismissed] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    try {
-      return Boolean(sessionStorage.getItem('kalajay_preloader_seen'));
-    } catch {
-      return false;
-    }
-  });
+  const [dismissed, setDismissed] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
   const initialized = useRef(false);
 
@@ -37,7 +30,7 @@ export default function Preloader() {
       // Unmount after smooth transition
       const timer2 = setTimeout(() => {
         setDismissed(true);
-      }, 2050);
+      }, 2250);
 
       return () => {
         clearTimeout(timer1);
@@ -61,6 +54,7 @@ export default function Preloader() {
   return (
     <div
       id="kalajay-preloader"
+      suppressHydrationWarning
       className={`fixed inset-0 z-50 bg-[#F7F3EC] flex flex-col items-center justify-center select-none ${
         fadeOut ? 'opacity-0 -translate-y-4 pointer-events-none' : 'opacity-100 translate-y-0'
       }`}
