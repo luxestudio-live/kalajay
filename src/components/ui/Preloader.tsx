@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { BIG_ELEPHANT_SRC, SMALL_ELEPHANT_SRC, FLOWER_SRC, WORDMARK_SRC } from './loaderAssets';
 
 export default function Preloader() {
+  const [mounted, setMounted] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
   const initialized = useRef(false);
@@ -20,6 +21,9 @@ export default function Preloader() {
       }
       // Immediately flag as seen in session so subsequent renders/refreshes never replay
       sessionStorage.setItem('kalajay_preloader_seen', 'true');
+
+      // Trigger animation strictly once after client hydration is complete
+      setMounted(true);
 
       // Preloader plays the full 1.6s elephant glide & lotus bloom animation,
       // then smoothly glides away to unveil the luxury storefront
@@ -78,7 +82,7 @@ export default function Preloader() {
 
       <div className="relative z-10 text-center px-6 max-w-md flex flex-col items-center">
         {/* Heritage Badge */}
-        <div className="mb-2 sm:mb-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F0E9DF] border border-[#DED3C5] text-[10px] uppercase tracking-monumental text-[#9E5430] font-sans font-medium animate-badge-fade">
+        <div className={`mb-2 sm:mb-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F0E9DF] border border-[#DED3C5] text-[10px] uppercase tracking-monumental text-[#9E5430] font-sans font-medium ${mounted ? 'animate-badge-fade' : 'opacity-0'}`}>
           <span>The Craft House</span>
           <span className="w-1 h-1 rounded-full bg-[#9E5430]" />
           <span>Bihar & Mumbai</span>
@@ -94,7 +98,7 @@ export default function Preloader() {
             height={288}
             loading="eager"
             decoding="async"
-            className="absolute inset-0 w-full h-full object-contain pointer-events-none layer-big"
+            className={`absolute inset-0 w-full h-full object-contain pointer-events-none ${mounted ? 'layer-big' : 'opacity-0'}`}
           />
 
           {/* Layer 2: Small Elephant (Glides smoothly from right on GPU compositor) */}
@@ -105,11 +109,11 @@ export default function Preloader() {
             height={288}
             loading="eager"
             decoding="async"
-            className="absolute inset-0 w-full h-full object-contain pointer-events-none layer-small"
+            className={`absolute inset-0 w-full h-full object-contain pointer-events-none ${mounted ? 'layer-small' : 'opacity-0'}`}
           />
 
           {/* Lotus Flower Glow Aura */}
-          <div className="absolute left-[65%] top-[35%] -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-radial from-[#9E5430]/30 to-transparent pointer-events-none flower-sparkle" />
+          <div className={`absolute left-[65%] top-[35%] -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-radial from-[#9E5430]/30 to-transparent pointer-events-none ${mounted ? 'flower-sparkle' : 'opacity-0'}`} />
 
           {/* Layer 3: Lotus Flower (Blooms and descends from above once they meet) */}
           <img
@@ -119,12 +123,12 @@ export default function Preloader() {
             height={288}
             loading="eager"
             decoding="async"
-            className="absolute inset-0 w-full h-full object-contain pointer-events-none layer-flower"
+            className={`absolute inset-0 w-full h-full object-contain pointer-events-none ${mounted ? 'layer-flower' : 'opacity-0'}`}
           />
         </div>
 
         {/* Brand Identity Wordmark — Authentic Vector Wordmark directly from official logo */}
-        <div className="mt-2 flex flex-col items-center animate-brand-fade">
+        <div className={`mt-2 flex flex-col items-center ${mounted ? 'animate-brand-fade' : 'opacity-0'}`}>
           <img
             src={WORDMARK_SRC}
             alt="Kalajay"
@@ -140,8 +144,8 @@ export default function Preloader() {
         </div>
 
         {/* Pure CSS GPU Hardware-Accelerated Progress Indicator (0 React re-renders) */}
-        <div className="w-28 sm:w-36 h-[2px] bg-[#EAE2D8] rounded-full overflow-hidden mt-4 opacity-80 animate-progress-container">
-          <div className="h-full w-full bg-gradient-to-r from-[#C27448] via-[#9E5430] to-[#874427] rounded-full animate-progress-fill" />
+        <div className={`w-28 sm:w-36 h-[2px] bg-[#EAE2D8] rounded-full overflow-hidden mt-4 opacity-80 ${mounted ? 'animate-progress-container' : 'opacity-0'}`}>
+          <div className={`h-full w-full bg-gradient-to-r from-[#C27448] via-[#9E5430] to-[#874427] rounded-full ${mounted ? 'animate-progress-fill' : 'scale-x-0'}`} />
         </div>
       </div>
     </div>
