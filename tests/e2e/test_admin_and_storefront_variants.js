@@ -46,7 +46,7 @@ async function runRealBrowserAcceptance() {
     if (await userInput.isVisible()) {
       console.log('  Entering super admin credentials (soumya)...');
       await userInput.fill('soumya');
-      await passInput.fill('MaisonSoumya2026!Secure');
+      await passInput.fill(process.env.ADMIN_TEST_PASSCODE || '[REDACTED — TEST CREDENTIAL]');
       await page.click('button:has-text("Unlock Operations Console")');
       await page.waitForSelector('button:has-text("All Products"), text="All Products"', { timeout: 20000 }).catch(() => {});
       await page.waitForTimeout(2000);

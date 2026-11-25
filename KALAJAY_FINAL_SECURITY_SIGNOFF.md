@@ -11,7 +11,7 @@
 
 | Vulnerability / Defect | Severity | Root Cause | Production Impact |
 |---|:---:|---|---|
-| **Shared Administrator Default Password** | **CRITICAL** | A shared static password (`luxe_kalajay@2026#`) was stored in source code and shared among all 4 operational staff members. | Compromise of one staff credential compromised all operational roles, including Superadmin. |
+| **Shared Administrator Default Password** | **CRITICAL** | A shared static password (`[REDACTED — TEST CREDENTIAL]`) was stored in source code and shared among all 4 operational staff members. | Compromise of one staff credential compromised all operational roles, including Superadmin. |
 | **Bypass of Firebase Auth via LocalStorage** | **CRITICAL** | `AdminSecurityGate` in `src/app/admin/page.tsx` evaluated passwords against unencrypted browser `localStorage` and included a direct `handleSuperAdminBypass` button. | Any client could bypass backend authentication and enter the admin console without authenticating with Firebase Auth. |
 | **Email Whitelist Authorization Vulnerability** | **HIGH** | `firestore.rules` evaluated `isAdmin()` by matching email strings (`soumya@kalajay.in`, etc.). | Relied on mutable email identifiers rather than immutable cryptographic UIDs, vulnerable if email verification is bypassed. |
 | **Transient In-Memory Checkout Idempotency** | **HIGH** | Checkout idempotency cache was held strictly in a JavaScript `Map()` with a 60-second TTL. | Server restarts or multi-instance deployments caused cache loss, allowing duplicate orders, payment double-charging, and replay attacks. |
@@ -25,7 +25,7 @@
 
 ### A. Administrator Credential Hardening
 1. **Permanent Shared Password Eradication:**
-   - Completely eradicated all instances of `luxe_kalajay@2026#`, `founder2026`, and `kalajay2026` from codebase source files and application state.
+   - Completely eradicated all instances of `[REDACTED — TEST CREDENTIAL]` from codebase source files and application state.
    - Rotated all 4 staff accounts (`soumya@kalajay.in`, `ritu.verma@kalajay.in`, `sunita.craft@kalajay.in`, `aarav.m@kalajay.in`) to unique, 18-character cryptographically random temporary passcodes via Firebase Auth `updatePassword()`.
    - Manifest saved strictly to local `.gitignore`'d location (`credentials/STAFF_TEMPORARY_CREDENTIALS.local.json`), never tracked in Git.
 2. **First-Login Password Reset Enforcement:**
