@@ -1684,3 +1684,119 @@ export const SEED_ARTISANS: ArtisanProfile[] = [
     createdAt: '2025-08-15T09:30:00Z',
   },
 ];
+
+export interface PatronProfileSeed {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  city: string;
+  state: string;
+  tier: 'Diamond Patron' | 'Gold Patron' | 'Silver Patron' | 'First Heirloom';
+  lifetimeSpend: number;
+  ordersCount: number;
+  firstOrderDate: string;
+  lastOrderDate: string;
+  preferredPalette: string;
+  favoritePiece: string;
+  conciergeNotes: string;
+}
+
+export const SEED_PATRONS: PatronProfileSeed[] = [
+  {
+    id: 'PAT-001',
+    name: 'Dr. Suniti Oberoi',
+    email: 'suniti.oberoi@post.harvard.edu',
+    phone: '+91 98200 88210',
+    city: 'Mumbai',
+    state: 'Maharashtra',
+    tier: 'Diamond Patron',
+    lifetimeSpend: 42500,
+    ordersCount: 8,
+    firstOrderDate: '2025-11-14',
+    lastOrderDate: '2026-11-02',
+    preferredPalette: 'Champagne & Antique Gold',
+    favoritePiece: 'Signature Pearl Beaded Vanity Box',
+    conciergeNotes: 'Avid collector of Bihar loom vanity cases. Always prefers ivory satin gift wrap with handwritten calligraphed note.',
+  },
+  {
+    id: 'PAT-002',
+    name: 'Meera Singhania',
+    email: 'meera.s@gmail.com',
+    phone: '+91 98201 44892',
+    city: 'Mumbai',
+    state: 'Maharashtra',
+    tier: 'Gold Patron',
+    lifetimeSpend: 16800,
+    ordersCount: 3,
+    firstOrderDate: '2026-03-20',
+    lastOrderDate: '2026-11-11',
+    preferredPalette: 'Ivory Pearl & Blush',
+    favoritePiece: 'Vintage Pearl Beaded Evening Bag',
+    conciergeNotes: 'Recently placed custom bridal lehenga match inquiry for December wedding in Udaipur.',
+  },
+  {
+    id: 'PAT-003',
+    name: 'Ananya Deshmukh',
+    email: 'ananya.d@outlook.com',
+    phone: '+91 97693 88102',
+    city: 'Bengaluru',
+    state: 'Karnataka',
+    tier: 'Gold Patron',
+    lifetimeSpend: 14200,
+    ordersCount: 3,
+    firstOrderDate: '2026-04-12',
+    lastOrderDate: '2026-11-09',
+    preferredPalette: 'Lustrous Pearl & Emerald',
+    favoritePiece: 'Radiant Crystal Beaded Tealight Lantern',
+    conciergeNotes: 'Purchased 2 lanterns as Diwali gifts for family in Whitefield.',
+  },
+  {
+    id: 'PAT-004',
+    name: 'Kavita Chawla',
+    email: 'kavita.chawla@gmail.com',
+    phone: '+91 99100 23456',
+    city: 'New Delhi',
+    state: 'Delhi',
+    tier: 'Silver Patron',
+    lifetimeSpend: 7498,
+    ordersCount: 2,
+    firstOrderDate: '2026-08-15',
+    lastOrderDate: '2026-11-06',
+    preferredPalette: 'Pristine Ivory',
+    favoritePiece: 'Luminous Pearl Envelope Clutch',
+    conciergeNotes: 'Responded positively to the Craft House Bihar artisan documentary email.',
+  },
+  {
+    id: 'PAT-005',
+    name: 'Priyanka Tandon',
+    email: 'priyanka.t@gmail.com',
+    phone: '+91 98112 33445',
+    city: 'Gurugram',
+    state: 'Haryana',
+    tier: 'Silver Patron',
+    lifetimeSpend: 4200,
+    ordersCount: 1,
+    firstOrderDate: '2026-11-10',
+    lastOrderDate: '2026-11-10',
+    preferredPalette: 'Antique Brass & Pearl',
+    favoritePiece: 'Custom Beaded Crossbody Sling',
+    conciergeNotes: 'Bespoke lehenga strap length specification: 21 inch drop.',
+  },
+  {
+    id: 'PAT-006',
+    name: 'Radhika Kothari',
+    email: 'radhika.k@gmail.com',
+    phone: '+91 98205 99312',
+    city: 'Pune',
+    state: 'Maharashtra',
+    tier: 'First Heirloom',
+    lifetimeSpend: 2899,
+    ordersCount: 1,
+    firstOrderDate: '2026-11-11',
+    lastOrderDate: '2026-11-11',
+    preferredPalette: 'Luminous Pearl',
+    favoritePiece: 'Signature Pearl Beaded Vanity Box',
+    conciergeNotes: 'Traveling to Pune; address update handled via Support Concierge.',
+  },
+];

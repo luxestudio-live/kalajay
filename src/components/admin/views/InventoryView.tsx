@@ -33,6 +33,7 @@ import {
   Hammer,
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
+import { ProvenanceBadge } from '@/components/admin/ProvenanceBadge';
 import { StockAdjustment, InventoryItem, InventoryMovement, InventoryMovementType } from '@/data/adminTypes';
 
 interface ToastState {
@@ -828,7 +829,10 @@ export default function InventoryView() {
                         {idx + 1}
                       </td>
                       <td className="py-3 px-4 sticky left-0 z-10 bg-white hover:bg-[#FFFCF7] shadow-r">
-                        <strong className="text-[#372921] font-semibold block text-xs">{item.name}</strong>
+                        <div className="flex items-center gap-1.5">
+                          <strong className="text-[#372921] font-semibold block text-xs">{item.name}</strong>
+                          <ProvenanceBadge provenance={(item as any).provenance} isDemo={(item as any).isDemo} size="xs" />
+                        </div>
                         <div className="flex items-center gap-1.5 text-[10px] text-[#76695F] font-mono mt-0.5">
                           <span className="text-[#9E5430] font-bold">{item.sku}</span>
                           <span>·</span>

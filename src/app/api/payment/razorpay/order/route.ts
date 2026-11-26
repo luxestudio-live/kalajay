@@ -37,6 +37,23 @@ export async function POST(request: Request) {
       );
     }
 
+    // Security Guard: Prevent demo/sample orders from initiating real or gateway payments
+    if (
+      orderData.isDemo === true ||
+      orderData.provenance === 'demo' ||
+      orderId.startsWith('ord_sample') ||
+      orderId.startsWith('ord_demo')
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Demonstration and sample orders cannot initiate real payment transactions.',
+          code: 'DEMO_TRANSACTION_PROHIBITED',
+        },
+        { status: 400 }
+      );
+    }
+
     // Security Check: Order Status validation
     if (orderData.paymentStatus === 'paid' || orderData.paymentStatus === 'captured') {
       return NextResponse.json(

@@ -18,7 +18,49 @@ import {
 import { db } from './firebase';
 import { adminFetch } from './adminAuthClient';
 import type { User, Order } from '@/context/AuthContext';
-import type { Product, Collection } from '@/data/catalogue';
+import { PRODUCTS, COLLECTIONS, type Product, type Collection } from '@/data/catalogue';
+import {
+  SEED_ORDERS,
+  SEED_PATRONS,
+  SEED_INVENTORY_ITEMS,
+  SEED_BANNERS,
+  SEED_FEATURED_PRODUCTS_CONFIG,
+  SEED_COUPONS,
+  SEED_WORK_ORDERS,
+  SEED_TAX_SLABS,
+  SEED_OFFLINE_ORDERS,
+  SEED_AUDIT_LOGS,
+  SEED_CUSTOM_REQUESTS,
+  SEED_CORPORATE_ENQUIRIES,
+  SEED_SUPPORT_TICKETS,
+  SEED_EXPENSES,
+  SEED_VENDORS,
+  SEED_BUDGETS,
+  SEED_ARTISANS,
+} from '@/data/adminSeedData';
+import {
+  resolveProducts,
+  resolveCollections,
+  resolveOrders,
+  resolveInventory,
+  resolveCustomers,
+  resolveBanners,
+  resolveSingleEntity,
+  resolveCoupons,
+  resolveWorkOrders,
+  resolveTaxSlabs,
+  resolveOfflineOrders,
+  resolveAuditLogs,
+  resolveCustomRequests,
+  resolveCorporateEnquiries,
+  resolveSupportTickets,
+  resolveExpenses,
+  resolveVendors,
+  resolveBudgets,
+  resolveArtisans,
+  isDemoFallbackEnabled,
+  type WithProvenance,
+} from '@/lib/dataProvenance';
 import type {
   AdminOrder,
   CustomOrderRequest,
@@ -110,7 +152,7 @@ export async function updatePatronProfile(uid: string, data: Partial<User>): Pro
 
 export async function getFirestoreProducts(includeDrafts = false): Promise<Product[]> {
   try {
-    if (!db || !db.type) return [];
+    if (!db || !db.type) return resolveProducts([], PRODUCTS) as Product[];
     const productsRef = collection(db, 'products');
     const q = includeDrafts
       ? productsRef
@@ -124,7 +166,7 @@ export async function getFirestoreProducts(includeDrafts = false): Promise<Produ
           where('published', '==', true)
         );
     const snapshot = await getDocs(q);
-    if (snapshot.empty) return [];
+    if (snapshot.empty) return resolveProducts([], PRODUCTS) as Product[];
     const list: Product[] = [];
     snapshot.forEach((snap) => {
       const d = snap.data();
@@ -147,10 +189,10 @@ export async function getFirestoreProducts(includeDrafts = false): Promise<Produ
         images: Array.isArray(d.images) && d.images.length > 0 ? d.images : (d.coverImage ? [d.coverImage] : []),
       } as Product);
     });
-    return list;
+    return resolveProducts(list, PRODUCTS) as Product[];
   } catch (error) {
     console.warn('Firestore products fetch error, fallback to static catalogue:', error);
-    return [];
+    return resolveProducts([], PRODUCTS) as Product[];
   }
 }
 
@@ -210,10 +252,10 @@ export async function deleteFirestoreProduct(productId: string): Promise<void> {
 
 export async function getFirestoreCategories(includeArchived = false): Promise<Collection[]> {
   try {
-    if (!db || !db.type) return [];
+    if (!db || !db.type) return resolveCollections([], COLLECTIONS) as Collection[];
     const colRef = collection(db, 'categories');
     const snapshot = await getDocs(colRef);
-    if (snapshot.empty) return [];
+    if (snapshot.empty) return resolveCollections([], COLLECTIONS) as Collection[];
     const list: Collection[] = [];
     snapshot.forEach((snap) => {
       const d = snap.data();
@@ -230,10 +272,10 @@ export async function getFirestoreCategories(includeArchived = false): Promise<C
         ...d,
       } as unknown as Collection);
     });
-    return list;
+    return resolveCollections(list, COLLECTIONS) as Collection[];
   } catch (error) {
     console.warn('Firestore categories fetch error:', error);
-    return [];
+    return resolveCollections([], COLLECTIONS) as Collection[];
   }
 }
 
@@ -363,22 +405,22 @@ export async function getAllFirestoreOrders(): Promise<AdminOrder[]> {
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.orders)) {
-          return data.orders;
+          return resolveOrders(data.orders, SEED_ORDERS) as AdminOrder[];
         }
       }
     }
-    if (!db || !db.type) return [];
+    if (!db || !db.type) return resolveOrders([], SEED_ORDERS) as AdminOrder[];
     const ordersRef = collection(db, 'orders');
     const snapshot = await getDocs(ordersRef);
-    if (snapshot.empty) return [];
+    if (snapshot.empty) return resolveOrders([], SEED_ORDERS) as AdminOrder[];
     const orders: AdminOrder[] = [];
     snapshot.forEach((docSnap) => {
       orders.push({ id: docSnap.id, ...docSnap.data() } as AdminOrder);
     });
-    return orders;
+    return resolveOrders(orders, SEED_ORDERS) as AdminOrder[];
   } catch (error) {
     console.warn('Firestore orders fetch error:', error);
-    return [];
+    return resolveOrders([], SEED_ORDERS) as AdminOrder[];
   }
 }
 
@@ -476,7 +518,7 @@ export function subscribeToOrders(callback: (orders: AdminOrder[]) => void): Uns
       snapshot.forEach((snap) => {
         orders.push({ id: snap.id, ...snap.data() } as AdminOrder);
       });
-      callback(orders);
+      callback(resolveOrders(orders, SEED_ORDERS));
     });
   } catch (error) {
     console.warn('Realtime orders subscription failed:', error);
@@ -490,18 +532,18 @@ export function subscribeToOrders(callback: (orders: AdminOrder[]) => void): Uns
 
 export async function getFirestoreCustomEnquiries(): Promise<CustomOrderRequest[]> {
   try {
-    if (!db || !db.type) return [];
+    if (!db || !db.type) return resolveCustomRequests([], SEED_CUSTOM_REQUESTS) as CustomOrderRequest[];
     const ref = collection(db, 'custom_enquiries');
     const snapshot = await getDocs(ref);
-    if (snapshot.empty) return [];
+    if (snapshot.empty) return resolveCustomRequests([], SEED_CUSTOM_REQUESTS) as CustomOrderRequest[];
     const list: CustomOrderRequest[] = [];
     snapshot.forEach((snap) => {
       list.push({ id: snap.id, ...snap.data() } as CustomOrderRequest);
     });
-    return list;
+    return resolveCustomRequests(list, SEED_CUSTOM_REQUESTS) as CustomOrderRequest[];
   } catch (error) {
     console.warn('Error fetching custom enquiries:', error);
-    return [];
+    return resolveCustomRequests([], SEED_CUSTOM_REQUESTS) as CustomOrderRequest[];
   }
 }
 
@@ -559,18 +601,18 @@ export function subscribeToCustomEnquiries(
 
 export async function getFirestoreCorporateEnquiries(): Promise<CorporateEnquiry[]> {
   try {
-    if (!db || !db.type) return [];
+    if (!db || !db.type) return resolveCorporateEnquiries([], SEED_CORPORATE_ENQUIRIES) as CorporateEnquiry[];
     const ref = collection(db, 'corporate_enquiries');
     const snapshot = await getDocs(ref);
-    if (snapshot.empty) return [];
+    if (snapshot.empty) return resolveCorporateEnquiries([], SEED_CORPORATE_ENQUIRIES) as CorporateEnquiry[];
     const list: CorporateEnquiry[] = [];
     snapshot.forEach((snap) => {
       list.push({ id: snap.id, ...snap.data() } as CorporateEnquiry);
     });
-    return list;
+    return resolveCorporateEnquiries(list, SEED_CORPORATE_ENQUIRIES) as CorporateEnquiry[];
   } catch (error) {
     console.warn('Error fetching corporate enquiries:', error);
-    return [];
+    return resolveCorporateEnquiries([], SEED_CORPORATE_ENQUIRIES) as CorporateEnquiry[];
   }
 }
 
@@ -609,18 +651,18 @@ export async function updateFirestoreCorporateEnquiry(
 
 export async function getFirestoreSupportTickets(): Promise<SupportTicket[]> {
   try {
-    if (!db || !db.type) return [];
+    if (!db || !db.type) return resolveSupportTickets([], SEED_SUPPORT_TICKETS) as SupportTicket[];
     const ref = collection(db, 'support_tickets');
     const snapshot = await getDocs(ref);
-    if (snapshot.empty) return [];
+    if (snapshot.empty) return resolveSupportTickets([], SEED_SUPPORT_TICKETS) as SupportTicket[];
     const list: SupportTicket[] = [];
     snapshot.forEach((snap) => {
       list.push({ id: snap.id, ...snap.data() } as SupportTicket);
     });
-    return list;
+    return resolveSupportTickets(list, SEED_SUPPORT_TICKETS) as SupportTicket[];
   } catch (error) {
     console.warn('Error fetching support tickets:', error);
-    return [];
+    return resolveSupportTickets([], SEED_SUPPORT_TICKETS) as SupportTicket[];
   }
 }
 
@@ -703,15 +745,15 @@ export function subscribeToSupportTickets(
 
 export async function getFirestoreFeaturedConfig(): Promise<FeaturedProductsConfig | null> {
   try {
-    if (!db || !db.type) return null;
+    if (!db || !db.type) return resolveSingleEntity(null, SEED_FEATURED_PRODUCTS_CONFIG) as FeaturedProductsConfig | null;
     const snap = await getDoc(doc(db, 'cms', 'featured_products'));
     if (snap.exists()) {
-      return snap.data() as FeaturedProductsConfig;
+      return resolveSingleEntity(snap.data() as FeaturedProductsConfig, SEED_FEATURED_PRODUCTS_CONFIG) as FeaturedProductsConfig | null;
     }
-    return null;
+    return resolveSingleEntity(null, SEED_FEATURED_PRODUCTS_CONFIG) as FeaturedProductsConfig | null;
   } catch (error) {
     console.warn('Error fetching featured config from Firestore:', error);
-    return null;
+    return resolveSingleEntity(null, SEED_FEATURED_PRODUCTS_CONFIG) as FeaturedProductsConfig | null;
   }
 }
 
@@ -739,15 +781,15 @@ export async function saveFirestoreFeaturedConfig(config: FeaturedProductsConfig
 
 export async function getFirestoreBanners(): Promise<BannerItem[]> {
   try {
-    if (!db || !db.type) return [];
+    if (!db || !db.type) return resolveBanners([], SEED_BANNERS) as BannerItem[];
     const snap = await getDoc(doc(db, 'cms', 'banners'));
     if (snap.exists() && snap.data()?.items) {
-      return snap.data().items as BannerItem[];
+      return resolveBanners(snap.data().items as BannerItem[], SEED_BANNERS) as BannerItem[];
     }
-    return [];
+    return resolveBanners([], SEED_BANNERS) as BannerItem[];
   } catch (error) {
     console.warn('Error fetching banners from Firestore:', error);
-    return [];
+    return resolveBanners([], SEED_BANNERS) as BannerItem[];
   }
 }
 
@@ -774,22 +816,22 @@ export async function getFirestoreInventory(): Promise<InventoryItem[]> {
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.inventory)) {
-          return data.inventory;
+          return resolveInventory(data.inventory, SEED_INVENTORY_ITEMS) as InventoryItem[];
         }
       }
     }
-    if (!db || !db.type) return [];
+    if (!db || !db.type) return resolveInventory([], SEED_INVENTORY_ITEMS) as InventoryItem[];
     const ref = collection(db, 'inventory');
     const snapshot = await getDocs(ref);
-    if (snapshot.empty) return [];
+    if (snapshot.empty) return resolveInventory([], SEED_INVENTORY_ITEMS) as InventoryItem[];
     const list: InventoryItem[] = [];
     snapshot.forEach((snap) => {
       list.push({ id: snap.id, ...snap.data() } as InventoryItem);
     });
-    return list;
+    return resolveInventory(list, SEED_INVENTORY_ITEMS) as InventoryItem[];
   } catch (error) {
     console.warn('Error fetching inventory from Firestore:', error);
-    return [];
+    return resolveInventory([], SEED_INVENTORY_ITEMS) as InventoryItem[];
   }
 }
 
@@ -894,19 +936,19 @@ export async function logFirestoreInventoryMovement(movement: InventoryMovement)
 
 export async function getFirestoreExpenses(): Promise<ExpenseRecord[]> {
   try {
-    if (!db || !db.type) return [];
+    if (!db || !db.type) return resolveExpenses([], SEED_EXPENSES) as ExpenseRecord[];
     const ref = collection(db, 'expenses');
     const q = query(ref, orderBy('date', 'desc'), limit(300));
     const snapshot = await getDocs(q);
-    if (snapshot.empty) return [];
+    if (snapshot.empty) return resolveExpenses([], SEED_EXPENSES) as ExpenseRecord[];
     const list: ExpenseRecord[] = [];
     snapshot.forEach((snap) => {
       list.push({ id: snap.id, ...snap.data() } as ExpenseRecord);
     });
-    return list;
+    return resolveExpenses(list, SEED_EXPENSES) as ExpenseRecord[];
   } catch (error) {
     console.warn('Error fetching expenses from Firestore:', error);
-    return [];
+    return resolveExpenses([], SEED_EXPENSES) as ExpenseRecord[];
   }
 }
 
@@ -937,18 +979,18 @@ export async function saveFirestoreExpense(expense: ExpenseRecord): Promise<void
 
 export async function getFirestoreVendors(): Promise<VendorRecord[]> {
   try {
-    if (!db || !db.type) return [];
+    if (!db || !db.type) return resolveVendors([], SEED_VENDORS) as VendorRecord[];
     const ref = collection(db, 'vendors');
     const snapshot = await getDocs(ref);
-    if (snapshot.empty) return [];
+    if (snapshot.empty) return resolveVendors([], SEED_VENDORS) as VendorRecord[];
     const list: VendorRecord[] = [];
     snapshot.forEach((snap) => {
       list.push({ id: snap.id, ...snap.data() } as VendorRecord);
     });
-    return list;
+    return resolveVendors(list, SEED_VENDORS) as VendorRecord[];
   } catch (error) {
     console.warn('Error fetching vendors from Firestore:', error);
-    return [];
+    return resolveVendors([], SEED_VENDORS) as VendorRecord[];
   }
 }
 
@@ -979,14 +1021,15 @@ export async function saveFirestoreVendor(vendor: VendorRecord): Promise<void> {
 
 export async function getFirestoreBudgets(): Promise<CategoryBudget[]> {
   try {
-    if (!db || !db.type) return [];
+    if (!db || !db.type) return resolveBudgets([], SEED_BUDGETS) as CategoryBudget[];
     const ref = doc(db, 'settings', 'category_budgets');
     const snap = await getDoc(ref);
-    if (!snap.exists()) return [];
-    return (snap.data()?.items as CategoryBudget[]) || [];
+    if (!snap.exists()) return resolveBudgets([], SEED_BUDGETS) as CategoryBudget[];
+    const items = (snap.data()?.items as CategoryBudget[]) || [];
+    return resolveBudgets(items, SEED_BUDGETS) as CategoryBudget[];
   } catch (error) {
     console.warn('Error fetching category budgets:', error);
-    return [];
+    return resolveBudgets([], SEED_BUDGETS) as CategoryBudget[];
   }
 }
 
@@ -1009,18 +1052,18 @@ export async function saveFirestoreBudgets(budgets: CategoryBudget[]): Promise<v
 
 export async function getFirestoreArtisans(): Promise<ArtisanProfile[]> {
   try {
-    if (!db || !db.type) return [];
+    if (!db || !db.type) return resolveArtisans([], SEED_ARTISANS) as ArtisanProfile[];
     const ref = collection(db, 'artisans');
     const snapshot = await getDocs(ref);
-    if (snapshot.empty) return [];
+    if (snapshot.empty) return resolveArtisans([], SEED_ARTISANS) as ArtisanProfile[];
     const list: ArtisanProfile[] = [];
     snapshot.forEach((snap) => {
       list.push({ id: snap.id, ...snap.data() } as ArtisanProfile);
     });
-    return list;
+    return resolveArtisans(list, SEED_ARTISANS) as ArtisanProfile[];
   } catch (error) {
     console.warn('Error fetching artisans from Firestore:', error);
-    return [];
+    return resolveArtisans([], SEED_ARTISANS) as ArtisanProfile[];
   }
 }
 
@@ -1055,18 +1098,18 @@ export async function saveFirestoreArtisan(artisan: ArtisanProfile): Promise<voi
 
 export async function getFirestoreCoupons(): Promise<CouponItem[]> {
   try {
-    if (!db || !db.type) return [];
+    if (!db || !db.type) return resolveCoupons([], SEED_COUPONS) as CouponItem[];
     const ref = collection(db, 'coupons');
     const snapshot = await getDocs(ref);
-    if (snapshot.empty) return [];
+    if (snapshot.empty) return resolveCoupons([], SEED_COUPONS) as CouponItem[];
     const list: CouponItem[] = [];
     snapshot.forEach((snap) => {
       list.push(snap.data() as CouponItem);
     });
-    return list;
+    return resolveCoupons(list, SEED_COUPONS) as CouponItem[];
   } catch (error) {
     console.warn('Error fetching coupons from Firestore:', error);
-    return [];
+    return resolveCoupons([], SEED_COUPONS) as CouponItem[];
   }
 }
 
@@ -1102,7 +1145,7 @@ export async function logFirestoreAuditAction(log: AuditLogItem): Promise<void> 
 
 export async function getFirestoreAuditLogs(limitCount = 50): Promise<AuditLogItem[]> {
   try {
-    if (!db || !db.type) return [];
+    if (!db || !db.type) return resolveAuditLogs([], SEED_AUDIT_LOGS);
     const ref = collection(db, 'audit_logs');
     const q = query(ref, orderBy('timestamp', 'desc'), limit(limitCount));
     const snapshot = await getDocs(q);
@@ -1110,10 +1153,10 @@ export async function getFirestoreAuditLogs(limitCount = 50): Promise<AuditLogIt
     snapshot.forEach((snap) => {
       list.push(snap.data() as AuditLogItem);
     });
-    return list;
+    return resolveAuditLogs(list, SEED_AUDIT_LOGS);
   } catch (error) {
     console.warn('Error fetching audit logs:', error);
-    return [];
+    return resolveAuditLogs([], SEED_AUDIT_LOGS);
   }
 }
 
@@ -1191,18 +1234,18 @@ export async function deleteFirestoreInventoryItem(sku: string): Promise<void> {
 
 export async function getFirestoreWorkOrders(): Promise<WorkOrder[]> {
   try {
-    if (!db || !db.type) return [];
+    if (!db || !db.type) return resolveWorkOrders([], SEED_WORK_ORDERS);
     const ref = collection(db, 'work_orders');
     const snapshot = await getDocs(ref);
-    if (snapshot.empty) return [];
+    if (snapshot.empty) return resolveWorkOrders([], SEED_WORK_ORDERS);
     const list: WorkOrder[] = [];
     snapshot.forEach((snap) => {
       list.push(snap.data() as WorkOrder);
     });
-    return list;
+    return resolveWorkOrders(list, SEED_WORK_ORDERS);
   } catch (error) {
     console.warn('Error fetching work orders from Firestore:', error);
-    return [];
+    return resolveWorkOrders([], SEED_WORK_ORDERS);
   }
 }
 
@@ -1243,18 +1286,18 @@ export async function deleteFirestoreWorkOrder(id: string): Promise<void> {
 
 export async function getFirestoreTaxSlabs(): Promise<TaxSlab[]> {
   try {
-    if (!db || !db.type) return [];
+    if (!db || !db.type) return resolveTaxSlabs([], SEED_TAX_SLABS);
     const ref = collection(db, 'tax_slabs');
     const snapshot = await getDocs(ref);
-    if (snapshot.empty) return [];
+    if (snapshot.empty) return resolveTaxSlabs([], SEED_TAX_SLABS);
     const list: TaxSlab[] = [];
     snapshot.forEach((snap) => {
       list.push(snap.data() as TaxSlab);
     });
-    return list;
+    return resolveTaxSlabs(list, SEED_TAX_SLABS);
   } catch (error) {
     console.warn('Error fetching tax slabs from Firestore:', error);
-    return [];
+    return resolveTaxSlabs([], SEED_TAX_SLABS);
   }
 }
 
@@ -1287,18 +1330,18 @@ export async function deleteFirestoreTaxSlab(id: string): Promise<void> {
 
 export async function getFirestoreOfflineOrders(): Promise<OfflineOrder[]> {
   try {
-    if (!db || !db.type) return [];
+    if (!db || !db.type) return resolveOfflineOrders([], SEED_OFFLINE_ORDERS);
     const ref = collection(db, 'offline_orders');
     const snapshot = await getDocs(ref);
-    if (snapshot.empty) return [];
+    if (snapshot.empty) return resolveOfflineOrders([], SEED_OFFLINE_ORDERS);
     const list: OfflineOrder[] = [];
     snapshot.forEach((snap) => {
       list.push(snap.data() as OfflineOrder);
     });
-    return list;
+    return resolveOfflineOrders(list, SEED_OFFLINE_ORDERS);
   } catch (error) {
     console.warn('Error fetching offline orders from Firestore:', error);
-    return [];
+    return resolveOfflineOrders([], SEED_OFFLINE_ORDERS);
   }
 }
 
@@ -1421,21 +1464,21 @@ export async function getAllFirestoreUsers(): Promise<User[]> {
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.customers)) {
-          return data.customers;
+          return resolveCustomers(data.customers, SEED_PATRONS as unknown as User[]) as unknown as User[];
         }
       }
     }
-    if (!db || !db.type) return [];
+    if (!db || !db.type) return resolveCustomers([], SEED_PATRONS as unknown as User[]) as unknown as User[];
     const ref = collection(db, 'users');
     const snapshot = await getDocs(ref);
-    if (snapshot.empty) return [];
+    if (snapshot.empty) return resolveCustomers([], SEED_PATRONS as unknown as User[]) as unknown as User[];
     const list: User[] = [];
     snapshot.forEach((snap) => {
       list.push({ id: snap.id, ...snap.data() } as User);
     });
-    return list;
+    return resolveCustomers(list, SEED_PATRONS as unknown as User[]) as unknown as User[];
   } catch (error) {
     console.warn('Error fetching all users from Firestore:', error);
-    return [];
+    return resolveCustomers([], SEED_PATRONS as unknown as User[]) as unknown as User[];
   }
 }

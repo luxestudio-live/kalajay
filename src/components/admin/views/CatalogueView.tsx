@@ -26,6 +26,7 @@ import {
   Info,
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
+import { ProvenanceBadge } from '@/components/admin/ProvenanceBadge';
 import {
   PRODUCTS,
   COLLECTIONS,
@@ -627,7 +628,10 @@ export default function CatalogueView() {
                             className="w-10 h-10 rounded object-cover border border-[#DED3C5]"
                           />
                           <div>
-                            <strong className="text-[#372921] font-semibold block">{p.name}</strong>
+                            <div className="flex items-center gap-1.5">
+                              <strong className="text-[#372921] font-semibold block">{p.name}</strong>
+                              <ProvenanceBadge provenance={(p as any).provenance} isDemo={(p as any).isDemo} size="xs" />
+                            </div>
                             <div className="flex items-center gap-1.5 mt-0.5">
                               <span className="text-[10.5px] text-[#76695F] font-mono">{p.code}</span>
                               {p.variants && p.variants.length > 0 && (

@@ -376,6 +376,10 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
           liveOffline,
           liveAuditLogs,
           liveSections,
+          liveExpenses,
+          liveVendors,
+          liveBudgets,
+          liveArtisans,
         ] = await Promise.allSettled([
           getAllFirestoreOrders(),
           getFirestoreCustomEnquiries(),
@@ -390,12 +394,14 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
           getFirestoreOfflineOrders(),
           getFirestoreAuditLogs(100),
           getFirestoreCmsDoc('homepage_sections'),
+          getFirestoreExpenses(),
+          getFirestoreVendors(),
+          getFirestoreBudgets(),
+          getFirestoreArtisans(),
         ]);
 
         if (liveOrders.status === 'fulfilled' && liveOrders.value.length > 0) {
-          const liveIds = new Set(liveOrders.value.map(o => o.id));
-          const remainingSeeds = SEED_ORDERS.filter(o => !liveIds.has(o.id));
-          setOrders([...liveOrders.value, ...remainingSeeds]);
+          setOrders(liveOrders.value);
         }
         if (liveCustom.status === 'fulfilled' && liveCustom.value.length > 0) {
           setCustomRequests(liveCustom.value);
@@ -413,9 +419,7 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
           setBanners(liveBanners.value);
         }
         if (liveInv.status === 'fulfilled' && liveInv.value.length > 0) {
-          const liveSkus = new Set(liveInv.value.map(i => i.sku || i.id));
-          const remainingSeeds = SEED_INVENTORY_ITEMS.filter(i => !liveSkus.has(i.sku || i.id));
-          setInventory([...liveInv.value, ...remainingSeeds]);
+          setInventory(liveInv.value);
         }
         if (liveCoupons.status === 'fulfilled' && liveCoupons.value.length > 0) {
           setCoupons(liveCoupons.value);
@@ -434,6 +438,18 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
         }
         if (liveSections.status === 'fulfilled' && liveSections.value?.items) {
           setHomepageSections(liveSections.value.items);
+        }
+        if (liveExpenses.status === 'fulfilled' && liveExpenses.value.length > 0) {
+          setExpenses(liveExpenses.value);
+        }
+        if (liveVendors.status === 'fulfilled' && liveVendors.value.length > 0) {
+          setVendors(liveVendors.value);
+        }
+        if (liveBudgets.status === 'fulfilled' && liveBudgets.value.length > 0) {
+          setCategoryBudgets(liveBudgets.value);
+        }
+        if (liveArtisans.status === 'fulfilled' && liveArtisans.value.length > 0) {
+          setArtisans(liveArtisans.value);
         }
       } catch (err) {
         console.warn('Initial Firestore hydration deferred:', err);

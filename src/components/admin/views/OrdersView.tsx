@@ -27,6 +27,7 @@ import {
 import { useAdminStore } from '@/data/AdminStoreContext';
 import { AdminOrder } from '@/data/adminTypes';
 import { PRODUCTS } from '@/data/catalogue';
+import { ProvenanceBadge } from '@/components/admin/ProvenanceBadge';
 
 export default function OrdersView() {
   const { orders, updateOrderStatus, createManualOrder, can, activeRole, currentUser, activeSubPage, setActiveSubPage, logAction } = useAdminStore();
@@ -285,9 +286,12 @@ export default function OrdersView() {
                       className="hover:bg-[#FFFCF7] transition-colors cursor-pointer"
                     >
                       <td className="py-3 px-4">
-                        <strong className="text-[#372921] font-bold block">
-                          #{order.id}
-                        </strong>
+                        <div className="flex items-center gap-1.5">
+                          <strong className="text-[#372921] font-bold">
+                            #{order.id}
+                          </strong>
+                          <ProvenanceBadge provenance={(order as any).provenance} isDemo={(order as any).isDemo} size="xs" />
+                        </div>
                         <span className="text-[10.5px] text-[#76695F] font-mono">
                           {order.createdAt.slice(0, 10)}
                         </span>
@@ -624,6 +628,7 @@ export default function OrdersView() {
               <div>
                 <h3 className="font-serif text-lg text-[#372921] font-semibold flex items-center gap-2">
                   <span>Order #{selectedOrder.id}</span>
+                  <ProvenanceBadge provenance={(selectedOrder as any).provenance} isDemo={(selectedOrder as any).isDemo} size="sm" />
                   <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#9E5430]/10 text-[#9E5430] font-sans font-medium uppercase">
                     {selectedOrder.fulfillmentStatus.replace('_', ' ')}
                   </span>

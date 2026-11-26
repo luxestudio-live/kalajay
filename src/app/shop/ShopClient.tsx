@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { PRODUCTS, COLLECTIONS, Product, ProductVariant, Collection } from '@/data/catalogue';
 import { getFirestoreProducts, getFirestoreCategories } from '@/lib/firestore';
+import { resolveProducts, resolveCollections } from '@/lib/dataProvenance';
 import { useCart } from '@/context/CartContext';
 
 const ITEMS_PER_PAGE = 16;
@@ -28,8 +29,8 @@ export function ShopContent() {
   const initialCategory = searchParams.get('category') || 'All';
   const initialQuery = searchParams.get('q') || '';
 
-  const [productsList, setProductsList] = useState<Product[]>(PRODUCTS);
-  const [categoriesList, setCategoriesList] = useState<Collection[]>(COLLECTIONS);
+  const [productsList, setProductsList] = useState<Product[]>(() => resolveProducts([], PRODUCTS));
+  const [categoriesList, setCategoriesList] = useState<Collection[]>(() => resolveCollections([], COLLECTIONS));
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
   const [selectedColor, setSelectedColor] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>(initialQuery);
@@ -60,17 +61,13 @@ export function ShopContent() {
   useEffect(() => {
     getFirestoreProducts().then((liveProds) => {
       if (liveProds && liveProds.length > 0) {
-        const codeSet = new Set(liveProds.map(p => p.code));
-        const combined = [...liveProds, ...PRODUCTS.filter(p => !codeSet.has(p.code))];
-        setProductsList(combined);
+        setProductsList(liveProds);
       }
     }).catch(() => {});
 
     getFirestoreCategories().then((liveCats) => {
       if (liveCats && liveCats.length > 0) {
-        const slugSet = new Set(liveCats.map(c => c.slug));
-        const combined = [...liveCats, ...COLLECTIONS.filter(c => !slugSet.has(c.slug))];
-        setCategoriesList(combined);
+        setCategoriesList(liveCats);
       }
     }).catch(() => {});
   }, []);

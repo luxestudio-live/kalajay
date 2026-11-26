@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/serverFirebaseAdmin';
 import { DEFAULT_REVIEWS, ReviewItem } from '@/data/catalogue';
 import { verifyStaffPermission, verifyFirebaseIdToken } from '@/lib/serverRbac';
+import { resolveReviews } from '@/lib/dataProvenance';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,16 +21,17 @@ export async function GET(request: Request) {
     if (adminDb) {
       try {
         const snap = await adminDb.collection('reviews').get();
+        const fsList: ReviewItem[] = [];
         if (!snap.empty) {
-          const fsList: ReviewItem[] = [];
           snap.forEach(d => fsList.push({ id: d.id, ...d.data() } as ReviewItem));
-          // Merge unique reviews
-          const idSet = new Set(fsList.map(r => r.id));
-          memoryReviews = [...fsList, ...memoryReviews.filter(r => !idSet.has(r.id))];
         }
+        memoryReviews = resolveReviews(fsList, DEFAULT_REVIEWS) as unknown as ReviewItem[];
       } catch (err) {
         console.warn('Firestore reviews fetch failed, using memory store:', err);
+        memoryReviews = resolveReviews([], DEFAULT_REVIEWS) as unknown as ReviewItem[];
       }
+    } else {
+      memoryReviews = resolveReviews([], DEFAULT_REVIEWS) as unknown as ReviewItem[];
     }
 
     if (all) {
