@@ -1,3 +1,5 @@
+import { KALAJAY_BUSINESS_PROFILE } from '@/lib/businessProfile';
+
 export type AttributeDisplayType = 'color' | 'image' | 'button' | 'dropdown' | 'text';
 
 export interface AttributeValue {
@@ -230,15 +232,15 @@ export const BRAND_CONFIG = {
     }
   ],
   "contact": {
-    "phone": "+91 97405 40847",
-    "displayPhone": "+91 97405 40847",
-    "email": "support@kalajay.in",
-    "altEmail": "kalajay.handcrafted@gmail.com",
-    "instagram": "@kalajay.handcrafted",
-    "instagramUrl": "https://www.instagram.com/kalajay.handcrafted/",
-    "gst": "11XXXXX1111X1Z1",
+    "phone": KALAJAY_BUSINESS_PROFILE.supportPhone,
+    "displayPhone": KALAJAY_BUSINESS_PROFILE.displayPhone,
+    "email": KALAJAY_BUSINESS_PROFILE.contactEmail,
+    "altEmail": KALAJAY_BUSINESS_PROFILE.altEmail,
+    "instagram": KALAJAY_BUSINESS_PROFILE.instagram,
+    "instagramUrl": KALAJAY_BUSINESS_PROFILE.instagramUrl,
+    "gst": KALAJAY_BUSINESS_PROFILE.gstin,
     "location": "Mumbai, Maharashtra, India",
-    "whatsappUrl": "https://wa.me/919740540847?text=Hi%20Kalajay!%20I%27d%20like%20to%20know%20more%20about%20your%20handcrafted%20pieces."
+    "whatsappUrl": KALAJAY_BUSINESS_PROFILE.whatsappUrl
   },
   "shipping": {
     "freeThreshold": 599,
@@ -246,10 +248,10 @@ export const BRAND_CONFIG = {
     "turnaround": "Made to order. Dispatched within 3-5 business days across India."
   },
   "tax": {
-    "gstRate": 0.03,
-    "taxLabel": "GST (3%)",
-    "hsnCode": "71179090",
-    "description": "GST on handcrafted luxury imitation jewelry and artisan beadwork under HSN 7117"
+    "gstRate": KALAJAY_BUSINESS_PROFILE.tax.gstRate,
+    "taxLabel": KALAJAY_BUSINESS_PROFILE.tax.taxLabel,
+    "hsnCode": KALAJAY_BUSINESS_PROFILE.tax.hsnCode,
+    "description": KALAJAY_BUSINESS_PROFILE.tax.description
   }
 };
 

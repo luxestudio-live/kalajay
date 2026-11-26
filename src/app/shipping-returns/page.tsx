@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Truck, ShieldCheck, Clock, CheckCircle2, XCircle, RefreshCw, MessageCircle, AlertCircle, HelpCircle, ChevronDown, Package } from 'lucide-react';
 import { BRAND_CONFIG } from '@/data/catalogue';
+import { KALAJAY_BUSINESS_PROFILE } from '@/lib/businessProfile';
 import { getFirestoreCmsDoc } from '@/lib/firestore';
 
 export default function ShippingReturnsPage() {
@@ -68,6 +69,10 @@ export default function ShippingReturnsPage() {
             <span>Free Pan-India Delivery Above ₹{policies.shippingThreshold}</span>
             <span className="w-1.5 h-1.5 rounded-full bg-gold" />
             <span>{policies.dispatchHours}-Hour Transit Guarantee</span>
+          </div>
+
+          <div className="pt-4 max-w-xl mx-auto text-xs text-ink-muted/80 bg-canvas-subtle p-3 rounded-lg border border-border-subtle text-center">
+            <span className="font-semibold text-plum">Statutory Tax Compliance:</span> Official GST Tax Invoices are issued with every shipment under GSTIN <span className="font-mono text-plum font-semibold">{KALAJAY_BUSINESS_PROFILE.gstin}</span> (HSN: {KALAJAY_BUSINESS_PROFILE.tax.hsnCode}).
           </div>
         </div>
       </section>

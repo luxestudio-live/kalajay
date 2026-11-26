@@ -41,6 +41,7 @@ import {
 import { useAdminStore } from '@/data/AdminStoreContext';
 import { TaxSlab, OfflineOrder, OfflineOrderItem, ExpenseRecord, VendorRecord, CategoryBudget, ExpenseTreatment } from '@/data/adminTypes';
 import { PRODUCTS } from '@/data/catalogue';
+import { KALAJAY_BUSINESS_PROFILE } from '@/lib/businessProfile';
 
 interface SettlementItem {
   id: string;
@@ -600,7 +601,7 @@ export default function FinanceView() {
           <button
             type="button"
             onClick={() => {
-              logAction('EXPORT_GSTR1_REPORT', 'finance', 'Exported monthly GSTR-1 summary for GSTIN 27AAECK1294F1Z3');
+              logAction('EXPORT_GSTR1_REPORT', 'finance', `Exported monthly GSTR-1 summary for GSTIN ${KALAJAY_BUSINESS_PROFILE.gstin}`);
               showToast('Exported GSTR-1 Monthly Return (JSON & Excel format)');
             }}
             className="px-4 py-2 rounded-full border border-[#DED3C5] bg-white hover:bg-[#F7F3EC] text-[#372921] text-xs font-medium transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
@@ -1065,14 +1066,14 @@ export default function FinanceView() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-mono text-xs font-bold text-[#9E5430] px-2.5 py-0.5 rounded bg-[#9E5430]/10">
-                  GSTIN: 27AAECK1294F1Z3
+                  GSTIN: {KALAJAY_BUSINESS_PROFILE.gstin}
                 </span>
                 <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">
                   Active Regular Taxpayer
                 </span>
               </div>
               <h3 className="font-serif text-lg font-bold text-[#372921] mt-1.5">
-                Kalajay Creations LLP (Maharashtra &amp; Bihar Operations)
+                {KALAJAY_BUSINESS_PROFILE.legalEntityName} (Maharashtra &amp; Bihar Operations)
               </h3>
               <p className="text-xs text-[#76695F] mt-0.5">
                 Principal Place of Business: Worli Sea Face, Mumbai 400018 | Atelier Loom Hub: Madhubani, Bihar 847211
@@ -1804,7 +1805,7 @@ export default function FinanceView() {
                 </span>
                 <p className="text-[11px] text-[#76695F] mt-1 leading-relaxed">
                   Worli Sea Face, Mumbai 400018, Maharashtra<br />
-                  GSTIN: <strong>27AAECK1294F1Z3</strong> | State Code: 27<br />
+                  GSTIN: <strong>{KALAJAY_BUSINESS_PROFILE.gstin}</strong> | State Code: {KALAJAY_BUSINESS_PROFILE.stateCode}<br />
                   WhatsApp Concierge: +91 97405 40847
                 </p>
               </div>

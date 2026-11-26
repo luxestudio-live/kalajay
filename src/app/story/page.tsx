@@ -2,8 +2,9 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Heart, MapPin, Scissors, Gem, Award, MessageCircle, CircleDot, BookOpen, Sparkles } from 'lucide-react';
+import { ArrowRight, Heart, MapPin, Scissors, Gem, Award, MessageCircle, CircleDot, BookOpen, Sparkles, ShieldCheck } from 'lucide-react';
 import { BRAND_CONFIG } from '@/data/catalogue';
+import { KALAJAY_BUSINESS_PROFILE } from '@/lib/businessProfile';
 
 export default function StoryPage() {
   return (
@@ -311,6 +312,14 @@ export default function StoryPage() {
                 <h4 className="font-serif text-xl text-plum">Structural Wire Rigidity</h4>
                 <p className="text-xs text-ink-muted leading-relaxed font-light">
                   Multi-strand stainless steel core wire ensures your bags and boxes do not sag or lose their architectural geometry over time.
+                </p>
+              </div>
+
+              <div className="p-6 rounded-[28px] bg-canvas border border-border-subtle space-y-3">
+                <ShieldCheck className="w-6 h-6 text-emerald-700" />
+                <h4 className="font-serif text-xl text-plum">Statutory Artisan Accreditation</h4>
+                <p className="text-xs text-ink-muted leading-relaxed font-light">
+                  Operating with full legal compliance as {KALAJAY_BUSINESS_PROFILE.legalEntityName} (GSTIN: <span className="font-mono font-medium text-plum">{KALAJAY_BUSINESS_PROFILE.gstin}</span>), supporting 21 women master artisans with fair living wages.
                 </p>
               </div>
             </div>

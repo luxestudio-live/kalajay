@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Check, Heart, Instagram, MessageCircle, Mail, MapPin } from 'lucide-react';
 import { BRAND_CONFIG, COLLECTIONS } from '@/data/catalogue';
+import { KALAJAY_BUSINESS_PROFILE } from '@/lib/businessProfile';
 import { saveFirestoreSubscriber } from '@/lib/firestore';
 
 export default function Footer() {
@@ -271,7 +272,7 @@ export default function Footer() {
                 </a>
               </div>
               <div className="pt-1 text-xs text-[#DED3C5]">
-                GST: {BRAND_CONFIG.contact.gst} · Made in India
+                GSTIN: <span className="font-mono text-[#F7F3EC]">{KALAJAY_BUSINESS_PROFILE.gstin}</span> · PAN: <span className="font-mono text-[#F7F3EC]">{KALAJAY_BUSINESS_PROFILE.pan}</span> · Made in India
               </div>
             </div>
           </div>
@@ -290,10 +291,10 @@ export default function Footer() {
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-[#D8CEBF] font-sans gap-4 border-t border-[#9E5430]/20">
           <div className="space-y-0.5">
             <div>
-              © {new Date().getFullYear()} Kalajay Creations Private Limited. All rights reserved.
+              © {new Date().getFullYear()} {KALAJAY_BUSINESS_PROFILE.legalEntityName}. All rights reserved.
             </div>
             <div className="text-[11px] text-[#D8CEBF]/75">
-              Engineered with DPDP Act, 2023 Technical Safeguards · Consumer Protection (E-Commerce) Rules, 2020 Framework
+              Official GSTIN: {KALAJAY_BUSINESS_PROFILE.gstin} · DPDP Act, 2023 Technical Safeguards · Consumer Protection (E-Commerce) Rules, 2020 Framework
             </div>
           </div>
           <div className="flex items-center gap-1.5">

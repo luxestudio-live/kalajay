@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Mail, Phone, MessageCircle, MapPin, Instagram, Check, Send } from 'lucide-react';
+import { Mail, Phone, MessageCircle, MapPin, Instagram, Check, Send, ShieldCheck } from 'lucide-react';
 import { BRAND_CONFIG } from '@/data/catalogue';
+import { KALAJAY_BUSINESS_PROFILE } from '@/lib/businessProfile';
 import { createFirestoreSupportTicket } from '@/lib/firestore';
 
 export default function ContactPage() {
@@ -158,8 +159,17 @@ export default function ContactPage() {
                 </p>
               </div>
 
-              <div className="text-[11px] text-ink-light">
-                GSTIN: <span className="font-mono text-plum">{BRAND_CONFIG.contact.gst}</span>
+              <div className="p-4 bg-canvas rounded-sm border border-border-subtle space-y-2 text-xs">
+                <span className="font-semibold text-plum flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-rosewood" />
+                  <span>Statutory Registration &amp; Tax Credentials</span>
+                </span>
+                <div className="text-[11px] text-ink-muted pl-5.5 space-y-1">
+                  <div>Legal Entity: <span className="font-medium text-plum">{KALAJAY_BUSINESS_PROFILE.legalEntityName}</span></div>
+                  <div>GSTIN: <span className="font-mono text-plum font-semibold">{KALAJAY_BUSINESS_PROFILE.gstin}</span> (State Code: {KALAJAY_BUSINESS_PROFILE.stateCode} - {KALAJAY_BUSINESS_PROFILE.stateName})</div>
+                  <div>PAN: <span className="font-mono text-plum">{KALAJAY_BUSINESS_PROFILE.pan}</span></div>
+                  <div>Registered Office: <span className="text-ink-muted">{KALAJAY_BUSINESS_PROFILE.registeredAddress}</span></div>
+                </div>
               </div>
             </div>
           </div>

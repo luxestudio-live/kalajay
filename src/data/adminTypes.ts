@@ -134,6 +134,45 @@ export interface CraftCosting {
   notes?: string;
 }
 
+export type MaterialUnit = 'kg' | 'g' | 'grams' | 'meters' | 'pieces';
+
+export interface RawMaterialRequirement {
+  id: string;
+  materialName: string;
+  materialSku?: string;
+  description?: string;
+  quantityRequired: number;
+  unit: MaterialUnit;
+  costPerKg: number;
+  lineCost: number;
+}
+
+export interface OtherChargeBreakdown {
+  id: string;
+  label: string;
+  amount: number;
+}
+
+export type CostingBasis = 'per_unit' | 'per_batch';
+
+export interface EnhancedInventoryCosting {
+  enabled: boolean;
+  costingBasis: CostingBasis;
+  productionQuantity: number;
+  rawMaterials: RawMaterialRequirement[];
+  totalRawMaterialCost: number;
+  labourHours: number;
+  labourCostPerHour: number;
+  labourCost: number;
+  otherCharges: number;
+  otherChargesBreakdown?: OtherChargeBreakdown[];
+  totalProductionCost: number;
+  unitCost: number;
+  calculatedCostPrice: number;
+  notes?: string;
+  calculatedAt?: string;
+}
+
 export interface InventoryMovement {
   id: string;
   sku: string;
@@ -194,6 +233,17 @@ export interface InventoryItem {
   variantLabel?: string;
   variantAttributes?: Record<string, string>;
   costing?: CraftCosting;
+  enhancedCosting?: EnhancedInventoryCosting;
+  rawMaterials?: RawMaterialRequirement[];
+  labourHours?: number;
+  labourCostPerHour?: number;
+  labourCost?: number;
+  otherCharges?: number;
+  otherChargesBreakdown?: OtherChargeBreakdown[];
+  costingBasis?: CostingBasis;
+  productionQuantity?: number;
+  totalProductionCost?: number;
+  notes?: string;
   updatedAt?: any;
 }
 

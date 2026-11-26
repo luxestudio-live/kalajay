@@ -31,10 +31,28 @@ import {
   Percent,
   Coins,
   Hammer,
+  Calculator,
+  Eye,
+  FileText,
+  Layers,
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
 import { ProvenanceBadge } from '@/components/admin/ProvenanceBadge';
-import { StockAdjustment, InventoryItem, InventoryMovement, InventoryMovementType } from '@/data/adminTypes';
+import {
+  StockAdjustment,
+  InventoryItem,
+  InventoryMovement,
+  InventoryMovementType,
+  RawMaterialRequirement,
+  MaterialUnit,
+  CostingBasis,
+  EnhancedInventoryCosting,
+} from '@/data/adminTypes';
+import {
+  calculateRawMaterialLineCost,
+  calculateInventoryCosting,
+  formatINR,
+} from '@/lib/inventoryCosting';
 
 interface ToastState {
   show: boolean;
@@ -403,6 +421,65 @@ export default function InventoryView() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
 
+  // Enhanced Costing State for Create Modal
+  const [createCostingEnabled, setCreateCostingEnabled] = useState(true);
+  const [createCostingBasis, setCreateCostingBasis] = useState<CostingBasis>('per_unit');
+  const [createProductionQuantity, setCreateProductionQuantity] = useState<number>(1);
+  const [createRawMaterials, setCreateRawMaterials] = useState<RawMaterialRequirement[]>([
+    {
+      id: 'rm-init-1',
+      materialName: 'Faceted Glass / Pearl Beads',
+      materialSku: 'RM-BEAD-01',
+      description: 'Lustrous seed and crystal beads',
+      quantityRequired: 0.25,
+      unit: 'kg',
+      costPerKg: 800,
+      lineCost: 200,
+    },
+  ]);
+  const [createLabourHours, setCreateLabourHours] = useState<number>(2.5);
+  const [createLabourCostPerHour, setCreateLabourCostPerHour] = useState<number>(120);
+  const [createOtherCharges, setCreateOtherCharges] = useState<number>(50);
+  const [createNotes, setCreateNotes] = useState<string>('');
+
+  // Enhanced Costing State for Edit Modal
+  const [editCostingBasis, setEditCostingBasis] = useState<CostingBasis>('per_unit');
+  const [editProductionQuantity, setEditProductionQuantity] = useState<number>(1);
+  const [editRawMaterials, setEditRawMaterials] = useState<RawMaterialRequirement[]>([]);
+  const [editLabourHours, setEditLabourHours] = useState<number>(0);
+  const [editLabourCostPerHour, setEditLabourCostPerHour] = useState<number>(120);
+  const [editOtherCharges, setEditOtherCharges] = useState<number>(0);
+  const [editNotes, setEditNotes] = useState<string>('');
+
+  // Item Details Modal State
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedDetailItem, setSelectedDetailItem] = useState<InventoryItem | null>(null);
+
+  // Calculated Costing Memos
+  const createCalculatedCosting = useMemo(() => {
+    return calculateInventoryCosting({
+      costingBasis: createCostingBasis,
+      productionQuantity: createProductionQuantity,
+      rawMaterials: createRawMaterials,
+      labourHours: createLabourHours,
+      labourCostPerHour: createLabourCostPerHour,
+      otherCharges: createOtherCharges,
+      notes: createNotes,
+    });
+  }, [createCostingBasis, createProductionQuantity, createRawMaterials, createLabourHours, createLabourCostPerHour, createOtherCharges, createNotes]);
+
+  const editCalculatedCosting = useMemo(() => {
+    return calculateInventoryCosting({
+      costingBasis: editCostingBasis,
+      productionQuantity: editProductionQuantity,
+      rawMaterials: editRawMaterials,
+      labourHours: editLabourHours,
+      labourCostPerHour: editLabourCostPerHour,
+      otherCharges: editOtherCharges,
+      notes: editNotes,
+    });
+  }, [editCostingBasis, editProductionQuantity, editRawMaterials, editLabourHours, editLabourCostPerHour, editOtherCharges, editNotes]);
+
   // 4. Delete SKU Modal State
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingItem, setDeletingItem] = useState<InventoryItem | null>(null);
@@ -577,8 +654,28 @@ export default function InventoryView() {
       retailPrice > 0 ? Math.round(((retailPrice - unitCost) / retailPrice) * 100 * 10) / 10 : 0;
     const stockValue = onHand * unitCost;
 
+    const finalEnhanced = calculateInventoryCosting({
+      costingBasis: createCostingBasis,
+      productionQuantity: createProductionQuantity,
+      rawMaterials: createRawMaterials,
+      labourHours: createLabourHours,
+      labourCostPerHour: createLabourCostPerHour,
+      otherCharges: createOtherCharges,
+      notes: createNotes,
+    });
+
     createInventoryItem({
       ...newSkuData,
+      costingBasis: createCostingBasis,
+      productionQuantity: createProductionQuantity,
+      rawMaterials: createRawMaterials,
+      labourHours: createLabourHours,
+      labourCostPerHour: createLabourCostPerHour,
+      labourCost: finalEnhanced.labourCost,
+      otherCharges: createOtherCharges,
+      totalProductionCost: finalEnhanced.totalProductionCost,
+      notes: createNotes,
+      enhancedCosting: finalEnhanced.enhancedCosting,
       onHand,
       reserved,
       available,
@@ -601,6 +698,39 @@ export default function InventoryView() {
     showToast(`Registered SKU ${newSkuData.sku} in master inventory ledger.`, 'success');
   };
 
+  // Open Edit SKU
+  const handleOpenEdit = (item: InventoryItem) => {
+    setEditingItem({ ...item });
+    setEditCostingBasis(item.costingBasis || item.enhancedCosting?.costingBasis || 'per_unit');
+    setEditProductionQuantity(item.productionQuantity || item.enhancedCosting?.productionQuantity || 1);
+
+    let initialMaterials: RawMaterialRequirement[] = item.rawMaterials || item.enhancedCosting?.rawMaterials || [];
+    if (initialMaterials.length === 0 && item.costing?.enabled) {
+      initialMaterials = [
+        {
+          id: 'rm-legacy-1',
+          materialName: item.costing.beadsUsed || 'Handicraft Beads',
+          quantityRequired: item.costing.beadKg || 0.25,
+          unit: 'kg',
+          costPerKg: item.costing.beadCostKg || 800,
+          lineCost: (item.costing.beadKg || 0.25) * (item.costing.beadCostKg || 800),
+        },
+      ];
+    }
+    setEditRawMaterials(initialMaterials);
+    setEditLabourHours(item.labourHours ?? item.enhancedCosting?.labourHours ?? item.costing?.laborHours ?? 2.5);
+    setEditLabourCostPerHour(item.labourCostPerHour ?? item.enhancedCosting?.labourCostPerHour ?? item.costing?.laborRatePerHour ?? 120);
+    setEditOtherCharges(item.otherCharges ?? item.enhancedCosting?.otherCharges ?? item.costing?.otherMaterialCost ?? 50);
+    setEditNotes(item.notes || item.enhancedCosting?.notes || item.costing?.notes || '');
+    setEditModalOpen(true);
+  };
+
+  // Open Detail View
+  const handleOpenDetail = (item: InventoryItem) => {
+    setSelectedDetailItem(item);
+    setDetailModalOpen(true);
+  };
+
   // Edit Submit
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -618,15 +748,35 @@ export default function InventoryView() {
         ? Math.round(((editingItem.retailPrice - editingItem.unitCost) / editingItem.retailPrice) * 100 * 10) / 10
         : editingItem.grossMarginPct;
 
+    const finalEnhanced = calculateInventoryCosting({
+      costingBasis: editCostingBasis,
+      productionQuantity: editProductionQuantity,
+      rawMaterials: editRawMaterials,
+      labourHours: editLabourHours,
+      labourCostPerHour: editLabourCostPerHour,
+      otherCharges: editOtherCharges,
+      notes: editNotes,
+    });
+
     updateInventoryItem(editingItem.id, {
       ...editingItem,
+      costingBasis: editCostingBasis,
+      productionQuantity: editProductionQuantity,
+      rawMaterials: editRawMaterials,
+      labourHours: editLabourHours,
+      labourCostPerHour: editLabourCostPerHour,
+      labourCost: finalEnhanced.labourCost,
+      otherCharges: editOtherCharges,
+      totalProductionCost: finalEnhanced.totalProductionCost,
+      notes: editNotes,
+      enhancedCosting: finalEnhanced.enhancedCosting,
       available: computedAvailable,
       status: computedStatus,
       stockValue: computedStockValue,
       grossMarginPct: computedMargin,
     });
     setEditModalOpen(false);
-    showToast(`Updated specifications for ${editingItem.name} (${editingItem.sku}).`, 'success');
+    showToast(`Updated specifications and costing for ${editingItem.name} (${editingItem.sku}).`, 'success');
   };
 
   const handleDeleteConfirm = () => {
@@ -830,16 +980,23 @@ export default function InventoryView() {
                       </td>
                       <td className="py-3 px-4 sticky left-0 z-10 bg-white hover:bg-[#FFFCF7] shadow-r">
                         <div className="flex items-center gap-1.5">
-                          <strong className="text-[#372921] font-semibold block text-xs">{item.name}</strong>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenDetail(item)}
+                            className="text-left font-semibold block text-xs text-[#372921] hover:text-[#9E5430] hover:underline cursor-pointer transition-colors"
+                            title="Click to view full SKU and costing details"
+                          >
+                            {item.name}
+                          </button>
                           <ProvenanceBadge provenance={(item as any).provenance} isDemo={(item as any).isDemo} size="xs" />
                         </div>
                         <div className="flex items-center gap-1.5 text-[10px] text-[#76695F] font-mono mt-0.5">
                           <span className="text-[#9E5430] font-bold">{item.sku}</span>
                           <span>·</span>
                           <span>{item.category}</span>
-                          {item.costing?.enabled && (
+                          {(item.costing?.enabled || item.enhancedCosting?.enabled || item.rawMaterials?.length) && (
                             <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 text-[9px] font-sans font-semibold">
-                              Craft Formula
+                              Craft Costing
                             </span>
                           )}
                         </div>
@@ -931,6 +1088,14 @@ export default function InventoryView() {
                         <div className="inline-flex items-center gap-1 justify-end">
                           <button
                             type="button"
+                            onClick={() => handleOpenDetail(item)}
+                            className="p-1.5 rounded-md hover:bg-[#F0E9DF] text-[#76695F] hover:text-[#372921] transition-colors cursor-pointer"
+                            title="View SKU & Costing Details"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => handleOpenMovement(item.sku)}
                             disabled={!canAdjustStock}
                             className="px-2 py-1 rounded-md bg-[#9E5430]/10 hover:bg-[#9E5430]/20 text-[10.5px] text-[#9E5430] font-semibold transition-colors cursor-pointer"
@@ -948,12 +1113,9 @@ export default function InventoryView() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => {
-                              setEditingItem({ ...item });
-                              setEditModalOpen(true);
-                            }}
+                            onClick={() => handleOpenEdit(item)}
                             className="p-1.5 rounded-md hover:bg-[#F0E9DF] text-[#76695F] hover:text-[#372921] transition-colors cursor-pointer"
-                            title="Edit Specifications"
+                            title="Edit Specifications & Costing"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
@@ -1533,7 +1695,7 @@ export default function InventoryView() {
           ========================================================================= */}
       {createModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="relative w-full max-w-lg bg-[#FCFAF6] rounded-2xl shadow-2xl border border-[#DED3C5] overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="relative w-full max-w-2xl bg-[#FCFAF6] rounded-2xl shadow-2xl border border-[#DED3C5] overflow-hidden flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 border-b border-[#EAE2D8] bg-[#F7F3EC] flex items-center justify-between">
               <div>
                 <span className="text-[10px] font-mono uppercase tracking-widest text-[#9E5430] font-bold">
@@ -1721,6 +1883,295 @@ export default function InventoryView() {
                 </div>
               </div>
 
+              {/* RAW MATERIALS & CRAFT COSTING SECTION */}
+              <div className="pt-4 border-t border-[#EAE2D8] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calculator className="w-4 h-4 text-[#9E5430]" />
+                    <span className="font-serif font-bold text-sm text-[#372921]">Craft Production &amp; Unit Costing</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-[#F0E9DF] p-1 rounded-lg">
+                    <button
+                      type="button"
+                      onClick={() => setCreateCostingBasis('per_unit')}
+                      className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors ${
+                        createCostingBasis === 'per_unit'
+                          ? 'bg-[#9E5430] text-white'
+                          : 'text-[#76695F] hover:text-[#372921]'
+                      }`}
+                    >
+                      Per-Unit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCreateCostingBasis('per_batch')}
+                      className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors ${
+                        createCostingBasis === 'per_batch'
+                          ? 'bg-[#9E5430] text-white'
+                          : 'text-[#76695F] hover:text-[#372921]'
+                      }`}
+                    >
+                      Per-Batch
+                    </button>
+                  </div>
+                </div>
+
+                {createCostingBasis === 'per_batch' && (
+                  <div className="p-2.5 bg-amber-50/70 rounded-xl border border-amber-200/60 flex items-center justify-between text-xs">
+                    <span className="font-medium text-amber-950">Batch Production Run Size (Finished Units):</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={createProductionQuantity}
+                      onChange={e => setCreateProductionQuantity(Math.max(1, Number(e.target.value) || 1))}
+                      className="w-24 bg-white border border-amber-300 rounded-lg px-2.5 py-1 font-mono font-bold text-center text-[#372921]"
+                    />
+                  </div>
+                )}
+
+                {/* Raw Materials Requirements Table */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-xs text-[#372921]">1. Raw Material Requirements</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCreateRawMaterials(prev => [
+                          ...prev,
+                          {
+                            id: `rm-${Date.now()}`,
+                            materialName: '',
+                            quantityRequired: 0.1,
+                            unit: 'kg',
+                            costPerKg: 500,
+                            lineCost: 50,
+                          },
+                        ]);
+                      }}
+                      className="px-2.5 py-1 rounded-md bg-[#9E5430]/10 hover:bg-[#9E5430]/20 text-[#9E5430] text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Add Material</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {createRawMaterials.map((mat, idx) => {
+                      const calculatedLine = calculateRawMaterialLineCost(mat.quantityRequired, mat.unit, mat.costPerKg);
+                      return (
+                        <div
+                          key={mat.id}
+                          className="p-2.5 bg-white rounded-xl border border-[#DED3C5] grid grid-cols-12 gap-2 items-center"
+                        >
+                          <div className="col-span-4">
+                            <input
+                              type="text"
+                              placeholder="Material name (e.g. Faux Pearls)"
+                              value={mat.materialName}
+                              onChange={e => {
+                                const val = e.target.value;
+                                setCreateRawMaterials(prev =>
+                                  prev.map((m, i) => (i === idx ? { ...m, materialName: val } : m))
+                                );
+                              }}
+                              className="w-full bg-[#FAF7F2] border border-[#EAE2D8] rounded-lg px-2 py-1 text-xs text-[#372921]"
+                            />
+                          </div>
+
+                          <div className="col-span-2">
+                            <input
+                              type="number"
+                              step="any"
+                              placeholder="Qty"
+                              value={mat.quantityRequired}
+                              onChange={e => {
+                                const val = Number(e.target.value) || 0;
+                                setCreateRawMaterials(prev =>
+                                  prev.map((m, i) =>
+                                    i === idx
+                                      ? {
+                                          ...m,
+                                          quantityRequired: val,
+                                          lineCost: calculateRawMaterialLineCost(val, m.unit, m.costPerKg),
+                                        }
+                                      : m
+                                  )
+                                );
+                              }}
+                              className="w-full bg-[#FAF7F2] border border-[#EAE2D8] rounded-lg px-2 py-1 text-xs font-mono text-center text-[#372921]"
+                            />
+                          </div>
+
+                          <div className="col-span-2">
+                            <select
+                              value={mat.unit}
+                              onChange={e => {
+                                const val = e.target.value as MaterialUnit;
+                                setCreateRawMaterials(prev =>
+                                  prev.map((m, i) =>
+                                    i === idx
+                                      ? {
+                                          ...m,
+                                          unit: val,
+                                          lineCost: calculateRawMaterialLineCost(m.quantityRequired, val, m.costPerKg),
+                                        }
+                                      : m
+                                  )
+                                );
+                              }}
+                              className="w-full bg-[#FAF7F2] border border-[#EAE2D8] rounded-lg px-1.5 py-1 text-xs text-[#372921]"
+                            >
+                              <option value="kg">kg</option>
+                              <option value="grams">grams (g)</option>
+                              <option value="meters">meters</option>
+                              <option value="pieces">pieces</option>
+                            </select>
+                          </div>
+
+                          <div className="col-span-2">
+                            <input
+                              type="number"
+                              step="any"
+                              placeholder="Cost/unit"
+                              value={mat.costPerKg}
+                              onChange={e => {
+                                const val = Number(e.target.value) || 0;
+                                setCreateRawMaterials(prev =>
+                                  prev.map((m, i) =>
+                                    i === idx
+                                      ? {
+                                          ...m,
+                                          costPerKg: val,
+                                          lineCost: calculateRawMaterialLineCost(m.quantityRequired, m.unit, val),
+                                        }
+                                      : m
+                                  )
+                                );
+                              }}
+                              className="w-full bg-[#FAF7F2] border border-[#EAE2D8] rounded-lg px-2 py-1 text-xs font-mono text-right text-[#372921]"
+                            />
+                          </div>
+
+                          <div className="col-span-2 flex items-center justify-between pl-1">
+                            <span className="font-mono font-bold text-xs text-[#9E5430]">
+                              ₹{calculatedLine}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCreateRawMaterials(prev => prev.filter((_, i) => i !== idx));
+                              }}
+                              className="p-1 text-rose-500 hover:text-rose-700"
+                              title="Remove raw material"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {createRawMaterials.length === 0 && (
+                      <p className="text-center py-2 text-[#76695F] italic bg-[#F7F3EC] rounded-lg border border-dashed border-[#DED3C5]">
+                        No raw materials specified. Click &ldquo;Add Material&rdquo; above.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Labour Costing & Other Charges Inputs */}
+                <div className="grid grid-cols-3 gap-3 pt-1">
+                  <div>
+                    <label className="block text-xs font-semibold text-[#372921] mb-1">2. Labour Hours</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={createLabourHours}
+                      onChange={e => setCreateLabourHours(Number(e.target.value) || 0)}
+                      className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921]"
+                    />
+                    <span className="text-[10px] text-[#76695F] block mt-0.5">Weaving time</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-[#372921] mb-1">Labour Rate/Hr (₹)</label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={createLabourCostPerHour}
+                      onChange={e => setCreateLabourCostPerHour(Number(e.target.value) || 0)}
+                      className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921]"
+                    />
+                    <span className="text-[10px] text-[#76695F] block mt-0.5">₹{Math.round(createLabourHours * createLabourCostPerHour)} total labour</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-[#372921] mb-1">3. Other Charges (₹)</label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={createOtherCharges}
+                      onChange={e => setCreateOtherCharges(Number(e.target.value) || 0)}
+                      className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921]"
+                    />
+                    <span className="text-[10px] text-[#76695F] block mt-0.5">Finishing &amp; packing</span>
+                  </div>
+                </div>
+
+                {/* Auto-Recalculating Costing Summary Card */}
+                <div className="p-3.5 bg-gradient-to-br from-[#FAF7F2] to-[#F4EFE6] rounded-xl border border-[#DED3C5] space-y-2">
+                  <div className="flex items-center justify-between text-xs pb-1 border-b border-[#EAE2D8]">
+                    <span className="font-semibold text-[#76695F]">Costing Breakdown:</span>
+                    <span className="font-mono text-[#372921]">
+                      Raw Materials: <strong>₹{createCalculatedCosting.totalRawMaterialCost}</strong> + Labour: <strong>₹{createCalculatedCosting.labourCost}</strong> + Others: <strong>₹{createCalculatedCosting.otherCharges}</strong>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider text-[#76695F] font-semibold block">
+                        Calculated Unit Cost ({createCostingBasis === 'per_batch' ? `Batch of ${createProductionQuantity}` : 'Per Unit'})
+                      </span>
+                      <span className="font-serif text-xl font-bold text-[#9E5430]">
+                        ₹{createCalculatedCosting.unitCost.toLocaleString('en-IN')}
+                      </span>
+                      <span className="text-[10px] text-[#76695F] block">
+                        Total Production Cost: ₹{createCalculatedCosting.totalProductionCost.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewSkuData(prev => ({ ...prev, unitCost: createCalculatedCosting.unitCost }));
+                        showToast(`Applied calculated unit cost (₹${createCalculatedCosting.unitCost}) to SKU.`, 'info');
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-[#9E5430] hover:bg-[#874427] text-white text-xs font-semibold shadow-xs transition-colors flex items-center gap-1 cursor-pointer"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Sync to SKU Unit Cost</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* NOTES / REMARKS FIELD */}
+              <div className="pt-2">
+                <label className="block text-xs font-semibold text-[#372921] mb-1">
+                  Notes / Artisan Production Remarks
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Master loom tension calibrated for Czech crystal beads. Bihar artisan batch."
+                  value={createNotes}
+                  onChange={e => setCreateNotes(e.target.value)}
+                  className="w-full bg-white border border-[#DED3C5] rounded-xl p-2.5 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                />
+              </div>
+
               <div className="pt-4 border-t border-[#EAE2D8] flex items-center justify-between">
                 <button
                   type="button"
@@ -1731,7 +2182,7 @@ export default function InventoryView() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white font-semibold flex items-center gap-1.5"
+                  className="px-5 py-2 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white font-semibold flex items-center gap-1.5 shadow-sm"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Register Entity in Ledger</span>
@@ -1747,14 +2198,14 @@ export default function InventoryView() {
           ========================================================================= */}
       {editModalOpen && editingItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="relative w-full max-w-md bg-[#FCFAF6] rounded-2xl shadow-2xl border border-[#DED3C5] overflow-hidden flex flex-col">
+          <div className="relative w-full max-w-2xl bg-[#FCFAF6] rounded-2xl shadow-2xl border border-[#DED3C5] overflow-hidden flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 border-b border-[#EAE2D8] bg-[#F7F3EC] flex items-center justify-between">
               <div>
                 <span className="text-[10px] font-mono uppercase tracking-widest text-[#9E5430] font-bold">
-                  SKU Specifications
+                  SKU Specifications &amp; Craft Costing
                 </span>
                 <h3 className="font-serif text-lg font-bold text-[#372921] mt-0.5">
-                  Edit {editingItem.sku}
+                  Edit {editingItem.sku} — {editingItem.name}
                 </h3>
               </div>
               <button
@@ -1766,7 +2217,7 @@ export default function InventoryView() {
               </button>
             </div>
 
-            <form onSubmit={handleEditSubmit} className="p-6 space-y-4 text-xs">
+            <form onSubmit={handleEditSubmit} className="p-6 space-y-4 text-xs overflow-y-auto">
               <div>
                 <label className="block text-xs font-semibold text-[#372921] mb-1">Item Title</label>
                 <input
@@ -1860,6 +2311,295 @@ export default function InventoryView() {
                 />
               </div>
 
+              {/* RAW MATERIALS & CRAFT COSTING SECTION (EDIT) */}
+              <div className="pt-4 border-t border-[#EAE2D8] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calculator className="w-4 h-4 text-[#9E5430]" />
+                    <span className="font-serif font-bold text-sm text-[#372921]">Craft Production &amp; Unit Costing</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-[#F0E9DF] p-1 rounded-lg">
+                    <button
+                      type="button"
+                      onClick={() => setEditCostingBasis('per_unit')}
+                      className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors ${
+                        editCostingBasis === 'per_unit'
+                          ? 'bg-[#9E5430] text-white'
+                          : 'text-[#76695F] hover:text-[#372921]'
+                      }`}
+                    >
+                      Per-Unit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditCostingBasis('per_batch')}
+                      className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-colors ${
+                        editCostingBasis === 'per_batch'
+                          ? 'bg-[#9E5430] text-white'
+                          : 'text-[#76695F] hover:text-[#372921]'
+                      }`}
+                    >
+                      Per-Batch
+                    </button>
+                  </div>
+                </div>
+
+                {editCostingBasis === 'per_batch' && (
+                  <div className="p-2.5 bg-amber-50/70 rounded-xl border border-amber-200/60 flex items-center justify-between text-xs">
+                    <span className="font-medium text-amber-950">Batch Production Run Size (Finished Units):</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={editProductionQuantity}
+                      onChange={e => setEditProductionQuantity(Math.max(1, Number(e.target.value) || 1))}
+                      className="w-24 bg-white border border-amber-300 rounded-lg px-2.5 py-1 font-mono font-bold text-center text-[#372921]"
+                    />
+                  </div>
+                )}
+
+                {/* Raw Materials Requirements Table */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-xs text-[#372921]">1. Raw Material Requirements</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditRawMaterials(prev => [
+                          ...prev,
+                          {
+                            id: `rm-${Date.now()}`,
+                            materialName: '',
+                            quantityRequired: 0.1,
+                            unit: 'kg',
+                            costPerKg: 500,
+                            lineCost: 50,
+                          },
+                        ]);
+                      }}
+                      className="px-2.5 py-1 rounded-md bg-[#9E5430]/10 hover:bg-[#9E5430]/20 text-[#9E5430] text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Add Material</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {editRawMaterials.map((mat, idx) => {
+                      const calculatedLine = calculateRawMaterialLineCost(mat.quantityRequired, mat.unit, mat.costPerKg);
+                      return (
+                        <div
+                          key={mat.id}
+                          className="p-2.5 bg-white rounded-xl border border-[#DED3C5] grid grid-cols-12 gap-2 items-center"
+                        >
+                          <div className="col-span-4">
+                            <input
+                              type="text"
+                              placeholder="Material name"
+                              value={mat.materialName}
+                              onChange={e => {
+                                const val = e.target.value;
+                                setEditRawMaterials(prev =>
+                                  prev.map((m, i) => (i === idx ? { ...m, materialName: val } : m))
+                                );
+                              }}
+                              className="w-full bg-[#FAF7F2] border border-[#EAE2D8] rounded-lg px-2 py-1 text-xs text-[#372921]"
+                            />
+                          </div>
+
+                          <div className="col-span-2">
+                            <input
+                              type="number"
+                              step="any"
+                              placeholder="Qty"
+                              value={mat.quantityRequired}
+                              onChange={e => {
+                                const val = Number(e.target.value) || 0;
+                                setEditRawMaterials(prev =>
+                                  prev.map((m, i) =>
+                                    i === idx
+                                      ? {
+                                          ...m,
+                                          quantityRequired: val,
+                                          lineCost: calculateRawMaterialLineCost(val, m.unit, m.costPerKg),
+                                        }
+                                      : m
+                                  )
+                                );
+                              }}
+                              className="w-full bg-[#FAF7F2] border border-[#EAE2D8] rounded-lg px-2 py-1 text-xs font-mono text-center text-[#372921]"
+                            />
+                          </div>
+
+                          <div className="col-span-2">
+                            <select
+                              value={mat.unit}
+                              onChange={e => {
+                                const val = e.target.value as MaterialUnit;
+                                setEditRawMaterials(prev =>
+                                  prev.map((m, i) =>
+                                    i === idx
+                                      ? {
+                                          ...m,
+                                          unit: val,
+                                          lineCost: calculateRawMaterialLineCost(m.quantityRequired, val, m.costPerKg),
+                                        }
+                                      : m
+                                  )
+                                );
+                              }}
+                              className="w-full bg-[#FAF7F2] border border-[#EAE2D8] rounded-lg px-1.5 py-1 text-xs text-[#372921]"
+                            >
+                              <option value="kg">kg</option>
+                              <option value="grams">grams (g)</option>
+                              <option value="meters">meters</option>
+                              <option value="pieces">pieces</option>
+                            </select>
+                          </div>
+
+                          <div className="col-span-2">
+                            <input
+                              type="number"
+                              step="any"
+                              placeholder="Cost/unit"
+                              value={mat.costPerKg}
+                              onChange={e => {
+                                const val = Number(e.target.value) || 0;
+                                setEditRawMaterials(prev =>
+                                  prev.map((m, i) =>
+                                    i === idx
+                                      ? {
+                                          ...m,
+                                          costPerKg: val,
+                                          lineCost: calculateRawMaterialLineCost(m.quantityRequired, m.unit, val),
+                                        }
+                                      : m
+                                  )
+                                );
+                              }}
+                              className="w-full bg-[#FAF7F2] border border-[#EAE2D8] rounded-lg px-2 py-1 text-xs font-mono text-right text-[#372921]"
+                            />
+                          </div>
+
+                          <div className="col-span-2 flex items-center justify-between pl-1">
+                            <span className="font-mono font-bold text-xs text-[#9E5430]">
+                              ₹{calculatedLine}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditRawMaterials(prev => prev.filter((_, i) => i !== idx));
+                              }}
+                              className="p-1 text-rose-500 hover:text-rose-700"
+                              title="Remove raw material"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {editRawMaterials.length === 0 && (
+                      <p className="text-center py-2 text-[#76695F] italic bg-[#F7F3EC] rounded-lg border border-dashed border-[#DED3C5]">
+                        No raw materials specified. Click &ldquo;Add Material&rdquo; above.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Labour Costing & Other Charges Inputs */}
+                <div className="grid grid-cols-3 gap-3 pt-1">
+                  <div>
+                    <label className="block text-xs font-semibold text-[#372921] mb-1">2. Labour Hours</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={editLabourHours}
+                      onChange={e => setEditLabourHours(Number(e.target.value) || 0)}
+                      className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921]"
+                    />
+                    <span className="text-[10px] text-[#76695F] block mt-0.5">Weaving time</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-[#372921] mb-1">Labour Rate/Hr (₹)</label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={editLabourCostPerHour}
+                      onChange={e => setEditLabourCostPerHour(Number(e.target.value) || 0)}
+                      className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921]"
+                    />
+                    <span className="text-[10px] text-[#76695F] block mt-0.5">₹{Math.round(editLabourHours * editLabourCostPerHour)} total labour</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-[#372921] mb-1">3. Other Charges (₹)</label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={editOtherCharges}
+                      onChange={e => setEditOtherCharges(Number(e.target.value) || 0)}
+                      className="w-full bg-white border border-[#DED3C5] rounded-xl px-3 py-2 text-xs font-mono text-[#372921]"
+                    />
+                    <span className="text-[10px] text-[#76695F] block mt-0.5">Finishing &amp; packing</span>
+                  </div>
+                </div>
+
+                {/* Auto-Recalculating Costing Summary Card */}
+                <div className="p-3.5 bg-gradient-to-br from-[#FAF7F2] to-[#F4EFE6] rounded-xl border border-[#DED3C5] space-y-2">
+                  <div className="flex items-center justify-between text-xs pb-1 border-b border-[#EAE2D8]">
+                    <span className="font-semibold text-[#76695F]">Costing Breakdown:</span>
+                    <span className="font-mono text-[#372921]">
+                      Raw Materials: <strong>₹{editCalculatedCosting.totalRawMaterialCost}</strong> + Labour: <strong>₹{editCalculatedCosting.labourCost}</strong> + Others: <strong>₹{editCalculatedCosting.otherCharges}</strong>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider text-[#76695F] font-semibold block">
+                        Calculated Unit Cost ({editCostingBasis === 'per_batch' ? `Batch of ${editProductionQuantity}` : 'Per Unit'})
+                      </span>
+                      <span className="font-serif text-xl font-bold text-[#9E5430]">
+                        ₹{editCalculatedCosting.unitCost.toLocaleString('en-IN')}
+                      </span>
+                      <span className="text-[10px] text-[#76695F] block">
+                        Total Production Cost: ₹{editCalculatedCosting.totalProductionCost.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingItem(prev => (prev ? { ...prev, unitCost: editCalculatedCosting.unitCost } : null));
+                        showToast(`Applied calculated unit cost (₹${editCalculatedCosting.unitCost}) to SKU.`, 'info');
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-[#9E5430] hover:bg-[#874427] text-white text-xs font-semibold shadow-xs transition-colors flex items-center gap-1 cursor-pointer"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Sync to SKU Unit Cost</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* NOTES / REMARKS FIELD (EDIT) */}
+              <div className="pt-2">
+                <label className="block text-xs font-semibold text-[#372921] mb-1">
+                  Notes / Artisan Production Remarks
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Master loom tension calibrated for Czech crystal beads. Bihar artisan batch."
+                  value={editNotes}
+                  onChange={e => setEditNotes(e.target.value)}
+                  className="w-full bg-white border border-[#DED3C5] rounded-xl p-2.5 text-xs text-[#372921] focus:outline-none focus:border-[#9E5430]"
+                />
+              </div>
+
               <div className="pt-4 border-t border-[#EAE2D8] flex items-center justify-between">
                 <button
                   type="button"
@@ -1876,6 +2616,194 @@ export default function InventoryView() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL 6: ITEM DETAILS & CRAFT COSTING MODAL
+          ========================================================================= */}
+      {detailModalOpen && selectedDetailItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="relative w-full max-w-2xl bg-[#FCFAF6] rounded-3xl shadow-2xl border border-[#DED3C5] overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 border-b border-[#EAE2D8] bg-[#F7F3EC] flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-[#9E5430] font-bold">
+                    Master SKU Dossier
+                  </span>
+                  <ProvenanceBadge provenance={(selectedDetailItem as any).provenance} isDemo={(selectedDetailItem as any).isDemo} size="xs" />
+                </div>
+                <h3 className="font-serif text-xl font-bold text-[#372921] mt-0.5">
+                  {selectedDetailItem.name}
+                </h3>
+                <span className="font-mono text-xs text-[#76695F]">{selectedDetailItem.sku} · {selectedDetailItem.category}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDetailModalOpen(false)}
+                className="p-1.5 rounded-full hover:bg-[#EAE2D8] text-[#76695F]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6 text-xs overflow-y-auto">
+              {/* Top Summary Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3 bg-white rounded-xl border border-[#DED3C5]">
+                  <span className="text-[10px] text-[#76695F] uppercase font-semibold block">On-Hand Stock</span>
+                  <span className="font-mono text-lg font-bold text-[#372921]">
+                    {selectedDetailItem.onHand} <span className="text-xs font-normal text-[#76695F]">{selectedDetailItem.unit}</span>
+                  </span>
+                  <span className="text-[10px] text-emerald-700 block font-medium">Available: {selectedDetailItem.available}</span>
+                </div>
+
+                <div className="p-3 bg-white rounded-xl border border-[#DED3C5]">
+                  <span className="text-[10px] text-[#76695F] uppercase font-semibold block">Unit Cost (COGS)</span>
+                  <span className="font-mono text-lg font-bold text-[#9E5430]">
+                    ₹{selectedDetailItem.unitCost.toLocaleString('en-IN')}
+                  </span>
+                  <span className="text-[10px] text-[#76695F] block">Valuation: ₹{(selectedDetailItem.stockValue || selectedDetailItem.onHand * selectedDetailItem.unitCost).toLocaleString('en-IN')}</span>
+                </div>
+
+                <div className="p-3 bg-white rounded-xl border border-[#DED3C5]">
+                  <span className="text-[10px] text-[#76695F] uppercase font-semibold block">Selling Price</span>
+                  <span className="font-mono text-lg font-bold text-[#372921]">
+                    {selectedDetailItem.retailPrice ? `₹${selectedDetailItem.retailPrice.toLocaleString('en-IN')}` : '—'}
+                  </span>
+                  <span className="text-[10px] text-emerald-700 block font-medium">Margin: {selectedDetailItem.grossMarginPct || 0}%</span>
+                </div>
+
+                <div className="p-3 bg-white rounded-xl border border-[#DED3C5]">
+                  <span className="text-[10px] text-[#76695F] uppercase font-semibold block">Tax &amp; HSN</span>
+                  <span className="font-mono text-sm font-bold text-[#372921] block mt-0.5">
+                    {selectedDetailItem.hsnCode || '7117.90'}
+                  </span>
+                  <span className="text-[10px] text-[#76695F] block">{selectedDetailItem.taxRate || 3}% GST</span>
+                </div>
+              </div>
+
+              {/* Craft Production Costing Breakdown */}
+              <div className="p-4 bg-white rounded-2xl border border-[#DED3C5] space-y-3">
+                <div className="flex items-center justify-between border-b border-[#EAE2D8] pb-2">
+                  <div className="flex items-center gap-2">
+                    <Calculator className="w-4 h-4 text-[#9E5430]" />
+                    <span className="font-serif font-bold text-sm text-[#372921]">Craft Production &amp; Unit Costing Breakdown</span>
+                  </div>
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-semibold font-mono">
+                    Basis: {selectedDetailItem.costingBasis === 'per_batch' ? `Batch of ${selectedDetailItem.productionQuantity || selectedDetailItem.enhancedCosting?.productionQuantity || 1} units` : 'Per-Unit Finished Good'}
+                  </span>
+                </div>
+
+                {/* Raw Materials Table */}
+                <div className="space-y-1.5">
+                  <span className="font-semibold text-xs text-[#76695F]">Raw Material Bill of Materials (BOM):</span>
+                  {((selectedDetailItem.rawMaterials && selectedDetailItem.rawMaterials.length > 0) ||
+                    (selectedDetailItem.enhancedCosting?.rawMaterials && selectedDetailItem.enhancedCosting.rawMaterials.length > 0)) ? (
+                    <div className="border border-[#EAE2D8] rounded-xl overflow-hidden">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-[#F7F3EC] text-[#76695F] text-[10px] uppercase font-semibold border-b border-[#EAE2D8]">
+                          <tr>
+                            <th className="py-2 px-3">Material</th>
+                            <th className="py-2 px-3 text-center">Quantity</th>
+                            <th className="py-2 px-3 text-center">Unit</th>
+                            <th className="py-2 px-3 text-right">Rate (₹)</th>
+                            <th className="py-2 px-3 text-right font-bold">Line Cost</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#EAE2D8]">
+                          {(selectedDetailItem.rawMaterials || selectedDetailItem.enhancedCosting?.rawMaterials || []).map((m, idx) => (
+                            <tr key={idx} className="hover:bg-[#FFFCF7]">
+                              <td className="py-2 px-3 font-medium text-[#372921]">{m.materialName}</td>
+                              <td className="py-2 px-3 text-center font-mono">{m.quantityRequired}</td>
+                              <td className="py-2 px-3 text-center font-mono text-[#76695F]">{m.unit}</td>
+                              <td className="py-2 px-3 text-right font-mono">₹{m.costPerKg}</td>
+                              <td className="py-2 px-3 text-right font-mono font-bold text-[#9E5430]">₹{m.lineCost}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : selectedDetailItem.costing?.enabled ? (
+                    <div className="p-3 bg-[#F7F3EC] rounded-xl text-xs space-y-1">
+                      <div>Legacy Formula: <strong>{selectedDetailItem.costing.beadsUsed || 'Handcrafted Beads'}</strong></div>
+                      <div>Weight: {selectedDetailItem.costing.beadKg} kg @ ₹{selectedDetailItem.costing.beadCostKg}/kg = ₹{selectedDetailItem.costing.beadKg * selectedDetailItem.costing.beadCostKg}</div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-[#76695F] italic p-2 bg-[#F7F3EC] rounded-lg border border-dashed border-[#DED3C5]">
+                      No discrete raw material breakdown registered for this SKU.
+                    </p>
+                  )}
+                </div>
+
+                {/* Labour & Other Charges Summary */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-2 border-t border-[#EAE2D8]">
+                  <div className="p-2.5 bg-[#FAF7F2] rounded-xl border border-[#EAE2D8]">
+                    <span className="text-[10px] text-[#76695F] block font-semibold">Labour Cost</span>
+                    <span className="font-mono text-xs font-bold text-[#372921]">
+                      {selectedDetailItem.labourHours ?? selectedDetailItem.enhancedCosting?.labourHours ?? selectedDetailItem.costing?.laborHours ?? 0} hrs @ ₹{selectedDetailItem.labourCostPerHour ?? selectedDetailItem.enhancedCosting?.labourCostPerHour ?? selectedDetailItem.costing?.laborRatePerHour ?? 120}/hr
+                    </span>
+                    <span className="text-[11px] font-mono font-bold text-[#9E5430] block mt-0.5">
+                      = ₹{selectedDetailItem.labourCost ?? selectedDetailItem.enhancedCosting?.labourCost ?? (Number(selectedDetailItem.costing?.laborHours || 0) * Number(selectedDetailItem.costing?.laborRatePerHour || 120))}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 bg-[#FAF7F2] rounded-xl border border-[#EAE2D8]">
+                    <span className="text-[10px] text-[#76695F] block font-semibold">Other Charges</span>
+                    <span className="font-mono text-xs font-bold text-[#372921]">
+                      Finishing, packaging
+                    </span>
+                    <span className="text-[11px] font-mono font-bold text-[#9E5430] block mt-0.5">
+                      = ₹{selectedDetailItem.otherCharges ?? selectedDetailItem.enhancedCosting?.otherCharges ?? selectedDetailItem.costing?.otherMaterialCost ?? 0}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 bg-[#F0E9DF] rounded-xl border border-[#DED3C5] col-span-2 sm:col-span-1">
+                    <span className="text-[10px] text-[#76695F] block font-semibold uppercase">Total Unit Cost</span>
+                    <span className="font-serif text-lg font-bold text-[#9E5430]">
+                      ₹{selectedDetailItem.unitCost.toLocaleString('en-IN')}
+                    </span>
+                    <span className="text-[10px] text-[#76695F] block">
+                      Total Run: ₹{(selectedDetailItem.totalProductionCost ?? selectedDetailItem.enhancedCosting?.totalProductionCost ?? selectedDetailItem.unitCost).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes / Remarks Card */}
+              <div className="p-4 bg-white rounded-2xl border border-[#DED3C5] space-y-1.5">
+                <span className="font-semibold text-xs text-[#372921] flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-[#9E5430]" />
+                  <span>Production Notes &amp; Remarks</span>
+                </span>
+                <p className="text-xs text-[#76695F] bg-[#FAF7F2] p-3 rounded-xl border border-[#EAE2D8] whitespace-pre-wrap leading-relaxed">
+                  {selectedDetailItem.notes || selectedDetailItem.enhancedCosting?.notes || selectedDetailItem.costing?.notes || 'No production notes or remarks logged for this item.'}
+                </p>
+              </div>
+
+              <div className="pt-2 flex items-center justify-between border-t border-[#EAE2D8]">
+                <button
+                  type="button"
+                  onClick={() => setDetailModalOpen(false)}
+                  className="px-4 py-2 rounded-full border border-[#DED3C5] text-[#76695F] hover:bg-[#F0E9DF]"
+                >
+                  Close Dossier
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const itemToEdit = selectedDetailItem;
+                    setDetailModalOpen(false);
+                    handleOpenEdit(itemToEdit);
+                  }}
+                  className="px-5 py-2 rounded-full bg-[#9E5430] hover:bg-[#874427] text-white font-semibold flex items-center gap-1.5 shadow-sm"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  <span>Edit Specifications &amp; Costing</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

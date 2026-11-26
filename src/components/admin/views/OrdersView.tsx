@@ -27,6 +27,7 @@ import {
 import { useAdminStore } from '@/data/AdminStoreContext';
 import { AdminOrder } from '@/data/adminTypes';
 import { PRODUCTS } from '@/data/catalogue';
+import { KALAJAY_BUSINESS_PROFILE } from '@/lib/businessProfile';
 import { ProvenanceBadge } from '@/components/admin/ProvenanceBadge';
 
 export default function OrdersView() {
@@ -530,7 +531,7 @@ export default function OrdersView() {
                 GST Tax Invoices &amp; Commercial Receipts
               </h2>
               <p className="text-xs text-[#76695F] mt-0.5">
-                Compliant commercial invoices for GSTIN: 27AAECK1294F1Z3 with handicraft HSN tax classifications.
+                Compliant commercial invoices for GSTIN: {KALAJAY_BUSINESS_PROFILE.gstin} with handicraft HSN tax classifications.
               </p>
             </div>
 

@@ -22,20 +22,21 @@ import {
 } from 'lucide-react';
 import { useAdminStore } from '@/data/AdminStoreContext';
 import { getFirestoreStoreSettings, saveFirestoreStoreSettings } from '@/lib/firestore';
+import { KALAJAY_BUSINESS_PROFILE, validateGstin } from '@/lib/businessProfile';
 
 export default function SettingsStoreView() {
-  const { logAction } = useAdminStore();
+  const { logAction, can } = useAdminStore();
   const [activeTab, setActiveTab] = useState<'identity' | 'seams' | 'security'>('seams');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Store identity form state
-  const [storeName, setStoreName] = useState('Kalajay Handcrafted Luxuries');
-  const [legalEntity, setLegalEntity] = useState('Kalajay Creations LLP');
-  const [gstin, setGstin] = useState('27AAECK1294F1Z3');
-  const [supportEmail, setSupportEmail] = useState('concierge@kalajay.in');
-  const [supportPhone, setSupportPhone] = useState('+91 97405 40847');
-  const [mumbaiAddress, setMumbaiAddress] = useState('Sea Face Studios, Worli, Mumbai, Maharashtra 400018');
-  const [biharHubAddress, setBiharHubAddress] = useState('Craft House Atelier, Loom Cluster 4, Madhubani, Bihar 847211');
+  const [storeName, setStoreName] = useState(KALAJAY_BUSINESS_PROFILE.tradeName);
+  const [legalEntity, setLegalEntity] = useState(KALAJAY_BUSINESS_PROFILE.legalEntityName);
+  const [gstin, setGstin] = useState(KALAJAY_BUSINESS_PROFILE.gstin);
+  const [supportEmail, setSupportEmail] = useState(KALAJAY_BUSINESS_PROFILE.contactEmail);
+  const [supportPhone, setSupportPhone] = useState(KALAJAY_BUSINESS_PROFILE.supportPhone);
+  const [mumbaiAddress, setMumbaiAddress] = useState(KALAJAY_BUSINESS_PROFILE.mumbaiStudioAddress);
+  const [biharHubAddress, setBiharHubAddress] = useState(KALAJAY_BUSINESS_PROFILE.atelierHubAddress);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -65,12 +66,21 @@ export default function SettingsStoreView() {
 
   const handleSaveIdentity = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (can && !can('settings.store', 'edit')) {
+      showToast('Unauthorized: Modifying legal identity & GSTIN requires settings.store privileges.');
+      return;
+    }
+    const cleanGstin = gstin.trim().toUpperCase();
+    if (!validateGstin(cleanGstin)) {
+      showToast('Invalid GSTIN format. Expected format: 27AAAAA0000A1Z0 (15 alphanumeric characters).');
+      return;
+    }
     setIsSaving(true);
     try {
       await saveFirestoreStoreSettings({
         storeName,
         legalEntity,
-        gstin,
+        gstin: cleanGstin,
         supportEmail,
         supportPhone,
         mumbaiAddress,
@@ -80,7 +90,7 @@ export default function SettingsStoreView() {
         dispatchHours: 48,
         returnDays: 7,
       });
-      logAction('UPDATE_STORE_IDENTITY', 'settings', 'Updated registered store identity and studio addresses in Firestore');
+      logAction('UPDATE_STORE_IDENTITY', 'settings', `Updated registered store identity and GSTIN (${cleanGstin}) in Firestore`);
       showToast('Store identity and registered addresses saved successfully to Firestore');
     } catch (err) {
       showToast('Failed to persist store identity to Firestore');

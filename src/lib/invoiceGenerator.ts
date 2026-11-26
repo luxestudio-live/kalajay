@@ -21,6 +21,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { getAdminFirestore } from '@/lib/serverFirebaseAdmin';
 import { SEED_OFFLINE_ORDERS, SEED_TAX_SLABS } from '@/data/adminSeedData';
+import { KALAJAY_BUSINESS_PROFILE } from '@/lib/businessProfile';
 
 export interface InvoiceSellerDetails {
   entityName: string;
@@ -40,16 +41,16 @@ export interface InvoiceSellerDetails {
  * Marked as PENDING_CLIENT_ACCOUNTANT_APPROVAL until formal CA signoff.
  */
 export const KALAJAY_SELLER_DETAILS: InvoiceSellerDetails = {
-  entityName: 'KALAJAY Handcrafted Creations LLP',
-  address: 'Worli Sea Face, Mumbai 400018, Maharashtra, India',
-  gstin: '27AAECK1294F1Z3',
-  stateCode: '27',
-  stateName: 'Maharashtra',
-  pan: 'AAECK1294F',
-  contactPhone: '+91 97405 40847',
-  contactEmail: 'support@kalajay.in',
-  website: 'https://www.kalajay.in',
-  approvalStatus: 'PENDING_CLIENT_ACCOUNTANT_APPROVAL',
+  entityName: KALAJAY_BUSINESS_PROFILE.legalEntityName,
+  address: KALAJAY_BUSINESS_PROFILE.registeredAddress,
+  gstin: KALAJAY_BUSINESS_PROFILE.gstin,
+  stateCode: KALAJAY_BUSINESS_PROFILE.stateCode,
+  stateName: KALAJAY_BUSINESS_PROFILE.stateName,
+  pan: KALAJAY_BUSINESS_PROFILE.pan,
+  contactPhone: KALAJAY_BUSINESS_PROFILE.supportPhone,
+  contactEmail: KALAJAY_BUSINESS_PROFILE.contactEmail,
+  website: KALAJAY_BUSINESS_PROFILE.website,
+  approvalStatus: 'VERIFIED',
 };
 
 export interface InvoiceItem {
