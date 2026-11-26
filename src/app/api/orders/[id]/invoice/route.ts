@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { verifyFirebaseIdToken, verifyStaffPermission } from '@/lib/serverRbac';
+import { verifyTrackingSessionToken } from '@/lib/trackingSession';
 import {
   fetchOrderAuthoritatively,
   prepareInvoiceData,
@@ -9,6 +11,14 @@ import {
 } from '@/lib/invoiceGenerator';
 
 export const dynamic = 'force-dynamic';
+
+function safeTimingEqual(a: string, b: string): boolean {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
 
 export async function GET(
   request: Request,
@@ -39,30 +49,47 @@ export async function GET(
     let isAuthorized = false;
     let authRole = 'anonymous';
 
-    // A. Staff / Administrator Verification (Google Identity Platform RBAC)
+    // A. Extract Bearer Token (Header, URL Query parameter, or Cookie)
     const authHeader = request.headers.get('authorization') || '';
+    let bearerToken = '';
     if (authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7).trim();
+      bearerToken = authHeader.substring(7).trim();
+    }
+    if (!bearerToken) {
+      const qToken = searchParams.get('auth') || searchParams.get('token') || searchParams.get('idToken') || searchParams.get('staffToken') || '';
+      if (qToken && qToken.split('.').length === 3) {
+        bearerToken = qToken.trim();
+      }
+    }
+    if (!bearerToken) {
+      const cookieHeader = request.headers.get('cookie') || '';
+      const match = cookieHeader.match(/(?:kj_staff_token|kalajay_staff_token|kalajay_admin_token)=([^;]+)/);
+      if (match && match[1]) {
+        bearerToken = decodeURIComponent(match[1].trim());
+      }
+    }
 
+    // A1. Staff / Administrator Verification (Google Identity Platform RBAC)
+    if (bearerToken) {
       const staffCheck = await verifyStaffPermission(request, {}, 'orders.invoices', 'view');
       if (staffCheck.authorized) {
         isAuthorized = true;
         authRole = 'staff';
       } else {
-        const staffOrdersCheck = await verifyStaffPermission(request, {}, 'orders.orders', 'view');
+        const staffOrdersCheck = await verifyStaffPermission(request, {}, 'orders.all', 'view');
         if (staffOrdersCheck.authorized) {
           isAuthorized = true;
           authRole = 'staff';
         } else {
-          // Check if token belongs to the patron who placed the order
-          const customerCheck = await verifyFirebaseIdToken(token);
+          // A2. Check if token belongs to the patron who placed the order
+          const customerCheck = await verifyFirebaseIdToken(bearerToken);
           if (customerCheck.valid) {
-            const uidMatch = customerCheck.uid && order.userId && customerCheck.uid === order.userId;
-            const emailMatch =
+            const uidMatch = Boolean(customerCheck.uid && order.userId && customerCheck.uid === order.userId);
+            const emailMatch = Boolean(
               customerCheck.email &&
-              customerCheck.emailVerified &&
               order.customerEmail &&
-              customerCheck.email.toLowerCase() === order.customerEmail.toLowerCase();
+              customerCheck.email.toLowerCase().trim() === order.customerEmail.toLowerCase().trim()
+            );
 
             if (uidMatch || emailMatch) {
               isAuthorized = true;
@@ -73,23 +100,53 @@ export async function GET(
       }
     }
 
-    // B. Expiring Cryptographic Guest Token Verification
+    // B. Safe Tracking Session Cookie (kj_track_session from order tracking flow)
+    if (!isAuthorized) {
+      const cookieHeader = request.headers.get('cookie') || '';
+      const matchSession = cookieHeader.match(/kj_track_session=([^;]+)/);
+      const sessionToken = matchSession
+        ? matchSession[1].trim()
+        : (request.headers.get('x-tracking-session') || searchParams.get('sessionToken') || '').trim();
+
+      if (sessionToken && verifyTrackingSessionToken(sessionToken, orderId)) {
+        isAuthorized = true;
+        authRole = 'tracking_session';
+      }
+    }
+
+    // C. Expiring Cryptographic Guest Token / Direct Access Key Verification
     const suppliedToken = (
       searchParams.get('token') ||
       searchParams.get('key') ||
+      searchParams.get('guestToken') ||
       request.headers.get('x-order-token') ||
       ''
     ).trim();
 
-    if (!isAuthorized && suppliedToken && order.customerEmail) {
-      const tokenRes = verifyGuestInvoiceToken(suppliedToken, orderId, order.customerEmail, order.createdAt);
-      if (tokenRes.authorized) {
-        isAuthorized = true;
-        authRole = 'guest_token';
+    if (!isAuthorized && suppliedToken) {
+      // 1. Expiring / Legacy HMAC guest invoice token
+      if (order.customerEmail) {
+        const tokenRes = verifyGuestInvoiceToken(suppliedToken, orderId, order.customerEmail, order.createdAt);
+        if (tokenRes.authorized) {
+          isAuthorized = true;
+          authRole = 'guest_token';
+        }
+      }
+
+      // 2. Direct SHA-256 Guest Access Token validation
+      if (!isAuthorized) {
+        const suppliedHash = crypto.createHash('sha256').update(suppliedToken).digest('hex');
+        if (order.guestAccessTokenHash && safeTimingEqual(order.guestAccessTokenHash, suppliedHash)) {
+          isAuthorized = true;
+          authRole = 'guest_token';
+        } else if (order.guestAccessToken && safeTimingEqual(suppliedToken, order.guestAccessToken)) {
+          isAuthorized = true;
+          authRole = 'guest_token';
+        }
       }
     }
 
-    // C. Static Showroom Showcase Records (KJ-8924, KJ-7710, KJ-6502)
+    // D. Static Showroom Showcase Records (KJ-8924, KJ-7710, KJ-6502)
     if (!isAuthorized && order.isStaticShowroomDemo && ['KJ-8924', 'KJ-7710', 'KJ-6502'].includes(orderId)) {
       isAuthorized = true;
       authRole = 'showroom_demo';

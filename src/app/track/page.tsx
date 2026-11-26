@@ -15,7 +15,8 @@ import {
   ArrowRight,
   ShieldCheck,
   MapPin,
-  ExternalLink
+  ExternalLink,
+  Download,
 } from 'lucide-react';
 import { BRAND_CONFIG } from '@/data/catalogue';
 import { getFirestoreOrderById } from '@/lib/firestore';
@@ -682,22 +683,39 @@ function TrackOrderContent() {
                   )}
                 </div>
               ) : (
-                <div className="divide-y divide-border-subtle/70">
-                  {activeOrder.items.map((item, idx) => (
-                    <div key={idx} className="py-3 flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-sm bg-canvas-subtle border border-border-subtle overflow-hidden shrink-0">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-border-subtle/50">
+                    <span className="text-[11px] text-ink-muted uppercase tracking-wider font-semibold">Verified Parcel Contents</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (typeof window !== 'undefined') {
+                          window.open(`/api/orders/${activeOrder.orderId}/invoice?download=1`, '_blank');
+                        }
+                      }}
+                      className="inline-flex items-center gap-1.5 text-xs text-gold-dark hover:text-ink font-semibold cursor-pointer transition-colors"
+                    >
+                      <Download className="w-3.5 h-3.5 text-gold-dark" />
+                      <span>Download Tax Invoice</span>
+                    </button>
+                  </div>
+                  <div className="divide-y divide-border-subtle/70">
+                    {activeOrder.items.map((item, idx) => (
+                      <div key={idx} className="py-3 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-sm bg-canvas-subtle border border-border-subtle overflow-hidden shrink-0">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                          </div>
+                          <div>
+                            <span className="font-serif text-sm text-plum block font-normal">{item.name}</span>
+                            <span className="text-[11px] text-ink-light font-light">{item.variant}</span>
+                          </div>
                         </div>
-                        <div>
-                          <span className="font-serif text-sm text-plum block font-normal">{item.name}</span>
-                          <span className="text-[11px] text-ink-light font-light">{item.variant}</span>
-                        </div>
+                        <span className="font-medium text-plum font-mono">₹{item.price.toLocaleString('en-IN')}</span>
                       </div>
-                      <span className="font-medium text-plum font-mono">₹{item.price.toLocaleString('en-IN')}</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

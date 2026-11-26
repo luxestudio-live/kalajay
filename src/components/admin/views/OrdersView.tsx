@@ -583,7 +583,13 @@ export default function OrdersView() {
                           type="button"
                           onClick={() => {
                             if (typeof window !== 'undefined') {
-                              window.open(`/api/orders/${o.id}/invoice?print=1`, '_blank');
+                              const staffToken =
+                                sessionStorage.getItem('kalajay_admin_token') ||
+                                sessionStorage.getItem('kalajay_staff_token') ||
+                                localStorage.getItem('kalajay_staff_token') ||
+                                '';
+                              const authParam = staffToken ? `&auth=${encodeURIComponent(staffToken)}` : '';
+                              window.open(`/api/orders/${o.id}/invoice?print=1${authParam}`, '_blank');
                             }
                           }}
                           className="px-2.5 py-1 rounded bg-white hover:bg-[#F7F3EC] border border-[#DED3C5] text-[#372921] text-xs font-medium inline-flex items-center gap-1 cursor-pointer"

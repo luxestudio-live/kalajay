@@ -858,6 +858,25 @@ export async function verifyStaffPermission(
     bearerToken = authHeader.slice(7).trim();
   }
 
+  // Fallback for secure browser navigations (e.g. window.open invoice downloads)
+  if (!bearerToken) {
+    try {
+      const url = new URL(request.url, 'http://localhost');
+      const qToken = url.searchParams.get('auth') || url.searchParams.get('staffToken') || url.searchParams.get('token') || '';
+      if (qToken && qToken.split('.').length === 3) {
+        bearerToken = qToken.trim();
+      }
+    } catch {}
+  }
+
+  if (!bearerToken) {
+    const cookieHeader = request.headers.get('cookie') || '';
+    const match = cookieHeader.match(/(?:kj_staff_token|kalajay_staff_token|kalajay_admin_token)=([^;]+)/);
+    if (match && match[1]) {
+      bearerToken = decodeURIComponent(match[1].trim());
+    }
+  }
+
   if (!bearerToken) {
     return {
       authorized: false,

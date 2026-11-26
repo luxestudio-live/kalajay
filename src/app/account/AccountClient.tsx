@@ -1041,9 +1041,16 @@ export default function AccountClient() {
 
                           <button
                             type="button"
-                            onClick={() => {
+                            onClick={async () => {
                               if (typeof window !== 'undefined') {
-                                window.open(`/api/orders/${order.id}/invoice?download=1`, '_blank');
+                                let authParam = '';
+                                try {
+                                  const idToken = await getIdToken();
+                                  if (idToken) {
+                                    authParam = `&auth=${encodeURIComponent(idToken)}`;
+                                  }
+                                } catch {}
+                                window.open(`/api/orders/${order.id}/invoice?download=1${authParam}`, '_blank');
                               }
                             }}
                             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-canvas border border-border-medium hover:border-gold text-ink font-semibold transition-colors cursor-pointer self-start sm:self-auto shadow-2xs"
