@@ -48,17 +48,43 @@ try {
 
 // Client-only Google Analytics & Emulator initialization
 if (typeof window !== 'undefined') {
-  const useEmulator = process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true';
-  const useAuthEmulator = process.env.NEXT_PUBLIC_USE_AUTH_EMULATOR === 'true';
-  if (useEmulator && !(window as any).__EMULATORS_CONNECTED__) {
+  // STRICT SECURITY GUARD: Never connect to loopback/local emulators from public domains or production builds.
+  // Private Network Access (PNA) in Chrome triggers "wants to Access other apps and services on this device"
+  // if a public site attempts to reach 127.0.0.1 or localhost.
+  const isLocalHost =
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname === '[::1]';
+
+  const isDevelopment = process.env.NODE_ENV !== 'production';
+
+  const useAuthEmulator =
+    isLocalHost &&
+    isDevelopment &&
+    process.env.NEXT_PUBLIC_USE_AUTH_EMULATOR === 'true';
+
+  const useFirestoreEmulator =
+    isLocalHost &&
+    isDevelopment &&
+    process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true';
+
+  // 1. Auth Emulator (operates independently)
+  if (useAuthEmulator && !(window as any).__AUTH_EMULATOR_CONNECTED__) {
     try {
-      if (useAuthEmulator && auth && (auth as any).app) {
+      if (auth && (auth as any).app) {
         connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+        (window as any).__AUTH_EMULATOR_CONNECTED__ = true;
       }
+    } catch {}
+  }
+
+  // 2. Firestore Emulator (operates independently)
+  if (useFirestoreEmulator && !(window as any).__FIRESTORE_EMULATOR_CONNECTED__) {
+    try {
       if (db && (db as any).app) {
         connectFirestoreEmulator(db, '127.0.0.1', 8088);
+        (window as any).__FIRESTORE_EMULATOR_CONNECTED__ = true;
       }
-      (window as any).__EMULATORS_CONNECTED__ = true;
     } catch {}
   }
 

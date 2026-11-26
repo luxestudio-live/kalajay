@@ -8,24 +8,64 @@ export const dynamic = 'force-dynamic';
 // Rate limiting in-memory store for exchange attempts (per IP)
 const exchangeRateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
-function checkRateLimit(ip: string): boolean {
+function hashIp(rawIp: string): string {
+  const salt = process.env.RATELIMIT_SALT || 'kalajay_dpdp_salt_2026';
+  return crypto.createHash('sha256').update(rawIp + salt).digest('hex').substring(0, 32);
+}
+
+function timingSafeEqualString(a: string, b: string): boolean {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const bufA = crypto.createHash('sha256').update(a).digest();
+  const bufB = crypto.createHash('sha256').update(b).digest();
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+async function checkRateLimit(ip: string, adminDb: any): Promise<boolean> {
   const now = Date.now();
-  // Bound memory store against memory growth
-  if (exchangeRateLimitStore.size > 1000) {
-    exchangeRateLimitStore.forEach((val, key) => {
-      if (val.resetAt < now) exchangeRateLimitStore.delete(key);
-    });
-  }
-  const record = exchangeRateLimitStore.get(ip);
-  if (!record || record.resetAt < now) {
-    exchangeRateLimitStore.set(ip, { count: 1, resetAt: now + 60 * 1000 });
-    return true;
-  }
-  if (record.count >= 10) {
+  const ipKey = hashIp(ip);
+
+  // L1 In-memory fast path
+  const record = exchangeRateLimitStore.get(ipKey);
+  if (record && record.resetAt > now && record.count >= 10) {
     return false;
   }
+
+  // L2 Distributed Firestore transaction check (durable across serverless instances)
+  if (adminDb) {
+    try {
+      const ref = adminDb.collection('tracking_ratelimits').doc(`exch_${ipKey}`);
+      const allowed = await adminDb.runTransaction(async (t: any) => {
+        const snap = await t.get(ref);
+        if (!snap.exists) {
+          t.set(ref, { count: 1, resetAt: now + 60 * 1000 });
+          return true;
+        }
+        const data = snap.data() || {};
+        if (data.resetAt < now) {
+          t.set(ref, { count: 1, resetAt: now + 60 * 1000 });
+          return true;
+        }
+        if (data.count >= 10) {
+          return false;
+        }
+        t.update(ref, { count: (data.count || 0) + 1 });
+        return true;
+      });
+
+      if (!allowed) {
+        exchangeRateLimitStore.set(ipKey, { count: 10, resetAt: now + 60 * 1000 });
+        return false;
+      }
+    } catch {}
+  }
+
+  // Fallback to L1 in-memory tracking
+  if (!record || record.resetAt < now) {
+    exchangeRateLimitStore.set(ipKey, { count: 1, resetAt: now + 60 * 1000 });
+    return true;
+  }
   record.count += 1;
-  return true;
+  return record.count <= 10;
 }
 
 /**
@@ -34,8 +74,10 @@ function checkRateLimit(ip: string): boolean {
  */
 export async function POST(request: Request) {
   try {
+    const adminDb = getAdminFirestore();
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
-    if (!checkRateLimit(ip)) {
+    const isAllowed = await checkRateLimit(ip, adminDb);
+    if (!isAllowed) {
       return NextResponse.json(
         { success: false, error: 'Too many tracking exchange attempts. Please try again in one minute.' },
         { status: 429, headers: { 'Cache-Control': 'no-store, private' } }
@@ -53,7 +95,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const adminDb = getAdminFirestore();
     if (!adminDb) {
       return NextResponse.json(
         { success: false, error: 'Database service unavailable.' },
@@ -74,26 +115,28 @@ export async function POST(request: Request) {
 
     let isValidToken = false;
 
-    // Check SHA-256 hash stored in Firestore (Phase 4.1)
-    if (orderData.guestAccessTokenHash && orderData.guestAccessTokenHash === suppliedHash) {
+    // Check SHA-256 hash stored in Firestore (Phase 4.1) using timingSafeEqual
+    if (orderData.guestAccessTokenHash && timingSafeEqualString(orderData.guestAccessTokenHash, suppliedHash)) {
       isValidToken = true;
     }
 
-    // Backwards compatibility with legacy plaintext tokens
-    if (!isValidToken && orderData.guestAccessToken && orderData.guestAccessToken === token) {
+    // Backwards compatibility with legacy plaintext tokens using timingSafeEqual
+    if (!isValidToken && orderData.guestAccessToken && timingSafeEqualString(orderData.guestAccessToken, token)) {
       isValidToken = true;
     }
 
-    // Backwards compatibility with legacy HMAC tokens
+    // Backwards compatibility with legacy HMAC tokens using timingSafeEqual
     if (!isValidToken && orderData.customerEmail) {
-      const trackingSecret = process.env.ORDER_TRACKING_SECRET || process.env.NEXTAUTH_SECRET || 'kalajay_guest_order_tracking_salt_2026';
-      const legacyHmac = crypto
-        .createHmac('sha256', trackingSecret)
-        .update(`${orderId}:${orderData.customerEmail.toLowerCase().trim()}`)
-        .digest('hex')
-        .substring(0, 24);
-      if (token === legacyHmac) {
-        isValidToken = true;
+      const trackingSecret = process.env.ORDER_TRACKING_SECRET || process.env.NEXTAUTH_SECRET || (process.env.NODE_ENV !== 'production' ? 'kalajay_guest_order_tracking_salt_2026' : '');
+      if (trackingSecret) {
+        const legacyHmac = crypto
+          .createHmac('sha256', trackingSecret)
+          .update(`${orderId}:${orderData.customerEmail.toLowerCase().trim()}`)
+          .digest('hex')
+          .substring(0, 24);
+        if (timingSafeEqualString(token, legacyHmac)) {
+          isValidToken = true;
+        }
       }
     }
 

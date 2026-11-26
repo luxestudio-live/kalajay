@@ -104,6 +104,55 @@ export async function POST(request: Request) {
           if (orderRef && orderData) {
             const currentStatus: PaymentState = orderData.paymentStatus || 'pending';
 
+            // Validate currency: Store requires INR
+            const currency = (payment.currency || 'INR').toUpperCase();
+            if (currency !== 'INR') {
+              await orderRef.update({
+                paymentStatus: 'reconciliation_required',
+                'paymentDetails.currentStatus': 'reconciliation_required',
+                'paymentDetails.razorpayPaymentId': razorpayPaymentId,
+                'paymentDetails.reconciliationReason': `CURRENCY_MISMATCH_${currency}`,
+                updatedAt: nowIso,
+                timeline: FieldValue.arrayUnion({
+                  title: 'Webhook Discrepancy: Currency Mismatch',
+                  timestamp: nowIso,
+                  note: `Razorpay webhook reported payment in ${currency}, but store currency is INR. Routed for reconciliation.`,
+                }),
+              });
+              return NextResponse.json(
+                { success: false, error: `Invalid currency: Expected INR, received ${currency}.` },
+                { status: 400 }
+              );
+            }
+
+            // Validate amount in paise: Captured amount must meet or exceed order total
+            const expectedAmountPaise = Math.round(Number(orderData.total) * 100);
+            const capturedAmountPaise = Number(payment.amount) || 0;
+
+            if (capturedAmountPaise < expectedAmountPaise) {
+              await orderRef.update({
+                paymentStatus: 'reconciliation_required',
+                'paymentDetails.currentStatus': 'reconciliation_required',
+                'paymentDetails.razorpayPaymentId': razorpayPaymentId,
+                'paymentDetails.reconciliationReason': 'AMOUNT_MISMATCH_UNDERPAID',
+                'paymentDetails.amountCapturedPaise': capturedAmountPaise,
+                'paymentDetails.expectedAmountPaise': expectedAmountPaise,
+                updatedAt: nowIso,
+                timeline: FieldValue.arrayUnion({
+                  title: 'Webhook Discrepancy: Underpaid Order',
+                  timestamp: nowIso,
+                  note: `Razorpay webhook reported captured amount of ₹${(capturedAmountPaise / 100).toFixed(2)}, but order total is ₹${Number(orderData.total).toFixed(2)}. Routed for reconciliation.`,
+                }),
+              });
+              return NextResponse.json(
+                {
+                  success: false,
+                  error: `Underpaid: Captured amount (${capturedAmountPaise} paise) is less than order total (${expectedAmountPaise} paise).`,
+                },
+                { status: 400 }
+              );
+            }
+
             if (!isPaymentCaptured(currentStatus)) {
               assertValidPaymentTransition(currentStatus, 'captured', {
                 orderId: orderRef.id,
@@ -161,15 +210,33 @@ export async function POST(request: Request) {
       const payment = event.payload.payment?.entity;
       if (payment && adminDb) {
         const razorpayOrderId = payment.order_id;
-        const querySnap = await adminDb
-          .collection('orders')
-          .where('razorpayOrderId', '==', razorpayOrderId)
-          .limit(1)
-          .get();
+        const receipt = payment.notes?.internalOrderId || payment.description;
 
-        if (!querySnap.empty) {
-          const docRef = querySnap.docs[0].ref;
-          const currentData = querySnap.docs[0].data();
+        let docRef: any = null;
+        let currentData: any = null;
+
+        if (receipt) {
+          const byId = await adminDb.collection('orders').doc(receipt).get();
+          if (byId.exists) {
+            docRef = byId.ref;
+            currentData = byId.data();
+          }
+        }
+
+        if (!docRef && razorpayOrderId) {
+          const querySnap = await adminDb
+            .collection('orders')
+            .where('razorpayOrderId', '==', razorpayOrderId)
+            .limit(1)
+            .get();
+
+          if (!querySnap.empty) {
+            docRef = querySnap.docs[0].ref;
+            currentData = querySnap.docs[0].data();
+          }
+        }
+
+        if (docRef && currentData) {
           const currentStatus: PaymentState = currentData.paymentStatus || 'pending';
 
           // Never overwrite an already captured payment with a late failed event
@@ -191,14 +258,29 @@ export async function POST(request: Request) {
       const refund = event.payload.refund?.entity;
       if (refund && adminDb) {
         const razorpayPaymentId = refund.payment_id;
-        const querySnap = await adminDb
-          .collection('orders')
-          .where('paymentDetails.razorpayPaymentId', '==', razorpayPaymentId)
-          .limit(1)
-          .get();
+        const receipt = (refund as any).notes?.internalOrderId || (refund as any).description;
 
-        if (!querySnap.empty) {
-          const docRef = querySnap.docs[0].ref;
+        let docRef: any = null;
+        if (receipt) {
+          const byId = await adminDb.collection('orders').doc(receipt).get();
+          if (byId.exists) {
+            docRef = byId.ref;
+          }
+        }
+
+        if (!docRef && razorpayPaymentId) {
+          const querySnap = await adminDb
+            .collection('orders')
+            .where('paymentDetails.razorpayPaymentId', '==', razorpayPaymentId)
+            .limit(1)
+            .get();
+
+          if (!querySnap.empty) {
+            docRef = querySnap.docs[0].ref;
+          }
+        }
+
+        if (docRef) {
           await docRef.update({
             paymentStatus: 'refunded',
             'paymentDetails.currentStatus': 'refunded',
@@ -216,15 +298,18 @@ export async function POST(request: Request) {
 
     // 6. Record Deduplication Log Entry
     if (adminDb) {
+      const paymentEntity = event.payload.payment?.entity;
+      const refundEntity = event.payload.refund?.entity;
+
       await adminDb.collection('payment_webhook_events').doc(eventId).set({
         id: eventId,
         eventType,
         receivedAt: nowIso,
         status: 'processed',
         payloadSummary: {
-          paymentId: event.payload.payment?.entity?.id,
-          orderId: event.payload.payment?.entity?.order_id,
-          amount: event.payload.payment?.entity?.amount,
+          paymentId: paymentEntity?.id || refundEntity?.payment_id || null,
+          orderId: paymentEntity?.order_id || null,
+          amount: paymentEntity?.amount !== undefined ? paymentEntity.amount : (refundEntity?.amount !== undefined ? refundEntity.amount : null),
         },
       });
     }

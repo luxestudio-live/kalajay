@@ -140,6 +140,24 @@ function writeServerRateLimits(data: Record<string, RateLimitRecord>) {
   } catch {}
 }
 
+function timingSafeEqualString(a: string, b: string): boolean {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const bufA = crypto.createHash('sha256').update(a).digest();
+  const bufB = crypto.createHash('sha256').update(b).digest();
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+function getTrackingSecret(): string {
+  const secret = process.env.ORDER_TRACKING_SECRET || process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('CRITICAL SECURITY ERROR: ORDER_TRACKING_SECRET or NEXTAUTH_SECRET must be configured in production.');
+    }
+    return 'kalajay_guest_order_tracking_salt_2026';
+  }
+  return secret;
+}
+
 async function checkServerRateLimit(ip: string): Promise<{ allowed: boolean; error?: string }> {
   const ipHash = hashIp(ip);
   const now = Date.now();
@@ -150,6 +168,26 @@ async function checkServerRateLimit(ip: string): Promise<{ allowed: boolean; err
     record = persistent[ipHash] || { count: 0, windowStart: now, failedAttempts: 0 };
     memoryRateLimitCache.set(ipHash, record);
   }
+
+  // Check distributed Firestore storage when available
+  try {
+    const adminDb = getAdminFirestore();
+    if (adminDb) {
+      const fsSnap = await adminDb.collection('tracking_ratelimits').doc(`trk_${ipHash}`).get();
+      if (fsSnap.exists) {
+        const fsData = fsSnap.data() as RateLimitRecord;
+        if (fsData) {
+          if (fsData.lockedUntil && fsData.lockedUntil > (record.lockedUntil || 0)) {
+            record.lockedUntil = fsData.lockedUntil;
+          }
+          if (fsData.windowStart && fsData.windowStart > record.windowStart) {
+            record.windowStart = fsData.windowStart;
+            record.count = fsData.count || 0;
+          }
+        }
+      }
+    }
+  } catch {}
 
   if (record.lockedUntil && record.lockedUntil > now) {
     const remainingSec = Math.ceil((record.lockedUntil - now) / 1000);
@@ -170,6 +208,14 @@ async function checkServerRateLimit(ip: string): Promise<{ allowed: boolean; err
   const persistent = readServerRateLimits();
   persistent[ipHash] = record;
   writeServerRateLimits(persistent);
+
+  // Sync to distributed Firestore
+  try {
+    const adminDb = getAdminFirestore();
+    if (adminDb) {
+      adminDb.collection('tracking_ratelimits').doc(`trk_${ipHash}`).set(record, { merge: true }).catch(() => {});
+    }
+  } catch {}
 
   if (record.count > 45) {
     return {
@@ -195,6 +241,13 @@ async function recordFailedAttempt(ip: string) {
   const persistent = readServerRateLimits();
   persistent[ipHash] = record;
   writeServerRateLimits(persistent);
+
+  try {
+    const adminDb = getAdminFirestore();
+    if (adminDb) {
+      adminDb.collection('tracking_ratelimits').doc(`trk_${ipHash}`).set(record, { merge: true }).catch(() => {});
+    }
+  } catch {}
 }
 
 async function recordSuccess(ip: string) {
@@ -206,6 +259,13 @@ async function recordSuccess(ip: string) {
     const persistent = readServerRateLimits();
     persistent[ipHash] = record;
     writeServerRateLimits(persistent);
+
+    try {
+      const adminDb = getAdminFirestore();
+      if (adminDb) {
+        adminDb.collection('tracking_ratelimits').doc(`trk_${ipHash}`).set(record, { merge: true }).catch(() => {});
+      }
+    } catch {}
   }
 }
 
@@ -217,7 +277,7 @@ function cleanDigits(val: string): string {
  * Computes deterministic guest order access token
  */
 function generateGuestAccessToken(orderId: string, customerEmail: string): string {
-  const trackingSecret = process.env.ORDER_TRACKING_SECRET || process.env.NEXTAUTH_SECRET || 'kalajay_guest_order_tracking_salt_2026';
+  const trackingSecret = getTrackingSecret();
   return crypto
     .createHmac('sha256', trackingSecret)
     .update(`${orderId}:${customerEmail.toLowerCase().trim()}`)
@@ -369,13 +429,13 @@ export async function GET(request: Request) {
 
     if (!isVerifiedOwner && suppliedToken) {
       const suppliedHash = crypto.createHash('sha256').update(suppliedToken).digest('hex');
-      if (foundOrder.guestAccessTokenHash && foundOrder.guestAccessTokenHash === suppliedHash) {
+      if (foundOrder.guestAccessTokenHash && timingSafeEqualString(foundOrder.guestAccessTokenHash, suppliedHash)) {
         isVerifiedOwner = true;
-      } else if (foundOrder.guestAccessToken && suppliedToken === foundOrder.guestAccessToken) {
+      } else if (foundOrder.guestAccessToken && timingSafeEqualString(suppliedToken, foundOrder.guestAccessToken)) {
         isVerifiedOwner = true;
       } else if (foundOrder.customerEmail) {
         const expectedToken = generateGuestAccessToken(orderId, foundOrder.customerEmail);
-        if (suppliedToken === expectedToken) {
+        if (expectedToken && timingSafeEqualString(suppliedToken, expectedToken)) {
           isVerifiedOwner = true;
         }
       }

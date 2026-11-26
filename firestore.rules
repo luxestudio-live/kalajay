@@ -569,6 +569,26 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------
+    // 21. Order Claim Challenges (/order_claim_challenges/{challengeId})
+    // STRICTLY SERVER-AUTHORITATIVE (Security Audit Hardening).
+    // Closed against all direct client SDK reads and writes.
+    // Handled exclusively by server transactions in /api/orders/claim.
+    // -------------------------------------------------------------
+    match /order_claim_challenges/{challengeId} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------
+    // 22. Payment Webhook Events (/payment_webhook_events/{eventId})
+    // STRICTLY SERVER-AUTHORITATIVE (Security Audit Hardening).
+    // Closed against all direct client SDK reads and writes.
+    // Idempotency records maintained exclusively by trusted backend webhook handler.
+    // -------------------------------------------------------------
+    match /payment_webhook_events/{eventId} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------
     // Default Deny
     // -------------------------------------------------------------
     match /{document=**} {

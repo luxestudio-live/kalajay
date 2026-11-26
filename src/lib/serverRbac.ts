@@ -789,7 +789,7 @@ export async function verifyFirebaseIdToken(
 
   const rawApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '';
   const apiKey = rawApiKey.replace(/^["']|["']$/g, '');
-  const authEmulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
+  const authEmulatorHost = process.env.NODE_ENV !== 'production' ? process.env.FIREBASE_AUTH_EMULATOR_HOST : undefined;
   const lookupEndpoint = authEmulatorHost
     ? `http://${authEmulatorHost}/identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey || 'emulator-api-key'}`
     : `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`;
@@ -812,13 +812,26 @@ export async function verifyFirebaseIdToken(
     const emailVerified = Boolean(user.emailVerified);
     const phoneNumber = user.phoneNumber;
 
-    tokenVerificationCache.set(token, {
-      uid,
-      email,
-      emailVerified,
-      phoneNumber,
-      expiresAt: now + 5 * 60 * 1000,
-    });
+    // Bound cache TTL strictly to token expiration time
+    let jwtExpMs = now + 5 * 60 * 1000;
+    try {
+      const payloadJson = Buffer.from(parts[1], 'base64url').toString('utf8');
+      const payload = JSON.parse(payloadJson);
+      if (payload.exp && typeof payload.exp === 'number') {
+        jwtExpMs = payload.exp * 1000;
+      }
+    } catch {}
+
+    const cacheTtlMs = Math.min(now + 5 * 60 * 1000, jwtExpMs);
+    if (cacheTtlMs > now) {
+      tokenVerificationCache.set(token, {
+        uid,
+        email,
+        emailVerified,
+        phoneNumber,
+        expiresAt: cacheTtlMs,
+      });
+    }
 
     return { valid: true, uid, email, emailVerified, phoneNumber };
   } catch (err: any) {

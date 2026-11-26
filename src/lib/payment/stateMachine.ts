@@ -71,13 +71,16 @@ const ALLOWED_TRANSITIONS: Record<PaymentState, PaymentState[]> = {
  * Checks whether a proposed state transition is logically permitted.
  */
 export function isValidPaymentTransition(from: PaymentState, to: PaymentState): boolean {
-  // Same-state transition is idempotent and always allowed
-  if (from === to) return true;
+  const normFrom = (from as any) === 'paid' ? 'captured' : from;
+  const normTo = (to as any) === 'paid' ? 'captured' : to;
 
-  const validTargets = ALLOWED_TRANSITIONS[from];
+  // Same-state transition is idempotent and always allowed
+  if (normFrom === normTo) return true;
+
+  const validTargets = ALLOWED_TRANSITIONS[normFrom];
   if (!validTargets) return false;
 
-  return validTargets.includes(to);
+  return validTargets.includes(normTo);
 }
 
 /**
@@ -88,7 +91,10 @@ export function assertValidPaymentTransition(
   to: PaymentState,
   context?: { orderId?: string; paymentId?: string; source?: string }
 ): void {
-  if (from === to) return;
+  const normFrom = (from as any) === 'paid' ? 'captured' : from;
+  const normTo = (to as any) === 'paid' ? 'captured' : to;
+
+  if (normFrom === normTo) return;
 
   if (!isValidPaymentTransition(from, to)) {
     const ctxMsg = context
@@ -102,9 +108,15 @@ export function assertValidPaymentTransition(
 
 /**
  * Determines whether the payment state represents a finalized, immutable capture.
+ * Accurately treats both internal 'paid' and gateway 'captured' as captured states.
  */
-export function isPaymentCaptured(state: PaymentState): boolean {
-  return state === 'captured' || state === 'partially_refunded' || state === 'refunded';
+export function isPaymentCaptured(state: PaymentState | string): boolean {
+  return (
+    state === 'captured' ||
+    state === 'paid' ||
+    state === 'partially_refunded' ||
+    state === 'refunded'
+  );
 }
 
 /**

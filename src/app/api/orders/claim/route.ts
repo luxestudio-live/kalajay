@@ -11,8 +11,37 @@ function cleanDigits(val: string): string {
   return (val || '').replace(/\D/g, '');
 }
 
+/**
+ * Constant-time string comparison to defeat side-channel timing analysis.
+ * Uses SHA-256 digests to ensure equal length buffers without risking RangeErrors.
+ */
+function timingSafeEqualString(a: string, b: string): boolean {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const bufA = crypto.createHash('sha256').update(a).digest();
+  const bufB = crypto.createHash('sha256').update(b).digest();
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+/**
+ * Resolves the OTP signing secret.
+ * In production, fails closed if no secret is configured.
+ */
+function getClaimOtpSecret(): string {
+  const secret = process.env.ORDER_CLAIM_OTP_SECRET || process.env.ORDER_TRACKING_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('CRITICAL SECURITY ERROR: ORDER_CLAIM_OTP_SECRET or ORDER_TRACKING_SECRET must be configured in production.');
+    }
+    return 'kalajay_claim_otp_secret_2026';
+  }
+  return secret;
+}
+
 function generateGuestAccessToken(orderId: string, customerEmail: string): string {
-  const trackingSecret = process.env.ORDER_TRACKING_SECRET || process.env.NEXTAUTH_SECRET || 'kalajay_guest_order_tracking_salt_2026';
+  const trackingSecret = process.env.ORDER_TRACKING_SECRET || process.env.NEXTAUTH_SECRET || (process.env.NODE_ENV !== 'production' ? 'kalajay_guest_order_tracking_salt_2026' : '');
+  if (!trackingSecret) {
+    throw new Error('ORDER_TRACKING_SECRET is required in production.');
+  }
   return crypto
     .createHmac('sha256', trackingSecret)
     .update(`${orderId}:${customerEmail.toLowerCase().trim()}`)
@@ -126,48 +155,62 @@ export async function POST(request: Request) {
     const orderPhoneClean = cleanDigits(orderData.customerPhone || orderData.shippingAddress?.phone || '');
 
     // 5. Handle Action: 'request_otp' (Independent Contact Challenge)
-    const claimOtpSecret = process.env.ORDER_CLAIM_OTP_SECRET || process.env.ORDER_TRACKING_SECRET || 'kalajay_claim_otp_secret_2026';
-
     if (action === 'request_otp') {
       const challengeRef = adminDb.collection('order_claim_challenges').doc(orderId);
-      const existingSnap = await challengeRef.get();
-      if (existingSnap.exists) {
-        const existingData = existingSnap.data() || {};
-        const createdMs = existingData.createdAt ? new Date(existingData.createdAt).getTime() : 0;
-        // 60-second cooldown rate limit between OTP generation attempts (Phase 5.1)
-        if (Date.now() - createdMs < 60 * 1000) {
+      const claimOtpSecret = getClaimOtpSecret();
+
+      try {
+        const generatedOtp = await adminDb.runTransaction(async (transaction) => {
+          const existingSnap = await transaction.get(challengeRef);
+          const now = Date.now();
+          if (existingSnap.exists) {
+            const existingData = existingSnap.data() || {};
+            const createdMs = existingData.createdAt ? new Date(existingData.createdAt).getTime() : 0;
+            // 60-second cooldown rate limit between OTP generation attempts (Phase 5.1)
+            if (now - createdMs < 60 * 1000) {
+              const waitSec = Math.ceil((60 * 1000 - (now - createdMs)) / 1000);
+              throw new Error(`COOLDOWN_ACTIVE:${waitSec}`);
+            }
+          }
+
+          const otp = Math.floor(100000 + Math.random() * 900000).toString();
+          // Server-side HMAC-based OTP storage using dedicated secret
+          const hashedOtp = crypto.createHmac('sha256', claimOtpSecret).update(otp).digest('hex');
+          const expiresAt = now + 5 * 60 * 1000; // 5 minutes
+
+          transaction.set(challengeRef, {
+            orderId,
+            hashedOtp,
+            expiresAt,
+            attemptsRemaining: 3,
+            targetEmail: orderEmail,
+            targetPhone: orderPhoneClean,
+            requestedByUid: authenticatedUid,
+            createdAt: new Date(now).toISOString(),
+          });
+
+          return otp;
+        });
+
+        // Output solely to server console in local/test environment; NEVER return in client API response
+        if (process.env.NODE_ENV !== 'production' || process.env.FIRESTORE_EMULATOR_HOST) {
+          console.log(`[Kalajay Atelier] Guest Order Claim OTP for ${orderId}: ${generatedOtp}`);
+        }
+
+        return NextResponse.json({
+          success: true,
+          message: `Verification code sent to registered order contact (${orderEmail.slice(0, 3)}***@***). Valid for 5 minutes.`,
+        });
+      } catch (err: any) {
+        if (err?.message?.startsWith('COOLDOWN_ACTIVE:')) {
+          const wait = err.message.split(':')[1];
           return NextResponse.json(
-            { success: false, error: 'Please wait 60 seconds before requesting another verification code.' },
+            { success: false, error: `Please wait ${wait} seconds before requesting another verification code.` },
             { status: 429 }
           );
         }
+        throw err;
       }
-
-      const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-      // Server-side HMAC-based OTP storage using dedicated secret (Phase 5.1)
-      const hashedOtp = crypto.createHmac('sha256', claimOtpSecret).update(generatedOtp).digest('hex');
-      const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
-
-      await challengeRef.set({
-        orderId,
-        hashedOtp,
-        expiresAt,
-        attemptsRemaining: 3,
-        targetEmail: orderEmail,
-        targetPhone: orderPhoneClean,
-        requestedByUid: authenticatedUid,
-        createdAt: new Date().toISOString(),
-      });
-
-      // Output solely to server console in local/test environment; NEVER return in client API response (Phase 5.2)
-      if (process.env.NODE_ENV !== 'production' || process.env.FIRESTORE_EMULATOR_HOST) {
-        console.log(`[Kalajay Atelier] Guest Order Claim OTP for ${orderId}: ${generatedOtp}`);
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: `Verification code sent to registered order contact (${orderEmail.slice(0, 3)}***@***). Valid for 5 minutes.`,
-      });
     }
 
     // 6. Ownership Verification Logic
@@ -185,56 +228,8 @@ export async function POST(request: Request) {
       verificationMethod = 'firebase_verified_phone_match';
     }
 
-    // Method B: OTP Challenge Verification to original order contact (Phase 5.3)
-    // NOTE: Guest tracking token ALONE is strictly disallowed from bypassing contact verification (Scenario 26)
-    if (!isOwnershipVerified && action === 'verify_otp_and_claim' && suppliedOtp) {
-      const challengeRef = adminDb.collection('order_claim_challenges').doc(orderId);
-      const challengeSnap = await challengeRef.get();
-
-      if (!challengeSnap.exists) {
-        return NextResponse.json(
-          { success: false, error: 'No active OTP verification challenge found for this order. Please request a new code.' },
-          { status: 400 }
-        );
-      }
-
-      const cData = challengeSnap.data() || {};
-      if (cData.expiresAt < Date.now()) {
-        return NextResponse.json(
-          { success: false, error: 'Verification code has expired. Please request a new code.' },
-          { status: 400 }
-        );
-      }
-
-      if (cData.attemptsRemaining <= 0) {
-        return NextResponse.json(
-          { success: false, error: 'Maximum verification attempts exceeded. Please request a new code.' },
-          { status: 429 }
-        );
-      }
-
-      const hmacSupplied = crypto.createHmac('sha256', claimOtpSecret).update(suppliedOtp).digest('hex');
-      const shaSupplied = crypto.createHash('sha256').update(suppliedOtp).digest('hex');
-
-      if (hmacSupplied === cData.hashedOtp || shaSupplied === cData.hashedOtp) {
-        isOwnershipVerified = true;
-        verificationMethod = 'otp_contact_challenge';
-        // Clean up completed challenge (one-time use invalidation)
-        await challengeRef.delete().catch(() => {});
-      } else {
-        // Atomic decrement to prevent concurrent attempt exhaustion bypass (Phase 4)
-        await challengeRef.update({
-          attemptsRemaining: FieldValue.increment(-1),
-        }).catch(() => {});
-        const remaining = Math.max(0, (cData.attemptsRemaining || 1) - 1);
-        return NextResponse.json(
-          { success: false, error: `Invalid verification code. ${remaining} attempts remaining.` },
-          { status: 400 }
-        );
-      }
-    }
-
-    if (!isOwnershipVerified) {
+    // If verification method is not satisfied and action is not verify_otp_and_claim, prompt user
+    if (!isOwnershipVerified && action !== 'verify_otp_and_claim') {
       return NextResponse.json(
         {
           success: false,
@@ -248,87 +243,209 @@ export async function POST(request: Request) {
       );
     }
 
-    // 7. Atomic Claim Transaction (Anti-Concurrency Guaranteed)
+    // 7. Atomic Claim & Verification Transaction (Anti-Concurrency & Durable Attempt Enforcement)
     const claimTimestamp = new Date().toISOString();
-    const timelineEntry = {
-      title: 'Order Bound to Patron Portfolio',
-      timestamp: claimTimestamp,
-      note: `Claimed by verified patron account (${authenticatedEmail || authenticatedUid}) via ${verificationMethod}.`,
-    };
+    const challengeRef = adminDb.collection('order_claim_challenges').doc(orderId);
 
-    await adminDb.runTransaction(async (transaction) => {
-      const liveOrderSnap = await transaction.get(orderRef);
-      if (!liveOrderSnap.exists) {
-        throw new Error('ORDER_NOT_FOUND');
-      }
+    try {
+      const txResult = await adminDb.runTransaction(async (transaction) => {
+        // Read target order
+        const liveOrderSnap = await transaction.get(orderRef);
+        if (!liveOrderSnap.exists) {
+          return { status: 'ORDER_NOT_FOUND' };
+        }
 
-      const liveOrderData = liveOrderSnap.data() || {};
-      if (liveOrderData.userId && liveOrderData.userId !== authenticatedUid) {
-        throw new Error('CONCURRENT_CLAIM_CONFLICT');
-      }
+        const liveOrderData = liveOrderSnap.data() || {};
+        if (liveOrderData.userId) {
+          if (liveOrderData.userId === authenticatedUid) {
+            return { status: 'ALREADY_OWNED' };
+          }
+          return { status: 'CONCURRENT_CLAIM_CONFLICT' };
+        }
 
-      transaction.update(orderRef, {
-        userId: authenticatedUid,
-        isGuestOrder: false,
-        claimedAt: claimTimestamp,
-        claimedByUid: authenticatedUid,
-        claimedByEmail: authenticatedEmail || null,
-        claimVerificationMethod: verificationMethod,
-        timeline: FieldValue.arrayUnion(timelineEntry),
-        updatedAt: claimTimestamp,
+        // Method B Verification inside Transaction (Guarantees zero concurrent exhaustion bypass or replay)
+        let txVerificationMethod = verificationMethod;
+        if (!isOwnershipVerified) {
+          if (!suppliedOtp) {
+            return { status: 'OTP_REQUIRED' };
+          }
+
+          const challengeSnap = await transaction.get(challengeRef);
+          if (!challengeSnap.exists) {
+            return { status: 'CHALLENGE_NOT_FOUND' };
+          }
+
+          const cData = challengeSnap.data() || {};
+          const now = Date.now();
+
+          if (cData.expiresAt < now) {
+            transaction.delete(challengeRef);
+            return { status: 'CHALLENGE_EXPIRED' };
+          }
+
+          // Strict UID Binding Check: Challenge must belong to the authenticated caller who requested it
+          if (cData.requestedByUid && cData.requestedByUid !== authenticatedUid) {
+            return { status: 'CHALLENGE_USER_MISMATCH' };
+          }
+
+          const attempts = cData.attemptsRemaining !== undefined ? Number(cData.attemptsRemaining) : 0;
+          if (attempts <= 0) {
+            transaction.delete(challengeRef);
+            return { status: 'MAX_ATTEMPTS_EXCEEDED' };
+          }
+
+          const claimOtpSecret = getClaimOtpSecret();
+          const hmacSupplied = crypto.createHmac('sha256', claimOtpSecret).update(suppliedOtp).digest('hex');
+          const shaSupplied = crypto.createHash('sha256').update(suppliedOtp).digest('hex');
+
+          const isMatch = timingSafeEqualString(hmacSupplied, cData.hashedOtp) || timingSafeEqualString(shaSupplied, cData.hashedOtp);
+
+          if (!isMatch) {
+            const remaining = Math.max(0, attempts - 1);
+            if (remaining <= 0) {
+              transaction.delete(challengeRef);
+            } else {
+              transaction.update(challengeRef, { attemptsRemaining: remaining });
+            }
+            return { status: 'INVALID_OTP', remaining };
+          }
+
+          // OTP verified: atomically delete challenge to prevent reuse/replay
+          transaction.delete(challengeRef);
+          txVerificationMethod = 'otp_contact_challenge';
+        }
+
+        const timelineEntry = {
+          title: 'Order Bound to Patron Portfolio',
+          timestamp: claimTimestamp,
+          note: `Claimed by verified patron account (${authenticatedEmail || authenticatedUid}) via ${txVerificationMethod}.`,
+        };
+
+        transaction.update(orderRef, {
+          userId: authenticatedUid,
+          isGuestOrder: false,
+          claimedAt: claimTimestamp,
+          claimedByUid: authenticatedUid,
+          claimedByEmail: authenticatedEmail || null,
+          claimVerificationMethod: txVerificationMethod,
+          timeline: FieldValue.arrayUnion(timelineEntry),
+          updatedAt: claimTimestamp,
+        });
+
+        // Optional: Save guest delivery address to customer profile if requested
+        if (saveAddressToProfile && liveOrderData.shippingAddress) {
+          try {
+            const userRef = adminDb.collection('users').doc(authenticatedUid);
+            const userSnap = await transaction.get(userRef);
+            if (userSnap.exists) {
+              const userData = userSnap.data() || {};
+              const existingAddresses: Address[] = Array.isArray(userData.addresses) ? userData.addresses : [];
+              const newAddrRaw = {
+                label: 'Claimed Order Destination',
+                fullName: liveOrderData.customerName || userData.name || 'Patron',
+                phone: liveOrderData.customerPhone || userData.phone || '',
+                street: liveOrderData.shippingAddress.addressLine || '',
+                apartment: liveOrderData.shippingAddress.apartment || undefined,
+                city: liveOrderData.shippingAddress.city || '',
+                state: liveOrderData.shippingAddress.state || 'Maharashtra',
+                pincode: liveOrderData.shippingAddress.pincode || '',
+                isDefault: existingAddresses.length === 0,
+              };
+
+              const isDuplicate = existingAddresses.some(a => areAddressesEqual(a, newAddrRaw));
+              if (!isDuplicate) {
+                const normalized = normalizeAddress(newAddrRaw);
+                transaction.update(userRef, {
+                  addresses: FieldValue.arrayUnion(normalized),
+                  updatedAt: claimTimestamp,
+                });
+              }
+            }
+          } catch (profileErr) {
+            console.warn('Deferred address save during claim notice:', profileErr);
+          }
+        }
+
+        return { status: 'SUCCESS', verificationMethod: txVerificationMethod };
       });
 
-      // Optional: Save guest delivery address to customer profile if requested
-      if (saveAddressToProfile && liveOrderData.shippingAddress) {
-        try {
-          const userRef = adminDb.collection('users').doc(authenticatedUid);
-          const userSnap = await transaction.get(userRef);
-          if (userSnap.exists) {
-            const userData = userSnap.data() || {};
-            const existingAddresses: Address[] = Array.isArray(userData.addresses) ? userData.addresses : [];
-            const newAddrRaw = {
-              label: 'Claimed Order Destination',
-              fullName: liveOrderData.customerName || userData.name || 'Patron',
-              phone: liveOrderData.customerPhone || userData.phone || '',
-              street: liveOrderData.shippingAddress.addressLine || '',
-              apartment: liveOrderData.shippingAddress.apartment || undefined,
-              city: liveOrderData.shippingAddress.city || '',
-              state: liveOrderData.shippingAddress.state || 'Maharashtra',
-              pincode: liveOrderData.shippingAddress.pincode || '',
-              isDefault: existingAddresses.length === 0,
-            };
-
-            const isDuplicate = existingAddresses.some(a => areAddressesEqual(a, newAddrRaw));
-            if (!isDuplicate) {
-              const normalized = normalizeAddress(newAddrRaw);
-              transaction.update(userRef, {
-                addresses: FieldValue.arrayUnion(normalized),
-                updatedAt: claimTimestamp,
-              });
-            }
-          }
-        } catch (profileErr) {
-          console.warn('Deferred address save during claim notice:', profileErr);
-        }
+      if (txResult.status === 'ALREADY_OWNED') {
+        return NextResponse.json({
+          success: true,
+          alreadyOwned: true,
+          orderId,
+          message: 'This order is already securely linked to your patron portfolio.',
+        });
       }
-    });
+      if (txResult.status === 'CONCURRENT_CLAIM_CONFLICT') {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Ownership Conflict: This order is already registered to another patron account.',
+            code: 'ORDER_ALREADY_OWNED',
+          },
+          { status: 403 }
+        );
+      }
+      if (txResult.status === 'ORDER_NOT_FOUND') {
+        return NextResponse.json(
+          { success: false, error: `Order "${orderId}" not found in atelier chronicle.` },
+          { status: 404 }
+        );
+      }
+      if (txResult.status === 'OTP_REQUIRED') {
+        return NextResponse.json(
+          { success: false, error: 'Verification code (OTP) is required.' },
+          { status: 400 }
+        );
+      }
+      if (txResult.status === 'CHALLENGE_NOT_FOUND') {
+        return NextResponse.json(
+          { success: false, error: 'No active OTP verification challenge found for this order. Please request a new code.' },
+          { status: 400 }
+        );
+      }
+      if (txResult.status === 'CHALLENGE_EXPIRED') {
+        return NextResponse.json(
+          { success: false, error: 'Verification code has expired. Please request a new code.' },
+          { status: 400 }
+        );
+      }
+      if (txResult.status === 'CHALLENGE_USER_MISMATCH') {
+        return NextResponse.json(
+          { success: false, error: 'Access Denied: Verification challenge was issued to another patron session.' },
+          { status: 403 }
+        );
+      }
+      if (txResult.status === 'MAX_ATTEMPTS_EXCEEDED') {
+        return NextResponse.json(
+          { success: false, error: 'Maximum verification attempts exceeded. Please request a new code.' },
+          { status: 429 }
+        );
+      }
+      if (txResult.status === 'INVALID_OTP') {
+        return NextResponse.json(
+          { success: false, error: `Invalid verification code. ${txResult.remaining} attempts remaining.` },
+          { status: 400 }
+        );
+      }
 
-    return NextResponse.json({
-      success: true,
-      orderId,
-      message: 'Order successfully claimed and bound to your patron portfolio.',
-      claimedAt: claimTimestamp,
-      verificationMethod,
-    });
-  } catch (err: any) {
-    if (err?.message === 'CONCURRENT_CLAIM_CONFLICT') {
+      return NextResponse.json({
+        success: true,
+        orderId,
+        message: 'Order successfully claimed and bound to your patron portfolio.',
+        claimedAt: claimTimestamp,
+        verificationMethod: txResult.verificationMethod,
+      });
+    } catch (err: any) {
       return NextResponse.json(
-        { success: false, error: 'Concurrent claim detected. Order was already claimed by another session.' },
-        { status: 409 }
+        { success: false, error: err?.message || 'Failed to complete guest order claiming.' },
+        { status: 500 }
       );
     }
+  } catch (topErr: any) {
     return NextResponse.json(
-      { success: false, error: err?.message || 'Failed to complete guest order claiming.' },
+      { success: false, error: topErr?.message || 'Server error.' },
       { status: 500 }
     );
   }

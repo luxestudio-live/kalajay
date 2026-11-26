@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     }
 
     // Verify stored Razorpay Order ID matches
-    if (orderRecord.razorpayOrderId && orderRecord.razorpayOrderId !== razorpayOrderId) {
+    if (!orderRecord.razorpayOrderId || orderRecord.razorpayOrderId !== razorpayOrderId) {
       return NextResponse.json(
         {
           success: false,

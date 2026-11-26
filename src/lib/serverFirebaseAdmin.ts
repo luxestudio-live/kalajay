@@ -11,12 +11,13 @@ const PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'kalajay-667ff
  * Avoids initializing unauthenticated Admin apps that fail on first ADC lookup.
  */
 function hasAdminCredentials(): boolean {
+  const isProduction = process.env.NODE_ENV === 'production';
   return Boolean(
     process.env.FIREBASE_SERVICE_ACCOUNT_KEY ||
     process.env.GOOGLE_APPLICATION_CREDENTIALS ||
     (process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) ||
     (process.env.FIREBASE_ADMIN_CLIENT_EMAIL && process.env.FIREBASE_ADMIN_PRIVATE_KEY) ||
-    process.env.FIRESTORE_EMULATOR_HOST ||
+    (!isProduction && process.env.FIRESTORE_EMULATOR_HOST) ||
     process.env.K_SERVICE || // Google Cloud Run / Functions
     process.env.FIREBASE_CONFIG
   );
@@ -31,6 +32,16 @@ function hasAdminCredentials(): boolean {
  * Secrets and credentials are NEVER logged or exposed.
  */
 function initAdminSDK(): { app: App | null; db: Firestore | null } {
+  // CRITICAL PRODUCTION GUARD: In production environments, never permit loopback emulator redirects.
+  if (process.env.NODE_ENV === 'production') {
+    if (process.env.FIRESTORE_EMULATOR_HOST) {
+      delete process.env.FIRESTORE_EMULATOR_HOST;
+    }
+    if (process.env.FIREBASE_AUTH_EMULATOR_HOST) {
+      delete process.env.FIREBASE_AUTH_EMULATOR_HOST;
+    }
+  }
+
   if (adminApp && adminFirestore) {
     return { app: adminApp, db: adminFirestore };
   }

@@ -71,7 +71,7 @@ export async function POST(request: Request) {
           const rawApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '';
           const apiKey = rawApiKey.replace(/^["']|["']$/g, '');
           if (apiKey) {
-            const authEmulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
+            const authEmulatorHost = process.env.NODE_ENV !== 'production' ? process.env.FIREBASE_AUTH_EMULATOR_HOST : undefined;
             const resetUrl = authEmulatorHost
               ? `http://${authEmulatorHost}/identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`
               : `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`;
@@ -152,7 +152,7 @@ export async function POST(request: Request) {
     }
 
     try {
-      const authEmulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
+      const authEmulatorHost = process.env.NODE_ENV !== 'production' ? process.env.FIREBASE_AUTH_EMULATOR_HOST : undefined;
       const signInUrl = authEmulatorHost
         ? `http://${authEmulatorHost}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`
         : `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`;
