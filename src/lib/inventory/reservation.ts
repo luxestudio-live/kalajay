@@ -165,6 +165,8 @@ export async function confirmStockReservation(orderId: string): Promise<ConfirmS
 
       // 1. If lease expired/released, check if physical available stock is still present
       if (isLatePayment) {
+        const lateUpdates: Array<{ ref: any; newAvailable: number; newCommitted: number }> = [];
+
         for (const item of resData.items) {
           const invRef = adminDb.collection('inventory').doc(item.sku);
           const invSnap = await transaction.get(invRef);
@@ -180,24 +182,22 @@ export async function confirmStockReservation(orderId: string): Promise<ConfirmS
                 error: `STOCK_EXHAUSTED_LATE_PAYMENT: Only ${currentAvailable} available for SKU ${item.sku}.`,
               };
             }
+            const currentCommitted = Number(invData.committedSale ?? 0);
+            lateUpdates.push({
+              ref: invRef,
+              newAvailable: Math.max(0, currentAvailable - item.quantity),
+              newCommitted: currentCommitted + item.quantity,
+            });
           }
         }
 
-        // Available stock is sufficient, claim it from 'available'
-        for (const item of resData.items) {
-          const invRef = adminDb.collection('inventory').doc(item.sku);
-          const invSnap = await transaction.get(invRef);
-          if (invSnap.exists) {
-            const invData = invSnap.data()!;
-            const currentAvailable = Number(invData.available ?? 0);
-            const currentCommitted = Number(invData.committedSale ?? 0);
-
-            transaction.update(invRef, {
-              available: Math.max(0, currentAvailable - item.quantity),
-              committedSale: currentCommitted + item.quantity,
-              updatedAt: nowIso,
-            });
-          }
+        // Available stock is sufficient, claim it from 'available' (Writes after all reads)
+        for (const u of lateUpdates) {
+          transaction.update(u.ref, {
+            available: u.newAvailable,
+            committedSale: u.newCommitted,
+            updatedAt: nowIso,
+          });
         }
 
         transaction.update(resDocRef, {
@@ -210,6 +210,8 @@ export async function confirmStockReservation(orderId: string): Promise<ConfirmS
       }
 
       // 2. Standard Active Reservation: Stock is currently held in 'reservedInLoom'
+      const standardUpdates: Array<{ ref: any; newReserved: number; newCommitted: number }> = [];
+
       for (const item of resData.items) {
         const invRef = adminDb.collection('inventory').doc(item.sku);
         const invSnap = await transaction.get(invRef);
@@ -218,12 +220,21 @@ export async function confirmStockReservation(orderId: string): Promise<ConfirmS
           const currentReserved = Number(invData.reservedInLoom ?? 0);
           const currentCommitted = Number(invData.committedSale ?? 0);
 
-          transaction.update(invRef, {
-            reservedInLoom: Math.max(0, currentReserved - item.quantity),
-            committedSale: currentCommitted + item.quantity,
-            updatedAt: nowIso,
+          standardUpdates.push({
+            ref: invRef,
+            newReserved: Math.max(0, currentReserved - item.quantity),
+            newCommitted: currentCommitted + item.quantity,
           });
         }
+      }
+
+      // Writes after all reads
+      for (const u of standardUpdates) {
+        transaction.update(u.ref, {
+          reservedInLoom: u.newReserved,
+          committedSale: u.newCommitted,
+          updatedAt: nowIso,
+        });
       }
 
       transaction.update(resDocRef, {
@@ -260,7 +271,9 @@ export async function releaseStockReservation(
 
       if (resData.status !== 'active') return false; // Already confirmed or released
 
-      // Restore stock: increment available, decrement reservedInLoom
+      // Restore stock: increment available, decrement reservedInLoom (All reads first)
+      const releaseUpdates: Array<{ ref: any; newAvailable: number; newReserved: number }> = [];
+
       for (const item of resData.items) {
         const invRef = adminDb.collection('inventory').doc(item.sku);
         const invSnap = await transaction.get(invRef);
@@ -269,12 +282,21 @@ export async function releaseStockReservation(
           const currentAvailable = Number(invData.available ?? 0);
           const currentReserved = Number(invData.reservedInLoom ?? 0);
 
-          transaction.update(invRef, {
-            available: currentAvailable + item.quantity,
-            reservedInLoom: Math.max(0, currentReserved - item.quantity),
-            updatedAt: new Date().toISOString(),
+          releaseUpdates.push({
+            ref: invRef,
+            newAvailable: currentAvailable + item.quantity,
+            newReserved: Math.max(0, currentReserved - item.quantity),
           });
         }
+      }
+
+      // All writes after all reads
+      for (const u of releaseUpdates) {
+        transaction.update(u.ref, {
+          available: u.newAvailable,
+          reservedInLoom: u.newReserved,
+          updatedAt: new Date().toISOString(),
+        });
       }
 
       transaction.update(resDocRef, {

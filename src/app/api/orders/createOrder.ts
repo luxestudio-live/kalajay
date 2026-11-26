@@ -594,7 +594,13 @@ export async function POST(request: Request) {
             return { isReplay: true, response: cached.response || resultPayload };
           }
 
-          // 2. Atomic Stock Validation & Reservation
+          // 2. Atomic Stock Validation & Reservation (All Reads First, Then All Writes)
+          const inventoryUpdates: Array<{
+            ref: any;
+            nextAvailable: number;
+            nextReserved: number;
+          }> = [];
+
           for (const item of verifiedOrderItems) {
             let invRef = adminDb.collection('inventory').doc(item.sku);
             let invSnap = await transaction.get(invRef);
@@ -625,12 +631,21 @@ export async function POST(request: Request) {
               const nextAvailable = currentAvailable - item.quantity;
               const nextReserved = Number(invData.reservedInLoom ?? 0) + item.quantity;
 
-              transaction.update(invRef, {
-                available: Math.max(0, nextAvailable),
-                reservedInLoom: nextReserved,
-                updatedAt: new Date().toISOString(),
+              inventoryUpdates.push({
+                ref: invRef,
+                nextAvailable: Math.max(0, nextAvailable),
+                nextReserved,
               });
             }
+          }
+
+          // Stage 2: Perform all writes only after all reads have completed
+          for (const u of inventoryUpdates) {
+            transaction.update(u.ref, {
+              available: u.nextAvailable,
+              reservedInLoom: u.nextReserved,
+              updatedAt: new Date().toISOString(),
+            });
           }
 
           // Record atomic 15-minute inventory reservation lease
@@ -738,6 +753,13 @@ export async function POST(request: Request) {
             return { isReplay: true, response: cached.response || resultPayload };
           }
 
+          // All reads first
+          const clientInvUpdates: Array<{
+            ref: any;
+            nextAvailable: number;
+            nextReserved: number;
+          }> = [];
+
           for (const item of verifiedOrderItems) {
             const invRef = doc(db, 'inventory', item.sku);
             const invSnap = await transaction.get(invRef);
@@ -759,12 +781,21 @@ export async function POST(request: Request) {
               const nextAvailable = currentAvailable - item.quantity;
               const nextReserved = Number(invData.reservedInLoom ?? 0) + item.quantity;
 
-              transaction.update(invRef, {
-                available: Math.max(0, nextAvailable),
-                reservedInLoom: nextReserved,
-                updatedAt: serverTimestamp(),
+              clientInvUpdates.push({
+                ref: invRef,
+                nextAvailable: Math.max(0, nextAvailable),
+                nextReserved,
               });
             }
+          }
+
+          // All writes after all reads
+          for (const u of clientInvUpdates) {
+            transaction.update(u.ref, {
+              available: u.nextAvailable,
+              reservedInLoom: u.nextReserved,
+              updatedAt: serverTimestamp(),
+            });
           }
 
           const orderDocRef = doc(db, 'orders', generatedOrderNumber);
