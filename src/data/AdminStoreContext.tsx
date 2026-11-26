@@ -393,7 +393,9 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
         ]);
 
         if (liveOrders.status === 'fulfilled' && liveOrders.value.length > 0) {
-          setOrders(liveOrders.value);
+          const liveIds = new Set(liveOrders.value.map(o => o.id));
+          const remainingSeeds = SEED_ORDERS.filter(o => !liveIds.has(o.id));
+          setOrders([...liveOrders.value, ...remainingSeeds]);
         }
         if (liveCustom.status === 'fulfilled' && liveCustom.value.length > 0) {
           setCustomRequests(liveCustom.value);
@@ -411,7 +413,9 @@ export function AdminStoreProvider({ children }: { children: React.ReactNode }) 
           setBanners(liveBanners.value);
         }
         if (liveInv.status === 'fulfilled' && liveInv.value.length > 0) {
-          setInventory(liveInv.value);
+          const liveSkus = new Set(liveInv.value.map(i => i.sku || i.id));
+          const remainingSeeds = SEED_INVENTORY_ITEMS.filter(i => !liveSkus.has(i.sku || i.id));
+          setInventory([...liveInv.value, ...remainingSeeds]);
         }
         if (liveCoupons.status === 'fulfilled' && liveCoupons.value.length > 0) {
           setCoupons(liveCoupons.value);

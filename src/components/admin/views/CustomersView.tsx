@@ -162,7 +162,7 @@ export default function CustomersView() {
         const spend = userOrders.reduce((sum, o) => sum + (o.total || 0), 0);
         const count = userOrders.length;
         const sorted = [...userOrders].sort(
-          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          (a, b) => new Date(a.createdAt || (a as any).createdAtServer || 0).getTime() - new Date(b.createdAt || (b as any).createdAtServer || 0).getTime()
         );
 
         let tier: PatronProfile['tier'] = 'First Heirloom';
@@ -172,16 +172,16 @@ export default function CustomersView() {
 
         return {
           id: u.id || `PAT-${String(idx + 1).padStart(3, '0')}`,
-          name: u.name || 'Patron',
+          name: u.name || (u as any).displayName || 'Patron',
           email: u.email || 'patron@kalajay.in',
-          phone: u.phone || '+91 97405 40847',
-          city: (u as any).addresses?.[0]?.city || 'Mumbai',
-          state: (u as any).addresses?.[0]?.state || 'Maharashtra',
+          phone: u.phone || (u as any).phoneNumber || '+91 97405 40847',
+          city: (u as any).addresses?.[0]?.city || (u as any).city || 'Mumbai',
+          state: (u as any).addresses?.[0]?.state || (u as any).state || 'Maharashtra',
           tier,
           lifetimeSpend: spend,
           ordersCount: count,
-          firstOrderDate: sorted[0]?.createdAt.slice(0, 10) || new Date().toISOString().slice(0, 10),
-          lastOrderDate: sorted[sorted.length - 1]?.createdAt.slice(0, 10) || new Date().toISOString().slice(0, 10),
+          firstOrderDate: sorted[0]?.createdAt?.slice(0, 10) || (sorted[0] as any)?.createdAtServer?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+          lastOrderDate: sorted[sorted.length - 1]?.createdAt?.slice(0, 10) || (sorted[sorted.length - 1] as any)?.createdAtServer?.slice(0, 10) || new Date().toISOString().slice(0, 10),
           preferredPalette: 'Heritage Ivory & Pearl',
           favoritePiece: userOrders[0]?.items?.[0]?.name || 'Signature Pearl Beaded Vanity Box',
           conciergeNotes: `Registered patron profile verified in Firestore. ${count} total orders placed.`,

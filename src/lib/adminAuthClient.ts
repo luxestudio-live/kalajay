@@ -8,7 +8,11 @@ export async function getAdminAuthHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
 
   if (typeof window !== 'undefined') {
-    const cachedToken = sessionStorage.getItem('kalajay_admin_token');
+    const cachedToken =
+      sessionStorage.getItem('kalajay_admin_token') ||
+      sessionStorage.getItem('kalajay_staff_token') ||
+      localStorage.getItem('kalajay_staff_token') ||
+      localStorage.getItem('kalajay_admin_token');
     if (cachedToken) {
       headers['Authorization'] = `Bearer ${cachedToken}`;
     }

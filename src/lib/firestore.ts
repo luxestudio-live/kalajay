@@ -358,6 +358,15 @@ export async function getPatronOrders(uid: string): Promise<Order[]> {
 
 export async function getAllFirestoreOrders(): Promise<AdminOrder[]> {
   try {
+    if (typeof window !== 'undefined') {
+      const res = await adminFetch('/api/admin/orders');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.orders)) {
+          return data.orders;
+        }
+      }
+    }
     if (!db || !db.type) return [];
     const ordersRef = collection(db, 'orders');
     const snapshot = await getDocs(ordersRef);
@@ -760,6 +769,15 @@ export async function saveFirestoreBanners(banners: BannerItem[]): Promise<void>
 
 export async function getFirestoreInventory(): Promise<InventoryItem[]> {
   try {
+    if (typeof window !== 'undefined') {
+      const res = await adminFetch('/api/admin/operations?action=inventory_list');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.inventory)) {
+          return data.inventory;
+        }
+      }
+    }
     if (!db || !db.type) return [];
     const ref = collection(db, 'inventory');
     const snapshot = await getDocs(ref);
@@ -1398,13 +1416,22 @@ export async function saveFirestoreCmsDoc(docId: string, data: Record<string, an
 
 export async function getAllFirestoreUsers(): Promise<User[]> {
   try {
+    if (typeof window !== 'undefined') {
+      const res = await adminFetch('/api/admin/operations?action=customers_list');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.customers)) {
+          return data.customers;
+        }
+      }
+    }
     if (!db || !db.type) return [];
     const ref = collection(db, 'users');
     const snapshot = await getDocs(ref);
     if (snapshot.empty) return [];
     const list: User[] = [];
     snapshot.forEach((snap) => {
-      list.push(snap.data() as User);
+      list.push({ id: snap.id, ...snap.data() } as User);
     });
     return list;
   } catch (error) {

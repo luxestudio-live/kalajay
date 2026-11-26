@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { FieldValue } from 'firebase-admin/firestore';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, collection, getDocs } from 'firebase/firestore';
 import { verifyStaffPermission } from '@/lib/serverRbac';
 import { ensureServerAdminAuth, getAdminFirestore } from '@/lib/serverFirebaseAdmin';
 import type { OfflineOrder, AdminOrder, PermissionAction } from '@/data/adminTypes';
@@ -50,6 +50,63 @@ function writeOrderStore(data: Record<string, any>) {
     const fPath = getOrderStorePath();
     fs.writeFileSync(fPath, JSON.stringify(data, null, 2), 'utf-8');
   } catch {}
+}
+
+// ==========================================
+// GET HANDLER: Authoritative Order Listing (Admin)
+// ==========================================
+export async function GET(request: Request) {
+  try {
+    let authCheck = await verifyStaffPermission(request, null, 'orders.all', 'view');
+    if (!authCheck.authorized) {
+      authCheck = await verifyStaffPermission(request, null, 'orders.orders', 'view');
+    }
+    if (!authCheck.authorized) {
+      authCheck = await verifyStaffPermission(request, null, 'orders.manual', 'view');
+    }
+    if (!authCheck.authorized) {
+      return NextResponse.json(
+        { success: false, error: authCheck.error, code: authCheck.code },
+        { status: authCheck.status }
+      );
+    }
+
+    const adminDb = getAdminFirestore();
+    const orders: AdminOrder[] = [];
+
+    if (adminDb) {
+      const snapshot = await adminDb.collection('orders').get();
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        orders.push({
+          id: docSnap.id,
+          ...data,
+        } as AdminOrder);
+      });
+    } else if (db && db.type) {
+      const snapshot = await getDocs(collection(db, 'orders'));
+      snapshot.forEach((docSnap: any) => {
+        orders.push({
+          id: docSnap.id,
+          ...docSnap.data(),
+        } as AdminOrder);
+      });
+    }
+
+    // Sort descending by order creation date
+    orders.sort((a, b) => {
+      const timeA = new Date(a.createdAt || (a as any).createdAtServer || 0).getTime();
+      const timeB = new Date(b.createdAt || (b as any).createdAtServer || 0).getTime();
+      return timeB - timeA;
+    });
+
+    return NextResponse.json({ success: true, orders });
+  } catch (err: any) {
+    return NextResponse.json(
+      { success: false, error: err?.message || 'Failed to list administrative orders.' },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(request: Request) {

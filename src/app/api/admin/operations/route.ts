@@ -11,10 +11,82 @@ import { getAdminFirestore } from '@/lib/serverFirebaseAdmin';
 export const dynamic = 'force-dynamic';
 
 // ==========================================
-// GET HANDLER: Fetch Roles
+// GET HANDLER: Fetch Roles, Customers, or Inventory
 // ==========================================
 export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get('action');
+
+    // ------------------------------------------
+    // ACTION: Fetch Registered Customers/Patrons
+    // ------------------------------------------
+    if (action === 'customers_list' || action === 'patrons') {
+      const authCheck = await verifyStaffPermission(request, null, 'customers.directory', 'view');
+      if (!authCheck.authorized && authCheck.code !== 'PERMISSION_DENIED') {
+        return NextResponse.json(
+          { success: false, error: authCheck.error, code: authCheck.code },
+          { status: authCheck.status }
+        );
+      }
+
+      const adminDb = getAdminFirestore();
+      const customers: any[] = [];
+
+      if (adminDb) {
+        const snapshot = await adminDb.collection('users').get();
+        snapshot.forEach(docSnap => {
+          customers.push({ id: docSnap.id, ...docSnap.data() });
+        });
+      } else if (db && db.type) {
+        const snapshot = await getDocs(collection(db, 'users'));
+        snapshot.forEach((docSnap: any) => {
+          customers.push({ id: docSnap.id, ...docSnap.data() });
+        });
+      }
+
+      return NextResponse.json({ success: true, customers });
+    }
+
+    // ------------------------------------------
+    // ACTION: Fetch Authoritative Inventory ERP
+    // ------------------------------------------
+    if (action === 'inventory_list' || action === 'inventory') {
+      let authCheck = await verifyStaffPermission(request, null, 'inventory.master', 'view');
+      if (!authCheck.authorized) {
+        authCheck = await verifyStaffPermission(request, null, 'inventory.all', 'view');
+      }
+      if (!authCheck.authorized) {
+        authCheck = await verifyStaffPermission(request, null, 'inventory.low_stock', 'view');
+      }
+      if (!authCheck.authorized && authCheck.code !== 'PERMISSION_DENIED') {
+        return NextResponse.json(
+          { success: false, error: authCheck.error, code: authCheck.code },
+          { status: authCheck.status }
+        );
+      }
+
+      const adminDb = getAdminFirestore();
+      const inventory: any[] = [];
+
+      if (adminDb) {
+        const snapshot = await adminDb.collection('inventory').get();
+        snapshot.forEach(docSnap => {
+          inventory.push({ id: docSnap.id, ...docSnap.data() });
+        });
+      } else if (db && db.type) {
+        const snapshot = await getDocs(collection(db, 'inventory'));
+        snapshot.forEach((docSnap: any) => {
+          inventory.push({ id: docSnap.id, ...docSnap.data() });
+        });
+      }
+
+      return NextResponse.json({ success: true, inventory });
+    }
+
+    // ------------------------------------------
+    // DEFAULT ACTION: Fetch Roles
+    // ------------------------------------------
     const authCheck = await verifyStaffPermission(request, null, 'settings.roles', 'view');
     if (!authCheck.authorized && authCheck.code !== 'PERMISSION_DENIED') {
       return NextResponse.json(
