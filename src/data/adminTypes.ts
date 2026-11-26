@@ -134,7 +134,8 @@ export interface CraftCosting {
   notes?: string;
 }
 
-export type MaterialUnit = 'kg' | 'g' | 'grams' | 'meters' | 'pieces';
+export type MaterialUnit = 'kg' | 'g' | 'grams' | 'meters' | 'metres' | 'pieces' | 'pcs';
+export type MaterialRateBasis = 'per_kg' | 'per_meter' | 'per_piece';
 
 export interface RawMaterialRequirement {
   id: string;
@@ -143,7 +144,10 @@ export interface RawMaterialRequirement {
   description?: string;
   quantityRequired: number;
   unit: MaterialUnit;
-  costPerKg: number;
+  rate: number;
+  rateUnit: MaterialRateBasis;
+  costPerKg?: number; // ONLY populated if rateUnit === 'per_kg'
+  costPerUnit?: number;
   lineCost: number;
 }
 
@@ -154,6 +158,18 @@ export interface OtherChargeBreakdown {
 }
 
 export type CostingBasis = 'per_unit' | 'per_batch';
+
+export interface CostingHistorySnapshot {
+  calculatedAt: string;
+  costingBasis: CostingBasis;
+  productionQuantity: number;
+  totalRawMaterialCost: number;
+  labourCost: number;
+  otherCharges: number;
+  totalProductionCost: number;
+  unitCost: number;
+  notes?: string;
+}
 
 export interface EnhancedInventoryCosting {
   enabled: boolean;
@@ -171,6 +187,7 @@ export interface EnhancedInventoryCosting {
   calculatedCostPrice: number;
   notes?: string;
   calculatedAt?: string;
+  history?: CostingHistorySnapshot[];
 }
 
 export interface InventoryMovement {

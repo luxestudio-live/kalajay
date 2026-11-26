@@ -45,12 +45,18 @@ import {
   InventoryMovementType,
   RawMaterialRequirement,
   MaterialUnit,
+  MaterialRateBasis,
   CostingBasis,
+  CostingHistorySnapshot,
   EnhancedInventoryCosting,
 } from '@/data/adminTypes';
 import {
   calculateRawMaterialLineCost,
   calculateInventoryCosting,
+  getRateUnitForMaterialUnit,
+  getRateBasisLabel,
+  normalizeRawMaterialRequirement,
+  createCostingHistorySnapshot,
   formatINR,
 } from '@/lib/inventoryCosting';
 
@@ -433,6 +439,8 @@ export default function InventoryView() {
       description: 'Lustrous seed and crystal beads',
       quantityRequired: 0.25,
       unit: 'kg',
+      rate: 800,
+      rateUnit: 'per_kg',
       costPerKg: 800,
       lineCost: 200,
     },
@@ -704,17 +712,19 @@ export default function InventoryView() {
     setEditCostingBasis(item.costingBasis || item.enhancedCosting?.costingBasis || 'per_unit');
     setEditProductionQuantity(item.productionQuantity || item.enhancedCosting?.productionQuantity || 1);
 
-    let initialMaterials: RawMaterialRequirement[] = item.rawMaterials || item.enhancedCosting?.rawMaterials || [];
+    let initialMaterials: RawMaterialRequirement[] = (item.rawMaterials || item.enhancedCosting?.rawMaterials || []).map((m, idx) =>
+      normalizeRawMaterialRequirement(m, `rm-edit-${idx + 1}`)
+    );
     if (initialMaterials.length === 0 && item.costing?.enabled) {
       initialMaterials = [
-        {
+        normalizeRawMaterialRequirement({
           id: 'rm-legacy-1',
           materialName: item.costing.beadsUsed || 'Handicraft Beads',
           quantityRequired: item.costing.beadKg || 0.25,
           unit: 'kg',
-          costPerKg: item.costing.beadCostKg || 800,
-          lineCost: (item.costing.beadKg || 0.25) * (item.costing.beadCostKg || 800),
-        },
+          rate: item.costing.beadCostKg || 800,
+          rateUnit: 'per_kg',
+        }),
       ];
     }
     setEditRawMaterials(initialMaterials);
@@ -748,6 +758,12 @@ export default function InventoryView() {
         ? Math.round(((editingItem.retailPrice - editingItem.unitCost) / editingItem.retailPrice) * 100 * 10) / 10
         : editingItem.grossMarginPct;
 
+    const existingHistory: CostingHistorySnapshot[] =
+      editingItem.enhancedCosting?.history || [];
+    const historyWithSnapshot: CostingHistorySnapshot[] = editingItem.enhancedCosting
+      ? [...existingHistory, createCostingHistorySnapshot(editingItem.enhancedCosting)]
+      : existingHistory;
+
     const finalEnhanced = calculateInventoryCosting({
       costingBasis: editCostingBasis,
       productionQuantity: editProductionQuantity,
@@ -756,6 +772,7 @@ export default function InventoryView() {
       labourCostPerHour: editLabourCostPerHour,
       otherCharges: editOtherCharges,
       notes: editNotes,
+      existingHistory: historyWithSnapshot,
     });
 
     updateInventoryItem(editingItem.id, {
@@ -1943,6 +1960,8 @@ export default function InventoryView() {
                             materialName: '',
                             quantityRequired: 0.1,
                             unit: 'kg',
+                            rate: 500,
+                            rateUnit: 'per_kg',
                             costPerKg: 500,
                             lineCost: 50,
                           },
@@ -1957,7 +1976,9 @@ export default function InventoryView() {
 
                   <div className="space-y-2">
                     {createRawMaterials.map((mat, idx) => {
-                      const calculatedLine = calculateRawMaterialLineCost(mat.quantityRequired, mat.unit, mat.costPerKg);
+                      const effectiveRate = mat.rate ?? mat.costPerKg ?? 0;
+                      const effectiveRateUnit = mat.rateUnit || getRateUnitForMaterialUnit(mat.unit);
+                      const calculatedLine = calculateRawMaterialLineCost(mat.quantityRequired, mat.unit, effectiveRate, effectiveRateUnit);
                       return (
                         <div
                           key={mat.id}
@@ -1987,15 +2008,16 @@ export default function InventoryView() {
                               onChange={e => {
                                 const val = Number(e.target.value) || 0;
                                 setCreateRawMaterials(prev =>
-                                  prev.map((m, i) =>
-                                    i === idx
-                                      ? {
-                                          ...m,
-                                          quantityRequired: val,
-                                          lineCost: calculateRawMaterialLineCost(val, m.unit, m.costPerKg),
-                                        }
-                                      : m
-                                  )
+                                  prev.map((m, i) => {
+                                    if (i !== idx) return m;
+                                    const r = m.rate ?? m.costPerKg ?? 0;
+                                    const ru = m.rateUnit || getRateUnitForMaterialUnit(m.unit);
+                                    return {
+                                      ...m,
+                                      quantityRequired: val,
+                                      lineCost: calculateRawMaterialLineCost(val, m.unit, r, ru),
+                                    };
+                                  })
                                 );
                               }}
                               className="w-full bg-[#FAF7F2] border border-[#EAE2D8] rounded-lg px-2 py-1 text-xs font-mono text-center text-[#372921]"
@@ -2007,16 +2029,20 @@ export default function InventoryView() {
                               value={mat.unit}
                               onChange={e => {
                                 const val = e.target.value as MaterialUnit;
+                                const newRateUnit = getRateUnitForMaterialUnit(val);
                                 setCreateRawMaterials(prev =>
-                                  prev.map((m, i) =>
-                                    i === idx
-                                      ? {
-                                          ...m,
-                                          unit: val,
-                                          lineCost: calculateRawMaterialLineCost(m.quantityRequired, val, m.costPerKg),
-                                        }
-                                      : m
-                                  )
+                                  prev.map((m, i) => {
+                                    if (i !== idx) return m;
+                                    const r = m.rate ?? m.costPerKg ?? 0;
+                                    return {
+                                      ...m,
+                                      unit: val,
+                                      rate: r,
+                                      rateUnit: newRateUnit,
+                                      costPerKg: newRateUnit === 'per_kg' ? r : undefined,
+                                      lineCost: calculateRawMaterialLineCost(m.quantityRequired, val, r, newRateUnit),
+                                    };
+                                  })
                                 );
                               }}
                               className="w-full bg-[#FAF7F2] border border-[#EAE2D8] rounded-lg px-1.5 py-1 text-xs text-[#372921]"
@@ -2028,28 +2054,35 @@ export default function InventoryView() {
                             </select>
                           </div>
 
-                          <div className="col-span-2">
-                            <input
-                              type="number"
-                              step="any"
-                              placeholder="Cost/unit"
-                              value={mat.costPerKg}
-                              onChange={e => {
-                                const val = Number(e.target.value) || 0;
-                                setCreateRawMaterials(prev =>
-                                  prev.map((m, i) =>
-                                    i === idx
-                                      ? {
-                                          ...m,
-                                          costPerKg: val,
-                                          lineCost: calculateRawMaterialLineCost(m.quantityRequired, m.unit, val),
-                                        }
-                                      : m
-                                  )
-                                );
-                              }}
-                              className="w-full bg-[#FAF7F2] border border-[#EAE2D8] rounded-lg px-2 py-1 text-xs font-mono text-right text-[#372921]"
-                            />
+                          <div className="col-span-2 relative">
+                            <div className="flex items-center">
+                              <input
+                                type="number"
+                                step="any"
+                                placeholder="Rate"
+                                value={mat.rate ?? mat.costPerKg ?? ''}
+                                onChange={e => {
+                                  const val = Number(e.target.value) || 0;
+                                  setCreateRawMaterials(prev =>
+                                    prev.map((m, i) => {
+                                      if (i !== idx) return m;
+                                      const ru = m.rateUnit || getRateUnitForMaterialUnit(m.unit);
+                                      return {
+                                        ...m,
+                                        rate: val,
+                                        rateUnit: ru,
+                                        costPerKg: ru === 'per_kg' ? val : undefined,
+                                        lineCost: calculateRawMaterialLineCost(m.quantityRequired, m.unit, val, ru),
+                                      };
+                                    })
+                                  );
+                                }}
+                                className="w-full bg-[#FAF7F2] border border-[#EAE2D8] rounded-lg pl-1.5 pr-8 py-1 text-xs font-mono text-right text-[#372921]"
+                              />
+                              <span className="absolute right-1 text-[10px] text-[#76695F] font-mono pointer-events-none">
+                                {getRateBasisLabel(effectiveRateUnit)}
+                              </span>
+                            </div>
                           </div>
 
                           <div className="col-span-2 flex items-center justify-between pl-1">
@@ -2371,6 +2404,8 @@ export default function InventoryView() {
                             materialName: '',
                             quantityRequired: 0.1,
                             unit: 'kg',
+                            rate: 500,
+                            rateUnit: 'per_kg',
                             costPerKg: 500,
                             lineCost: 50,
                           },
@@ -2385,7 +2420,9 @@ export default function InventoryView() {
 
                   <div className="space-y-2">
                     {editRawMaterials.map((mat, idx) => {
-                      const calculatedLine = calculateRawMaterialLineCost(mat.quantityRequired, mat.unit, mat.costPerKg);
+                      const effectiveRate = mat.rate ?? mat.costPerKg ?? 0;
+                      const effectiveRateUnit = mat.rateUnit || getRateUnitForMaterialUnit(mat.unit);
+                      const calculatedLine = calculateRawMaterialLineCost(mat.quantityRequired, mat.unit, effectiveRate, effectiveRateUnit);
                       return (
                         <div
                           key={mat.id}
@@ -2415,15 +2452,16 @@ export default function InventoryView() {
                               onChange={e => {
                                 const val = Number(e.target.value) || 0;
                                 setEditRawMaterials(prev =>
-                                  prev.map((m, i) =>
-                                    i === idx
-                                      ? {
-                                          ...m,
-                                          quantityRequired: val,
-                                          lineCost: calculateRawMaterialLineCost(val, m.unit, m.costPerKg),
-                                        }
-                                      : m
-                                  )
+                                  prev.map((m, i) => {
+                                    if (i !== idx) return m;
+                                    const r = m.rate ?? m.costPerKg ?? 0;
+                                    const ru = m.rateUnit || getRateUnitForMaterialUnit(m.unit);
+                                    return {
+                                      ...m,
+                                      quantityRequired: val,
+                                      lineCost: calculateRawMaterialLineCost(val, m.unit, r, ru),
+                                    };
+                                  })
                                 );
                               }}
                               className="w-full bg-[#FAF7F2] border border-[#EAE2D8] rounded-lg px-2 py-1 text-xs font-mono text-center text-[#372921]"
@@ -2435,16 +2473,20 @@ export default function InventoryView() {
                               value={mat.unit}
                               onChange={e => {
                                 const val = e.target.value as MaterialUnit;
+                                const newRateUnit = getRateUnitForMaterialUnit(val);
                                 setEditRawMaterials(prev =>
-                                  prev.map((m, i) =>
-                                    i === idx
-                                      ? {
-                                          ...m,
-                                          unit: val,
-                                          lineCost: calculateRawMaterialLineCost(m.quantityRequired, val, m.costPerKg),
-                                        }
-                                      : m
-                                  )
+                                  prev.map((m, i) => {
+                                    if (i !== idx) return m;
+                                    const r = m.rate ?? m.costPerKg ?? 0;
+                                    return {
+                                      ...m,
+                                      unit: val,
+                                      rate: r,
+                                      rateUnit: newRateUnit,
+                                      costPerKg: newRateUnit === 'per_kg' ? r : undefined,
+                                      lineCost: calculateRawMaterialLineCost(m.quantityRequired, val, r, newRateUnit),
+                                    };
+                                  })
                                 );
                               }}
                               className="w-full bg-[#FAF7F2] border border-[#EAE2D8] rounded-lg px-1.5 py-1 text-xs text-[#372921]"
@@ -2456,28 +2498,35 @@ export default function InventoryView() {
                             </select>
                           </div>
 
-                          <div className="col-span-2">
-                            <input
-                              type="number"
-                              step="any"
-                              placeholder="Cost/unit"
-                              value={mat.costPerKg}
-                              onChange={e => {
-                                const val = Number(e.target.value) || 0;
-                                setEditRawMaterials(prev =>
-                                  prev.map((m, i) =>
-                                    i === idx
-                                      ? {
-                                          ...m,
-                                          costPerKg: val,
-                                          lineCost: calculateRawMaterialLineCost(m.quantityRequired, m.unit, val),
-                                        }
-                                      : m
-                                  )
-                                );
-                              }}
-                              className="w-full bg-[#FAF7F2] border border-[#EAE2D8] rounded-lg px-2 py-1 text-xs font-mono text-right text-[#372921]"
-                            />
+                          <div className="col-span-2 relative">
+                            <div className="flex items-center">
+                              <input
+                                type="number"
+                                step="any"
+                                placeholder="Rate"
+                                value={mat.rate ?? mat.costPerKg ?? ''}
+                                onChange={e => {
+                                  const val = Number(e.target.value) || 0;
+                                  setEditRawMaterials(prev =>
+                                    prev.map((m, i) => {
+                                      if (i !== idx) return m;
+                                      const ru = m.rateUnit || getRateUnitForMaterialUnit(m.unit);
+                                      return {
+                                        ...m,
+                                        rate: val,
+                                        rateUnit: ru,
+                                        costPerKg: ru === 'per_kg' ? val : undefined,
+                                        lineCost: calculateRawMaterialLineCost(m.quantityRequired, m.unit, val, ru),
+                                      };
+                                    })
+                                  );
+                                }}
+                                className="w-full bg-[#FAF7F2] border border-[#EAE2D8] rounded-lg pl-1.5 pr-8 py-1 text-xs font-mono text-right text-[#372921]"
+                              />
+                              <span className="absolute right-1 text-[10px] text-[#76695F] font-mono pointer-events-none">
+                                {getRateBasisLabel(effectiveRateUnit)}
+                              </span>
+                            </div>
                           </div>
 
                           <div className="col-span-2 flex items-center justify-between pl-1">
@@ -2713,15 +2762,21 @@ export default function InventoryView() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[#EAE2D8]">
-                          {(selectedDetailItem.rawMaterials || selectedDetailItem.enhancedCosting?.rawMaterials || []).map((m, idx) => (
-                            <tr key={idx} className="hover:bg-[#FFFCF7]">
-                              <td className="py-2 px-3 font-medium text-[#372921]">{m.materialName}</td>
-                              <td className="py-2 px-3 text-center font-mono">{m.quantityRequired}</td>
-                              <td className="py-2 px-3 text-center font-mono text-[#76695F]">{m.unit}</td>
-                              <td className="py-2 px-3 text-right font-mono">₹{m.costPerKg}</td>
-                              <td className="py-2 px-3 text-right font-mono font-bold text-[#9E5430]">₹{m.lineCost}</td>
-                            </tr>
-                          ))}
+                          {(selectedDetailItem.rawMaterials || selectedDetailItem.enhancedCosting?.rawMaterials || []).map((m, idx) => {
+                            const effectiveRate = m.rate ?? m.costPerKg ?? 0;
+                            const effectiveRateUnit = m.rateUnit || getRateUnitForMaterialUnit(m.unit);
+                            return (
+                              <tr key={idx} className="hover:bg-[#FFFCF7]">
+                                <td className="py-2 px-3 font-medium text-[#372921]">{m.materialName}</td>
+                                <td className="py-2 px-3 text-center font-mono">{m.quantityRequired}</td>
+                                <td className="py-2 px-3 text-center font-mono text-[#76695F]">{m.unit}</td>
+                                <td className="py-2 px-3 text-right font-mono">
+                                  ₹{effectiveRate} <span className="text-[10px] text-[#76695F]">({getRateBasisLabel(effectiveRateUnit)})</span>
+                                </td>
+                                <td className="py-2 px-3 text-right font-mono font-bold text-[#9E5430]">₹{m.lineCost}</td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

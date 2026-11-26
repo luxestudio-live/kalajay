@@ -317,9 +317,9 @@ export default function StoryPage() {
 
               <div className="p-6 rounded-[28px] bg-canvas border border-border-subtle space-y-3">
                 <ShieldCheck className="w-6 h-6 text-emerald-700" />
-                <h4 className="font-serif text-xl text-plum">Statutory Artisan Accreditation</h4>
+                <h4 className="font-serif text-xl text-plum">Statutory Business Details</h4>
                 <p className="text-xs text-ink-muted leading-relaxed font-light">
-                  Operating with full legal compliance as {KALAJAY_BUSINESS_PROFILE.legalEntityName} (GSTIN: <span className="font-mono font-medium text-plum">{KALAJAY_BUSINESS_PROFILE.gstin}</span>), supporting 21 women master artisans with fair living wages.
+                  Registered as {KALAJAY_BUSINESS_PROFILE.legalEntityName} · GSTIN: <span className="font-mono font-medium text-plum">{KALAJAY_BUSINESS_PROFILE.gstin}</span> (State Code: {KALAJAY_BUSINESS_PROFILE.stateCode} - {KALAJAY_BUSINESS_PROFILE.stateName}).
                 </p>
               </div>
             </div>

@@ -72,7 +72,7 @@ export default function ShippingReturnsPage() {
           </div>
 
           <div className="pt-4 max-w-xl mx-auto text-xs text-ink-muted/80 bg-canvas-subtle p-3 rounded-lg border border-border-subtle text-center">
-            <span className="font-semibold text-plum">Statutory Tax Compliance:</span> Official GST Tax Invoices are issued with every shipment under GSTIN <span className="font-mono text-plum font-semibold">{KALAJAY_BUSINESS_PROFILE.gstin}</span> (HSN: {KALAJAY_BUSINESS_PROFILE.tax.hsnCode}).
+            <span className="font-semibold text-plum">Statutory Tax Registration:</span> GSTIN <span className="font-mono text-plum font-semibold">{KALAJAY_BUSINESS_PROFILE.gstin}</span> · HSN {KALAJAY_BUSINESS_PROFILE.tax.hsnCode} (Invoices issued in accordance with GST regulations).
           </div>
         </div>
       </section>

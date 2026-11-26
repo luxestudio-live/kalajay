@@ -32,6 +32,7 @@ export interface KalajayBusinessProfile {
   instagram: string;
   instagramUrl: string;
   website: string;
+  approvalStatus: 'PENDING_CLIENT_ACCOUNTANT_APPROVAL' | 'VERIFIED';
   tax: {
     gstRate: number;
     taxLabel: string;
@@ -41,6 +42,11 @@ export interface KalajayBusinessProfile {
 }
 
 export const KALAJAY_BUSINESS_PROFILE: KalajayBusinessProfile = {
+  // CONFIRMED STATUTORY DETAILS:
+  // GSTIN is confirmed statutory identifier: 27FAAPS2113B1Z8
+  // PAN is structurally extracted: FAAPS2113B
+  // State code: 27 (Maharashtra)
+  // All other legal entity and registration credentials are held pending formal client/CA signoff.
   legalEntityName: 'Kalajay Creations LLP',
   brandName: 'Kalajay',
   tradeName: 'Kalajay Handcrafted Luxuries',
@@ -59,6 +65,7 @@ export const KALAJAY_BUSINESS_PROFILE: KalajayBusinessProfile = {
   instagram: '@kalajay.handcrafted',
   instagramUrl: 'https://www.instagram.com/kalajay.handcrafted/',
   website: 'https://kalajay-luxe.theluxestudio.in',
+  approvalStatus: 'PENDING_CLIENT_ACCOUNTANT_APPROVAL',
   tax: {
     gstRate: 0.03,
     taxLabel: 'GST (3%)',

@@ -50,7 +50,7 @@ export const KALAJAY_SELLER_DETAILS: InvoiceSellerDetails = {
   contactPhone: KALAJAY_BUSINESS_PROFILE.supportPhone,
   contactEmail: KALAJAY_BUSINESS_PROFILE.contactEmail,
   website: KALAJAY_BUSINESS_PROFILE.website,
-  approvalStatus: 'VERIFIED',
+  approvalStatus: 'PENDING_CLIENT_ACCOUNTANT_APPROVAL',
 };
 
 export interface InvoiceItem {
