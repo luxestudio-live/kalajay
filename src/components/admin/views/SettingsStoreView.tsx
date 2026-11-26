@@ -45,7 +45,11 @@ export default function SettingsStoreView() {
       if (settings && isMounted) {
         if (settings.storeName) setStoreName(settings.storeName);
         if (settings.legalEntity) setLegalEntity(settings.legalEntity);
-        if (settings.gstin) setGstin(settings.gstin);
+        if (settings.gstin && validateGstin(settings.gstin)) {
+          setGstin(settings.gstin);
+        } else {
+          setGstin(KALAJAY_BUSINESS_PROFILE.gstin);
+        }
         if (settings.supportEmail) setSupportEmail(settings.supportEmail);
         if (settings.supportPhone) setSupportPhone(settings.supportPhone);
         if (settings.mumbaiAddress) setMumbaiAddress(settings.mumbaiAddress);
