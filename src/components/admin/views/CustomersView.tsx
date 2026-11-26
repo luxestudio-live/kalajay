@@ -43,6 +43,8 @@ interface PatronProfile {
   preferredPalette: string;
   favoritePiece: string;
   conciergeNotes: string;
+  provenance?: 'live' | 'demo';
+  isDemo?: boolean;
 }
 
 export default function CustomersView() {
@@ -88,11 +90,17 @@ export default function CustomersView() {
           preferredPalette: 'Heritage Ivory & Pearl',
           favoritePiece: userOrders[0]?.items?.[0]?.name || 'Signature Pearl Beaded Vanity Box',
           conciergeNotes: `Registered patron profile verified in Firestore. ${count} total orders placed.`,
+          provenance: 'live',
+          isDemo: false,
         };
       });
 
       const existingEmails = new Set(livePatrons.map((p) => p.email.toLowerCase()));
-      const remainingSeed = SEED_PATRONS.filter((p) => !existingEmails.has(p.email.toLowerCase()));
+      const remainingSeed = SEED_PATRONS.filter((p) => !existingEmails.has(p.email.toLowerCase())).map((p) => ({
+        ...p,
+        provenance: 'demo' as const,
+        isDemo: true,
+      }));
       setPatrons([...livePatrons, ...(remainingSeed as unknown as PatronProfile[])]);
     });
 
