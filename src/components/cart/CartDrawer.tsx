@@ -22,24 +22,64 @@ export default function CartDrawer() {
     whatsappCheckoutUrl
   } = useCart();
 
-  if (!isOpen) return null;
-
   const freeDeliveryThreshold = BRAND_CONFIG.shipping.freeThreshold;
   const amountToFreeShipping = Math.max(0, freeDeliveryThreshold - subtotal);
   const freeShippingProgress = Math.min(100, (subtotal / freeDeliveryThreshold) * 100);
 
+  // Lock body scroll and pause Lenis while cart drawer is open
+  React.useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      if (typeof window !== 'undefined' && (window as unknown as { __lenis?: { stop: () => void } }).__lenis) {
+        (window as unknown as { __lenis?: { stop: () => void } }).__lenis?.stop();
+      }
+    } else {
+      document.body.style.overflow = 'unset';
+      if (typeof window !== 'undefined' && (window as unknown as { __lenis?: { start: () => void } }).__lenis) {
+        (window as unknown as { __lenis?: { start: () => void } }).__lenis?.start();
+      }
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+      if (typeof window !== 'undefined' && (window as unknown as { __lenis?: { start: () => void } }).__lenis) {
+        (window as unknown as { __lenis?: { start: () => void } }).__lenis?.start();
+      }
+    };
+  }, [isOpen]);
+
+  // Handle ESC key to dismiss cart drawer
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeCart();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, closeCart]);
+
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 overflow-hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Your Shopping Bag"
+    >
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-plum/70 backdrop-blur-sm transition-opacity"
         onClick={closeCart}
+        aria-hidden="true"
       />
 
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md bg-canvas shadow-2xl flex flex-col justify-between animate-fade-in border-l border-border-subtle">
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-4 sm:pl-10 pointer-events-none">
+        <div
+          className="w-screen max-w-md h-full max-h-screen h-[100dvh] bg-canvas shadow-2xl flex flex-col min-h-0 animate-fade-in border-l border-border-subtle pointer-events-auto"
+          data-lenis-prevent="true"
+        >
           {/* Header */}
-          <div className="p-6 border-b border-border-subtle flex items-center justify-between bg-canvas-subtle/50">
+          <div className="p-5 sm:p-6 border-b border-border-subtle flex items-center justify-between bg-canvas-subtle/50 shrink-0">
             <div>
               <h2 className="font-serif text-2xl tracking-wide text-plum font-normal">
                 Your Shopping Bag
@@ -62,7 +102,7 @@ export default function CartDrawer() {
 
           {/* Free Shipping Progress Indicator */}
           {cart.length > 0 && (
-            <div className="bg-blush/40 px-6 py-3 border-b border-border-subtle text-xs text-ink">
+            <div className="bg-blush/40 px-5 sm:px-6 py-3 border-b border-border-subtle text-xs text-ink shrink-0">
               <div className="flex items-center justify-between mb-1.5 font-medium">
                 {amountToFreeShipping > 0 ? (
                   <span>
@@ -87,7 +127,11 @@ export default function CartDrawer() {
           )}
 
           {/* Cart Item List */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-5 sm:p-6 space-y-5 sm:space-y-6"
+            data-lenis-prevent="true"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             {cart.length === 0 ? (
               <div className="py-16 text-center space-y-4">
                 <div className="w-16 h-16 mx-auto rounded-full bg-blush/50 flex items-center justify-center text-rosewood">
@@ -197,7 +241,7 @@ export default function CartDrawer() {
 
           {/* Footer Checkout Summary */}
           {cart.length > 0 && (
-            <div className="p-6 bg-canvas-subtle/70 border-t border-border-subtle space-y-4">
+            <div className="p-5 sm:p-6 bg-canvas-subtle/70 border-t border-border-subtle space-y-4 shrink-0">
               <div className="space-y-1.5 text-xs text-ink">
                 <div className="flex justify-between">
                   <span className="text-ink-muted">Subtotal</span>

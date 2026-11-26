@@ -560,7 +560,8 @@ export default function FAQConcierge() {
           <div
             ref={chatScrollContainerRef}
             data-lenis-prevent="true"
-            className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-3.5 bg-[#FAF7F2]"
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-3.5 bg-[#FAF7F2]"
+            style={{ WebkitOverflowScrolling: 'touch' }}
           >
             {messages.map((msg) => (
               <div

@@ -32,21 +32,48 @@ import { useAuth, Address, Order, OrderItem } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { PRODUCTS } from '@/data/catalogue';
 import { getPatronOrders } from '@/lib/firestore';
+import { validateAddress } from '@/lib/checkout/addressModel';
 
 export default function AccountClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialTab = searchParams.get('tab') || 'overview';
 
-  const { user, isAuthenticated, isLoading, logout, updateProfile, addAddress, deleteAddress, setDefaultAddress } =
-    useAuth();
+  const {
+    user,
+    isAuthenticated,
+    isLoading,
+    getIdToken,
+    logout,
+    updateProfile,
+    addAddress,
+    updateAddress,
+    deleteAddress,
+    setDefaultAddress,
+  } = useAuth();
   const { formatINR, addToCart, openCart } = useCart();
 
   const [activeTab, setActiveTab] = useState<string>(initialTab);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  // Address Modal State
+  // Guest Order Claiming States
+  const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
+  const [claimOrderId, setClaimOrderId] = useState('');
+  const [claimOtp, setClaimOtp] = useState('');
+  const [claimStep, setClaimStep] = useState<'input' | 'otp'>('input');
+  const [claimError, setClaimError] = useState<string | null>(null);
+  const [claimSuccess, setClaimSuccess] = useState<string | null>(null);
+  const [isClaiming, setIsClaiming] = useState(false);
+  const [claimSaveAddress, setClaimSaveAddress] = useState(true);
+
+  // Address Modal & Action States
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+  const [addressActionError, setAddressActionError] = useState<string | null>(null);
+  const [addressActionSuccess, setAddressActionSuccess] = useState<string | null>(null);
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
   const [newAddress, setNewAddress] = useState<Omit<Address, 'id'>>({
     label: 'Home',
     fullName: user?.name || '',
@@ -54,7 +81,7 @@ export default function AccountClient() {
     street: '',
     apartment: '',
     city: '',
-    state: '',
+    state: 'Maharashtra',
     pincode: '',
     isDefault: false,
   });
@@ -73,6 +100,11 @@ export default function AccountClient() {
   useEffect(() => {
     const tab = searchParams.get('tab');
     if (tab && tab !== 'privacy') setActiveTab(tab);
+    const claimCode = searchParams.get('claim');
+    if (claimCode) {
+      setClaimOrderId(claimCode);
+      setIsClaimModalOpen(true);
+    }
   }, [searchParams]);
 
   useEffect(() => {
@@ -125,6 +157,28 @@ export default function AccountClient() {
     }
   }, [user?.id]);
 
+  // Lock body scroll and pause Lenis when Address or Claim modal is open
+  useEffect(() => {
+    const isAnyModalOpen = Boolean(isAddressModalOpen || isClaimModalOpen);
+    if (isAnyModalOpen) {
+      document.body.style.overflow = 'hidden';
+      if (typeof window !== 'undefined' && (window as unknown as { __lenis?: { stop: () => void } }).__lenis) {
+        (window as unknown as { __lenis?: { stop: () => void } }).__lenis?.stop();
+      }
+    } else {
+      document.body.style.overflow = 'unset';
+      if (typeof window !== 'undefined' && (window as unknown as { __lenis?: { start: () => void } }).__lenis) {
+        (window as unknown as { __lenis?: { start: () => void } }).__lenis?.start();
+      }
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+      if (typeof window !== 'undefined' && (window as unknown as { __lenis?: { start: () => void } }).__lenis) {
+        (window as unknown as { __lenis?: { start: () => void } }).__lenis?.start();
+      }
+    };
+  }, [isAddressModalOpen, isClaimModalOpen]);
+
   if (isLoading) {
     return (
       <div className="bg-canvas min-h-screen py-24 flex items-center justify-center">
@@ -156,31 +210,242 @@ export default function AccountClient() {
     setTimeout(() => setProfileSavedNotice(false), 3000);
   };
 
-  const handleCreateAddress = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    if (!newAddress.street || !newAddress.city || !newAddress.pincode) {
-      alert('Please fill all required address fields.');
-      return;
-    }
-    addAddress(newAddress);
-    setIsAddressModalOpen(false);
+  const handleOpenAddAddress = () => {
+    setEditingAddressId(null);
+    setAddressActionError(null);
     setNewAddress({
       label: 'Home',
-      fullName: user.name,
-      phone: user.phone,
+      fullName: user?.name || '',
+      phone: user?.phone || '',
       street: '',
       apartment: '',
       city: '',
-      state: '',
+      state: 'Maharashtra',
       pincode: '',
-      isDefault: false,
+      isDefault: (user?.addresses || []).length === 0,
     });
+    setIsAddressModalOpen(true);
+  };
+
+  const handleOpenEditAddress = (addr: Address) => {
+    setEditingAddressId(addr.id);
+    setAddressActionError(null);
+    setNewAddress({
+      label: addr.label || 'Home',
+      fullName: addr.fullName || '',
+      phone: addr.phone || '',
+      street: addr.street || '',
+      apartment: addr.apartment || '',
+      city: addr.city || '',
+      state: addr.state || 'Maharashtra',
+      pincode: addr.pincode || '',
+      isDefault: Boolean(addr.isDefault),
+    });
+    setIsAddressModalOpen(true);
+  };
+
+  const handleSaveAddress = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setAddressActionError(null);
+
+    const validation = validateAddress(newAddress);
+    if (!validation.valid) {
+      setAddressActionError(validation.errors.join(' '));
+      return;
+    }
+
+    setIsSavingAddress(true);
+    try {
+      if (editingAddressId) {
+        const res = await updateAddress(editingAddressId, newAddress);
+        if (!res.success) {
+          setAddressActionError(res.error || 'Failed to update delivery destination.');
+          setIsSavingAddress(false);
+          return;
+        }
+        setAddressActionSuccess('Delivery destination updated successfully.');
+      } else {
+        const res = await addAddress(newAddress);
+        if (!res.success) {
+          setAddressActionError(res.error || 'Failed to save delivery destination.');
+          setIsSavingAddress(false);
+          return;
+        }
+        setAddressActionSuccess('New delivery destination added to your profile.');
+      }
+      setIsAddressModalOpen(false);
+      setTimeout(() => setAddressActionSuccess(null), 3500);
+    } catch (err: any) {
+      setAddressActionError(err?.message || 'Network error saving delivery destination.');
+    } finally {
+      setIsSavingAddress(false);
+    }
+  };
+
+  const handleDeleteAddress = async (id: string) => {
+    try {
+      const res = await deleteAddress(id);
+      if (!res.success) {
+        setAddressActionError(res.error || 'Failed to delete address.');
+        setTimeout(() => setAddressActionError(null), 3500);
+      } else {
+        setAddressActionSuccess('Address removed from your profile.');
+        setTimeout(() => setAddressActionSuccess(null), 3500);
+      }
+    } catch (err: any) {
+      setAddressActionError(err?.message || 'Network error removing address.');
+    } finally {
+      setConfirmDeleteId(null);
+    }
+  };
+
+  const handleSetDefaultAddress = async (id: string) => {
+    try {
+      const res = await setDefaultAddress(id);
+      if (!res.success) {
+        setAddressActionError(res.error || 'Failed to set default address.');
+        setTimeout(() => setAddressActionError(null), 3500);
+      } else {
+        setAddressActionSuccess('Default delivery destination updated.');
+        setTimeout(() => setAddressActionSuccess(null), 3500);
+      }
+    } catch (err: any) {
+      setAddressActionError(err?.message || 'Network error updating default address.');
+    }
   };
 
   const handleLogout = () => {
     logout();
     router.push('/');
+  };
+
+  const handleInitiateClaim = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanId = claimOrderId.trim().toUpperCase();
+    if (!cleanId) {
+      setClaimError('Please enter an order reference number (e.g. KJ-216626).');
+      return;
+    }
+    setIsClaiming(true);
+    setClaimError(null);
+    setClaimSuccess(null);
+
+    try {
+      const token = await getIdToken();
+      if (!token) {
+        setClaimError('Authentication token expired. Please re-authenticate.');
+        setIsClaiming(false);
+        return;
+      }
+
+      const res = await fetch('/api/orders/claim', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          orderId: cleanId,
+          action: 'claim',
+          saveAddressToProfile: claimSaveAddress,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setClaimSuccess(data.message || 'Order successfully linked to your portfolio.');
+        setIsClaiming(false);
+        if (user && user.id) {
+          getPatronOrders(user.id).then((ords) => {
+            if (ords) updateProfile({ orders: ords });
+          });
+        }
+        setTimeout(() => {
+          setIsClaimModalOpen(false);
+          setClaimOrderId('');
+          setClaimSuccess(null);
+        }, 1500);
+      } else if (data.requiresOtpChallenge) {
+        setClaimStep('otp');
+        setClaimError(null);
+        await fetch('/api/orders/claim', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            orderId: cleanId,
+            action: 'request_otp',
+          }),
+        });
+        setIsClaiming(false);
+      } else {
+        setClaimError(data.error || 'Failed to claim guest order.');
+        setIsClaiming(false);
+      }
+    } catch (err: any) {
+      setClaimError(err?.message || 'Network error claiming order.');
+      setIsClaiming(false);
+    }
+  };
+
+  const handleVerifyOtpAndClaim = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!claimOtp.trim()) {
+      setClaimError('Please enter the 6-digit verification code.');
+      return;
+    }
+    setIsClaiming(true);
+    setClaimError(null);
+
+    try {
+      const token = await getIdToken();
+      if (!token) {
+        setClaimError('Authentication token expired. Please re-authenticate.');
+        setIsClaiming(false);
+        return;
+      }
+
+      const res = await fetch('/api/orders/claim', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          orderId: claimOrderId.trim().toUpperCase(),
+          action: 'verify_otp_and_claim',
+          otp: claimOtp.trim(),
+          saveAddressToProfile: claimSaveAddress,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setClaimSuccess(data.message || 'Order successfully linked to your portfolio.');
+        setIsClaiming(false);
+        if (user && user.id) {
+          getPatronOrders(user.id).then((ords) => {
+            if (ords) updateProfile({ orders: ords });
+          });
+        }
+        setTimeout(() => {
+          setIsClaimModalOpen(false);
+          setClaimOrderId('');
+          setClaimOtp('');
+          setClaimStep('input');
+          setClaimSuccess(null);
+        }, 1500);
+      } else {
+        setClaimError(data.error || 'Invalid verification code.');
+        setIsClaiming(false);
+      }
+    } catch (err: any) {
+      setClaimError(err?.message || 'Network error verifying claim code.');
+      setIsClaiming(false);
+    }
   };
 
   const handleBuyAgain = (item: OrderItem) => {
@@ -545,16 +810,31 @@ export default function AccountClient() {
         {/* --- 2. ORDERS & PROVENANCE TAB --- */}
         {activeTab === 'orders' && (
           <div className="pt-8 space-y-6 animate-fade-in">
-            <div className="flex items-center justify-between pb-4 border-b border-border-subtle">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border-subtle gap-3">
               <div>
                 <h2 className="font-serif text-2xl text-ink font-normal">Order Chronicle & Provenance</h2>
                 <p className="text-xs text-ink-muted">
                   Every order includes authentic artisan notes and calibrated transit milestones.
                 </p>
               </div>
-              <span className="text-xs text-ink-muted">
-                Showing <strong className="text-ink">{userOrders.length}</strong> orders
-              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsClaimModalOpen(true);
+                    setClaimError(null);
+                    setClaimSuccess(null);
+                    setClaimStep('input');
+                  }}
+                  className="px-3.5 py-1.5 rounded-full border border-rosewood/40 hover:border-rosewood bg-blush/30 hover:bg-blush/50 text-rosewood text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Link Guest Order</span>
+                </button>
+                <span className="text-xs text-ink-muted">
+                  Showing <strong className="text-ink">{userOrders.length}</strong> orders
+                </span>
+              </div>
             </div>
 
             {userOrders.length === 0 ? (
@@ -785,9 +1065,9 @@ export default function AccountClient() {
         {/* --- 3. SAVED ADDRESSES TAB --- */}
         {activeTab === 'addresses' && (
           <div className="pt-8 space-y-6 animate-fade-in">
-            <div className="flex items-center justify-between pb-4 border-b border-border-subtle">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border-subtle gap-4">
               <div>
-                <h2 className="font-serif text-2xl text-ink font-normal">Delivery Addresses</h2>
+                <h2 className="font-serif text-2xl text-ink font-normal">Delivery Destinations</h2>
                 <p className="text-xs text-ink-muted">
                   Saved delivery locations for seamless, one-tap orders across India.
                 </p>
@@ -795,13 +1075,27 @@ export default function AccountClient() {
 
               <button
                 type="button"
-                onClick={() => setIsAddressModalOpen(true)}
-                className="px-4 py-2.5 rounded-full bg-ink hover:bg-gold hover:text-ink text-canvas text-xs uppercase tracking-refined font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                onClick={handleOpenAddAddress}
+                className="px-4 py-2.5 rounded-full bg-ink hover:bg-gold hover:text-ink text-canvas text-xs uppercase tracking-refined font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer self-start sm:self-auto"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add New Address</span>
               </button>
             </div>
+
+            {addressActionSuccess && (
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2 animate-fade-in">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{addressActionSuccess}</span>
+              </div>
+            )}
+
+            {addressActionError && (
+              <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs flex items-center gap-2 animate-fade-in">
+                <X className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{addressActionError}</span>
+              </div>
+            )}
 
             {userAddresses.length === 0 ? (
               <div className="text-center py-12 bg-canvas-subtle rounded-2xl border border-dashed border-border-medium space-y-3">
@@ -814,63 +1108,94 @@ export default function AccountClient() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {userAddresses.map((addr) => (
-                <div
-                  key={addr.id}
-                  className={`p-6 rounded-2xl border transition-all bg-canvas-subtle relative flex flex-col justify-between ${
-                    addr.isDefault ? 'border-gold shadow-md' : 'border-border-subtle hover:border-border-medium'
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-0.5 rounded-full bg-canvas text-ink text-[11px] font-semibold border border-border-subtle">
-                          {addr.label}
-                        </span>
-                        {addr.isDefault && (
-                          <span className="px-2 py-0.5 rounded-full bg-gold/15 text-gold-dark text-[10px] font-bold">
-                            Default
+                  <div
+                    key={addr.id}
+                    className={`p-6 rounded-2xl border transition-all bg-canvas-subtle relative flex flex-col justify-between ${
+                      addr.isDefault ? 'border-gold shadow-md ring-1 ring-gold/30' : 'border-border-subtle hover:border-border-medium'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2.5 py-0.5 rounded-full bg-canvas text-ink text-[11px] font-semibold border border-border-subtle">
+                            {addr.label}
                           </span>
-                        )}
-                      </div>
+                          {addr.isDefault && (
+                            <span className="px-2 py-0.5 rounded-full bg-gold/15 text-gold-dark text-[10px] font-bold inline-flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3 text-gold-dark" />
+                              <span>Default Destination</span>
+                            </span>
+                          )}
+                        </div>
 
-                      <div className="flex items-center gap-2">
-                        {!addr.isDefault && (
+                        <div className="flex items-center gap-2">
+                          {!addr.isDefault && (
+                            <button
+                              type="button"
+                              onClick={() => handleSetDefaultAddress(addr.id)}
+                              className="text-xs text-gold-dark hover:underline font-medium cursor-pointer"
+                            >
+                              Set Default
+                            </button>
+                          )}
                           <button
                             type="button"
-                            onClick={() => setDefaultAddress(addr.id)}
-                            className="text-xs text-gold-dark hover:underline font-medium cursor-pointer"
+                            onClick={() => handleOpenEditAddress(addr)}
+                            className="p-1.5 text-ink-faint hover:text-ink transition-colors cursor-pointer rounded-md hover:bg-canvas"
+                            title="Edit address"
                           >
-                            Set Default
+                            <Edit2 className="w-3.5 h-3.5" />
                           </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => deleteAddress(addr.id)}
-                          className="p-1 text-ink-faint hover:text-rose-600 transition-colors cursor-pointer"
-                          title="Delete address"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteId(addr.id)}
+                            className="p-1.5 text-ink-faint hover:text-rose-600 transition-colors cursor-pointer rounded-md hover:bg-canvas"
+                            title="Delete address"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
 
-                    <h4 className="font-serif text-base font-semibold text-ink">{addr.fullName}</h4>
-                    <p className="text-xs text-ink-muted mt-1 leading-relaxed">
-                      {addr.street}
-                      {addr.apartment ? `, ${addr.apartment}` : ''}
-                      <br />
-                      {addr.city}, {addr.state} — <strong className="text-ink">{addr.pincode}</strong>
-                    </p>
-                    <p className="text-xs text-ink mt-2">
-                      <span className="text-ink-muted">Phone:</span> {addr.phone}
-                    </p>
+                      {confirmDeleteId === addr.id && (
+                        <div className="mb-3 p-3 bg-rose-50/80 border border-rose-200 rounded-xl text-xs space-y-2 animate-fade-in">
+                          <p className="text-rose-900 font-medium">Remove this delivery destination?</p>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteAddress(addr.id)}
+                              className="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-full font-semibold text-[11px] transition-colors"
+                            >
+                              Yes, Remove
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="px-3 py-1 bg-canvas border border-border-medium hover:border-ink text-ink rounded-full font-medium text-[11px] transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      <h4 className="font-serif text-base font-semibold text-ink">{addr.fullName}</h4>
+                      <p className="text-xs text-ink-muted mt-1 leading-relaxed">
+                        {addr.street}
+                        {addr.apartment ? `, ${addr.apartment}` : ''}
+                        <br />
+                        {addr.city}, {addr.state} — <strong className="text-ink">{addr.pincode}</strong>
+                      </p>
+                      <p className="text-xs text-ink mt-2">
+                        <span className="text-ink-muted">Phone:</span> {addr.phone}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* --- 4. PROFILE & PREFERENCES TAB --- */}
         {activeTab === 'profile' && (
@@ -1030,10 +1355,17 @@ export default function AccountClient() {
         )}
       </div>
 
-      {/* --- ADD ADDRESS MODAL --- */}
+      {/* --- ADD / EDIT ADDRESS MODAL --- */}
       {isAddressModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/70 backdrop-blur-xs animate-fade-in">
-          <div className="bg-canvas w-full max-w-lg rounded-2xl border border-border-gold p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+          <div
+            className="bg-canvas w-full max-w-lg rounded-2xl border border-border-gold p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto overscroll-contain"
+            data-lenis-prevent="true"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+            role="dialog"
+            aria-modal="true"
+            aria-label={editingAddressId ? 'Edit Delivery Destination' : 'Add Delivery Destination'}
+          >
             <button
               type="button"
               onClick={() => setIsAddressModalOpen(false)}
@@ -1042,12 +1374,21 @@ export default function AccountClient() {
               <X className="w-5 h-5" />
             </button>
 
-            <h3 className="font-serif text-2xl text-ink font-normal mb-1">Add Delivery Destination</h3>
+            <h3 className="font-serif text-2xl text-ink font-normal mb-1">
+              {editingAddressId ? 'Edit Delivery Destination' : 'Add Delivery Destination'}
+            </h3>
             <p className="text-xs text-ink-muted mb-6">Enter safe transit destination details across India.</p>
 
-            <form onSubmit={handleCreateAddress} className="space-y-4">
+            {addressActionError && (
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs flex items-center gap-2">
+                <X className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{addressActionError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveAddress} className="space-y-4">
               <div className="flex items-center gap-3">
-                {['Home', 'Studio', 'Work'].map((lbl) => (
+                {['Home', 'Studio', 'Work', 'Other'].map((lbl) => (
                   <button
                     key={lbl}
                     type="button"
@@ -1071,6 +1412,7 @@ export default function AccountClient() {
                   id="addr-recipient-name"
                   type="text"
                   required
+                  placeholder="e.g. Radhika Kapoor"
                   value={newAddress.fullName}
                   onChange={(e) => setNewAddress({ ...newAddress, fullName: e.target.value })}
                   className="w-full px-3.5 py-2.5 bg-canvas border border-border-medium rounded-xl text-xs text-ink focus:outline-none focus:border-gold"
@@ -1085,6 +1427,7 @@ export default function AccountClient() {
                   id="addr-recipient-phone"
                   type="tel"
                   required
+                  placeholder="+91 98765 43210"
                   value={newAddress.phone}
                   onChange={(e) => setNewAddress({ ...newAddress, phone: e.target.value })}
                   className="w-full px-3.5 py-2.5 bg-canvas border border-border-medium rounded-xl text-xs text-ink focus:outline-none focus:border-gold"
@@ -1106,6 +1449,20 @@ export default function AccountClient() {
                 />
               </div>
 
+              <div>
+                <label htmlFor="addr-apartment" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
+                  Apartment, Suite, Landmark (Optional)
+                </label>
+                <input
+                  id="addr-apartment"
+                  type="text"
+                  placeholder="e.g. Landmark near Linking Road Police Station"
+                  value={newAddress.apartment || ''}
+                  onChange={(e) => setNewAddress({ ...newAddress, apartment: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-canvas border border-border-medium rounded-xl text-xs text-ink focus:outline-none focus:border-gold"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="addr-city" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
@@ -1115,6 +1472,7 @@ export default function AccountClient() {
                     id="addr-city"
                     type="text"
                     required
+                    placeholder="e.g. Mumbai"
                     value={newAddress.city}
                     onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
                     className="w-full px-3.5 py-2.5 bg-canvas border border-border-medium rounded-xl text-xs text-ink focus:outline-none focus:border-gold"
@@ -1123,32 +1481,46 @@ export default function AccountClient() {
 
                 <div>
                   <label htmlFor="addr-pincode" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
-                    Pincode *
+                    PIN Code (6 digits) *
                   </label>
                   <input
                     id="addr-pincode"
                     type="text"
                     required
                     maxLength={6}
+                    placeholder="400050"
                     value={newAddress.pincode}
                     onChange={(e) => setNewAddress({ ...newAddress, pincode: e.target.value.replace(/\D/g, '') })}
-                    className="w-full px-3.5 py-2.5 bg-canvas border border-border-medium rounded-xl text-xs text-ink focus:outline-none focus:border-gold"
+                    className="w-full px-3.5 py-2.5 bg-canvas border border-border-medium rounded-xl text-xs text-ink focus:outline-none focus:border-gold font-mono"
                   />
                 </div>
               </div>
 
               <div>
                 <label htmlFor="addr-state" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
-                  State *
+                  State / Union Territory *
                 </label>
-                <input
+                <select
                   id="addr-state"
-                  type="text"
                   required
                   value={newAddress.state}
                   onChange={(e) => setNewAddress({ ...newAddress, state: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-canvas border border-border-medium rounded-xl text-xs text-ink focus:outline-none focus:border-gold"
-                />
+                  className="w-full px-3.5 py-2.5 bg-canvas border border-border-medium rounded-xl text-xs text-ink focus:outline-none focus:border-gold cursor-pointer"
+                >
+                  <option value="Maharashtra">Maharashtra</option>
+                  <option value="Delhi">Delhi NCR</option>
+                  <option value="Karnataka">Karnataka</option>
+                  <option value="Gujarat">Gujarat</option>
+                  <option value="Tamil Nadu">Tamil Nadu</option>
+                  <option value="West Bengal">West Bengal</option>
+                  <option value="Rajasthan">Rajasthan</option>
+                  <option value="Uttar Pradesh">Uttar Pradesh</option>
+                  <option value="Telangana">Telangana</option>
+                  <option value="Kerala">Kerala</option>
+                  <option value="Punjab">Punjab</option>
+                  <option value="Haryana">Haryana</option>
+                  <option value="Other">Other State / UT</option>
+                </select>
               </div>
 
               <div className="flex items-center gap-2 pt-2">
@@ -1174,12 +1546,159 @@ export default function AccountClient() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-ink text-canvas hover:bg-gold hover:text-ink rounded-full text-xs uppercase tracking-refined font-semibold transition-all shadow-xs cursor-pointer"
+                  disabled={isSavingAddress}
+                  className={`px-6 py-2.5 rounded-full text-xs uppercase tracking-refined font-semibold transition-all shadow-xs cursor-pointer ${
+                    isSavingAddress
+                      ? 'bg-ink/60 text-canvas cursor-wait'
+                      : 'bg-ink text-canvas hover:bg-gold hover:text-ink'
+                  }`}
                 >
-                  Save Address
+                  {isSavingAddress
+                    ? 'Saving Destination...'
+                    : editingAddressId
+                    ? 'Update Address'
+                    : 'Save Address'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- LINK GUEST ORDER MODAL --- */}
+      {isClaimModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/70 backdrop-blur-xs animate-fade-in">
+          <div
+            className="bg-canvas w-full max-w-md rounded-2xl border border-border-gold p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto overscroll-contain"
+            data-lenis-prevent="true"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Link a Previous Guest Order"
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setIsClaimModalOpen(false);
+                setClaimOrderId('');
+                setClaimOtp('');
+                setClaimStep('input');
+                setClaimError(null);
+                setClaimSuccess(null);
+              }}
+              className="absolute top-5 right-5 p-1.5 text-ink-muted hover:text-ink cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h3 className="font-serif text-2xl text-ink font-normal mb-1">
+              Link a Previous Guest Order
+            </h3>
+            <p className="text-xs text-ink-muted mb-6">
+              Bind any order placed as a guest into your permanent patron portfolio and track artisan milestones.
+            </p>
+
+            {claimSuccess && (
+              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs flex items-center gap-2">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{claimSuccess}</span>
+              </div>
+            )}
+
+            {claimError && (
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs flex items-center gap-2">
+                <X className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{claimError}</span>
+              </div>
+            )}
+
+            {claimStep === 'input' ? (
+              <form onSubmit={handleInitiateClaim} className="space-y-4">
+                <div>
+                  <label htmlFor="claim-order-id" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
+                    Order Reference Code *
+                  </label>
+                  <input
+                    id="claim-order-id"
+                    type="text"
+                    required
+                    placeholder="e.g. KJ-216626"
+                    value={claimOrderId}
+                    onChange={(e) => setClaimOrderId(e.target.value.toUpperCase())}
+                    className="w-full px-3.5 py-2.5 bg-canvas border border-border-medium rounded-xl text-xs font-mono uppercase text-ink focus:outline-none focus:border-gold"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    id="claim-save-addr"
+                    type="checkbox"
+                    checked={claimSaveAddress}
+                    onChange={(e) => setClaimSaveAddress(e.target.checked)}
+                    className="w-4 h-4 rounded text-rosewood accent-rosewood cursor-pointer"
+                  />
+                  <label htmlFor="claim-save-addr" className="text-xs text-ink cursor-pointer">
+                    Save order's delivery destination to my saved addresses
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-border-subtle">
+                  <button
+                    type="button"
+                    onClick={() => setIsClaimModalOpen(false)}
+                    className="px-4 py-2 text-xs text-ink-muted hover:text-ink cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isClaiming}
+                    className="px-6 py-2.5 rounded-full bg-ink hover:bg-gold hover:text-ink text-canvas text-xs uppercase tracking-refined font-semibold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                  >
+                    {isClaiming ? 'Verifying Ownership...' : 'Link to Portfolio'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyOtpAndClaim} className="space-y-4">
+                <p className="text-xs text-ink-muted">
+                  A 6-digit verification code was sent to the contact coordinates on file for order <strong>{claimOrderId}</strong>.
+                </p>
+
+                <div>
+                  <label htmlFor="claim-otp-code" className="text-xs uppercase tracking-refined font-semibold text-ink block mb-1">
+                    Enter 6-Digit Verification Code *
+                  </label>
+                  <input
+                    id="claim-otp-code"
+                    type="text"
+                    required
+                    maxLength={6}
+                    placeholder="123456"
+                    value={claimOtp}
+                    onChange={(e) => setClaimOtp(e.target.value.replace(/\D/g, ''))}
+                    className="w-full px-3.5 py-2.5 bg-canvas border border-border-medium rounded-xl text-sm font-mono tracking-widest text-ink focus:outline-none focus:border-gold"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t border-border-subtle">
+                  <button
+                    type="button"
+                    onClick={() => setClaimStep('input')}
+                    className="text-xs text-rosewood hover:underline cursor-pointer"
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isClaiming}
+                    className="px-6 py-2.5 rounded-full bg-ink hover:bg-gold hover:text-ink text-canvas text-xs uppercase tracking-refined font-semibold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                  >
+                    {isClaiming ? 'Confirming...' : 'Verify & Claim'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

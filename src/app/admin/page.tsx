@@ -200,6 +200,7 @@ function AdminSecurityGate({
     let resolvedUsername = cleanInput.toLowerCase();
     let resolvedName = '';
     let serverRequiresReset = true;
+    let resolveData: any = null;
 
     try {
       const resolveRes = await fetch('/api/admin/auth', {
@@ -207,7 +208,7 @@ function AdminSecurityGate({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: cleanInput, password, action: 'resolve' }),
       });
-      const resolveData = await resolveRes.json();
+      resolveData = await resolveRes.json();
 
       if (!resolveRes.ok || !resolveData.success) {
         setIsSubmitting(false);
@@ -259,6 +260,14 @@ function AdminSecurityGate({
 
       onAuthenticated(resolvedEmail, resolvedUsername || resolvedStaffId);
     } catch (authErr: any) {
+      // If client Firebase SDK threw a network error (e.g. offline or emulator port mismatch),
+      // but Step 1 (/api/admin/auth) already verified credentials and issued an idToken:
+      if ((authErr.code === 'auth/network-request-failed' || authErr.message?.includes('network-request-failed')) && resolveData?.idToken) {
+        setIsSubmitting(false);
+        onAuthenticated(resolvedEmail, resolvedUsername || resolvedStaffId);
+        return;
+      }
+
       setIsSubmitting(false);
       if (
         authErr.code === 'auth/invalid-credential' ||

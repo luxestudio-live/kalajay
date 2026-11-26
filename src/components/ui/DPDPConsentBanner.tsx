@@ -323,7 +323,8 @@ export default function DPDPConsentBanner() {
             {/* Scrollable Body - captures all wheel/touch interactions inside modal */}
             <div
               data-lenis-prevent="true"
-              className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4"
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4"
+              style={{ WebkitOverflowScrolling: 'touch' }}
             >
               {/* Statutory Legal Badge */}
               <div className="p-3 bg-[#F0EAE1] rounded-lg border border-[#DED3C5] text-[11px] text-[#503A2E] flex items-center gap-2">

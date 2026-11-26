@@ -26,10 +26,17 @@ async function handleSweep(request: Request) {
 
     const stats = await processPendingNotificationOutbox({ maxAttempts, limit });
 
+    // Also sweep expired 15-minute inventory reservations
+    const { sweepExpiredReservations } = await import('@/lib/inventory/reservation');
+    const { sweptCount } = await sweepExpiredReservations();
+
     return NextResponse.json({
       success: true,
-      stats,
-      message: `Notification outbox automatic recovery sweep executed: ${stats.processed} processed, ${stats.succeeded} recovered/sent, ${stats.failed} failed.`,
+      stats: {
+        ...stats,
+        expiredReservationsReleased: sweptCount,
+      },
+      message: `Notification outbox and inventory reservation sweep executed: ${stats.processed} notifications processed, ${sweptCount} expired reservations released.`,
       timestamp: new Date().toISOString(),
     });
   } catch (err: any) {

@@ -1,5 +1,12 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
-import { getAuth, type Auth, connectAuthEmulator, signInWithCustomToken } from 'firebase/auth';
+import {
+  getAuth,
+  type Auth,
+  connectAuthEmulator,
+  signInWithCustomToken,
+  setPersistence,
+  browserLocalPersistence,
+} from 'firebase/auth';
 import { getFirestore, type Firestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getAnalytics, isSupported, type Analytics } from 'firebase/analytics';
 
@@ -42,9 +49,10 @@ try {
 // Client-only Google Analytics & Emulator initialization
 if (typeof window !== 'undefined') {
   const useEmulator = process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true';
+  const useAuthEmulator = process.env.NEXT_PUBLIC_USE_AUTH_EMULATOR === 'true';
   if (useEmulator && !(window as any).__EMULATORS_CONNECTED__) {
     try {
-      if (auth && (auth as any).app) {
+      if (useAuthEmulator && auth && (auth as any).app) {
         connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
       }
       if (db && (db as any).app) {
@@ -56,6 +64,11 @@ if (typeof window !== 'undefined') {
 
   (window as any).__FIREBASE_AUTH__ = auth;
   (window as any).__FIREBASE_DB__ = db;
+
+  // Enforce robust browser & PWA session persistence using IndexedDB
+  if (auth && (auth as any).app) {
+    setPersistence(auth, browserLocalPersistence).catch(() => {});
+  }
 
   const savedToken = sessionStorage.getItem('kalajay_custom_token');
   if (savedToken && auth && (auth as any).app) {

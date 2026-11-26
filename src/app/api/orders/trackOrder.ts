@@ -8,6 +8,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { verifyFirebaseIdToken } from '@/lib/serverRbac';
 import { getAdminFirestore } from '@/lib/serverFirebaseAdmin';
+import { verifyTrackingSessionToken } from '@/lib/trackingSession';
 
 // Immutable set of static showroom showcase references ONLY
 const STATIC_SHOWROOM_IDS = new Set(['KJ-8924', 'KJ-7710', 'KJ-6502']);
@@ -350,7 +351,15 @@ export async function GET(request: Request) {
       }
     }
 
-    // B. Cryptographic Order Access Token / Key Verification (e.g. from checkout receipt link)
+    // B. Safe Tracking Session Cookie (Phase 4.2)
+    const sessionCookie = request.headers.get('cookie') || '';
+    const matchSession = sessionCookie.match(/kj_track_session=([^;]+)/);
+    const sessionToken = matchSession ? matchSession[1].trim() : (request.headers.get('x-tracking-session') || '').trim();
+    if (!isVerifiedOwner && sessionToken && verifyTrackingSessionToken(sessionToken, orderId)) {
+      isVerifiedOwner = true;
+    }
+
+    // C. Cryptographic Order Access Token / Key Verification (via Header or URL)
     const suppliedToken = (
       searchParams.get('token') ||
       searchParams.get('key') ||
@@ -358,13 +367,17 @@ export async function GET(request: Request) {
       ''
     ).trim();
 
-    if (!isVerifiedOwner && suppliedToken && foundOrder.customerEmail) {
-      const expectedToken = generateGuestAccessToken(orderId, foundOrder.customerEmail);
-      if (
-        suppliedToken === expectedToken ||
-        (foundOrder.guestAccessToken && suppliedToken === foundOrder.guestAccessToken)
-      ) {
+    if (!isVerifiedOwner && suppliedToken) {
+      const suppliedHash = crypto.createHash('sha256').update(suppliedToken).digest('hex');
+      if (foundOrder.guestAccessTokenHash && foundOrder.guestAccessTokenHash === suppliedHash) {
         isVerifiedOwner = true;
+      } else if (foundOrder.guestAccessToken && suppliedToken === foundOrder.guestAccessToken) {
+        isVerifiedOwner = true;
+      } else if (foundOrder.customerEmail) {
+        const expectedToken = generateGuestAccessToken(orderId, foundOrder.customerEmail);
+        if (suppliedToken === expectedToken) {
+          isVerifiedOwner = true;
+        }
       }
     }
 
@@ -499,12 +512,20 @@ export async function GET(request: Request) {
       deliveryAttemptCount: foundOrder.deliveryAttemptCount ?? 0,
       deliveryFailureReason: foundOrder.deliveryFailureReason || null,
       createdAt: foundOrder.createdAt || new Date().toISOString(),
+      isGuestOrder: Boolean(foundOrder.isGuestOrder || !foundOrder.userId),
     };
 
-    return NextResponse.json({
-      success: true,
-      order: publicOrder,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        order: publicOrder,
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, private',
+        },
+      }
+    );
   } catch (error: any) {
     console.error('Error fetching public order tracking details:', error);
     return NextResponse.json(

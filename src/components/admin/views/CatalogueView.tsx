@@ -893,8 +893,17 @@ export default function CatalogueView() {
           MODAL 1: ADD NEW HANDCRAFTED PIECE
           ========================================================================= */}
       {addModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="relative w-full max-w-3xl max-h-[92vh] bg-[#FCFAF6] rounded-2xl shadow-2xl border border-[#DED3C5] overflow-hidden flex flex-col">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-fade-in"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Add New Handcrafted Piece"
+          data-lenis-prevent="true"
+        >
+          <div
+            className="relative w-full max-w-3xl max-h-[92vh] bg-[#FCFAF6] rounded-2xl shadow-2xl border border-[#DED3C5] overflow-hidden flex flex-col min-h-0"
+            data-lenis-prevent="true"
+          >
             {/* Header */}
             <div className="px-6 py-4 border-b border-[#EAE2D8] bg-[#F7F3EC] flex items-center justify-between shrink-0">
               <div>
@@ -989,7 +998,13 @@ export default function CatalogueView() {
             </div>
 
             {/* Scrollable Form Body */}
-            <form id="createProductForm" onSubmit={handleCreateProduct} className="flex-1 overflow-y-auto p-5 sm:p-6 text-xs space-y-4">
+            <form
+              id="createProductForm"
+              onSubmit={handleCreateProduct}
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-5 sm:p-6 text-xs space-y-4"
+              data-lenis-prevent="true"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
               {/* TAB 1: OVERVIEW */}
               {addModalTab === 'overview' && (
                 <div className="space-y-4 animate-fade-in">
@@ -1528,8 +1543,17 @@ export default function CatalogueView() {
           MODAL 2: EDIT PRODUCT MODAL
           ========================================================================= */}
       {editProductModalOpen && editingProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="relative w-full max-w-3xl max-h-[92vh] bg-[#FCFAF6] rounded-2xl shadow-2xl border border-[#DED3C5] overflow-hidden flex flex-col">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-fade-in"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Edit ${editingProduct.name}`}
+          data-lenis-prevent="true"
+        >
+          <div
+            className="relative w-full max-w-3xl max-h-[92vh] bg-[#FCFAF6] rounded-2xl shadow-2xl border border-[#DED3C5] overflow-hidden flex flex-col min-h-0"
+            data-lenis-prevent="true"
+          >
             {/* Header */}
             <div className="px-6 py-4 border-b border-[#EAE2D8] bg-[#F7F3EC] flex items-center justify-between shrink-0">
               <div>
@@ -1624,7 +1648,13 @@ export default function CatalogueView() {
             </div>
 
             {/* Scrollable Form Body */}
-            <form id="editProductForm" onSubmit={handleEditProductSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 text-xs space-y-4">
+            <form
+              id="editProductForm"
+              onSubmit={handleEditProductSubmit}
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-5 sm:p-6 text-xs space-y-4"
+              data-lenis-prevent="true"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
               {/* TAB 1: OVERVIEW */}
               {editModalTab === 'overview' && (
                 <div className="space-y-4 animate-fade-in">

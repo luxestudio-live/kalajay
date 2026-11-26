@@ -38,15 +38,23 @@ export default function LuxuryModal({
   isDestructive = false,
   maxWidth = 'md',
 }: LuxuryModalProps) {
-  // Close on Escape key
+  // Close on Escape key and manage body scroll
   useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
         onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = 'unset';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -100,13 +108,15 @@ export default function LuxuryModal({
       aria-modal="true"
       aria-labelledby="luxury-modal-title"
       className="fixed inset-0 z-50 bg-[#372921]/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-fade-in"
+      data-lenis-prevent="true"
     >
       <div
-        className={`bg-white rounded-2xl border border-[#DED3C5] shadow-2xl w-full ${maxWidthClasses} overflow-hidden my-8 animate-scale-in`}
+        className={`bg-white rounded-2xl border border-[#DED3C5] shadow-2xl w-full ${maxWidthClasses} overflow-hidden my-8 animate-scale-in max-h-[90dvh] flex flex-col`}
         onClick={e => e.stopPropagation()}
+        data-lenis-prevent="true"
       >
         {/* Modal Header */}
-        <div className="p-5 bg-[#F7F3EC] border-b border-[#DED3C5] flex items-center justify-between">
+        <div className="p-5 bg-[#F7F3EC] border-b border-[#DED3C5] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             <div
               className={`w-9 h-9 rounded-xl ${iconConfig.bg} ${iconConfig.text} ${iconConfig.border} border flex items-center justify-center shrink-0`}
@@ -136,13 +146,17 @@ export default function LuxuryModal({
 
         {/* Modal Body */}
         {children && (
-          <div className="p-6 text-xs text-[#372921] leading-relaxed max-h-[70vh] overflow-y-auto">
+          <div
+            className="p-6 text-xs text-[#372921] leading-relaxed flex-1 min-h-0 overflow-y-auto overscroll-contain"
+            data-lenis-prevent="true"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             {children}
           </div>
         )}
 
         {/* Modal Footer */}
-        <div className="px-6 py-3.5 bg-[#FAF8F5] border-t border-[#DED3C5] flex items-center justify-end gap-2.5">
+        <div className="px-6 py-3.5 bg-[#FAF8F5] border-t border-[#DED3C5] flex items-center justify-end gap-2.5 shrink-0">
           {cancelLabel && (
             <button
               type="button"

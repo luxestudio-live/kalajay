@@ -191,7 +191,14 @@ export default function PWAInstallPrompt() {
       {/* iOS "Add to Home Screen" Instructions Modal */}
       {showIOSModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 sm:p-4 bg-ink/70 backdrop-blur-xs animate-fade-in">
-          <div className="bg-canvas w-full max-w-sm rounded-t-2xl sm:rounded-2xl border border-border-gold p-6 shadow-2xl relative">
+          <div
+            className="bg-canvas w-full max-w-sm rounded-t-2xl sm:rounded-2xl border border-border-gold p-6 shadow-2xl relative max-h-[85dvh] overflow-y-auto overscroll-contain"
+            data-lenis-prevent="true"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Install Kalajay App"
+          >
             <button
               type="button"
               onClick={() => setShowIOSModal(false)}

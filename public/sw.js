@@ -39,6 +39,9 @@ self.addEventListener('fetch', (event) => {
   // Only handle same-origin requests
   if (url.origin !== self.location.origin) return;
 
+  // Never intercept, cache, or serve offline fallbacks for API requests, auth endpoints, or dynamic data
+  if (url.pathname.startsWith('/api/')) return;
+
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {

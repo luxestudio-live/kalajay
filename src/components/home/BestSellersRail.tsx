@@ -101,12 +101,12 @@ export default function BestSellersRail() {
 
       const calculateDistance = () => {
         const containerWidth = container ? container.clientWidth : window.innerWidth;
-        const travel = track.scrollWidth - containerWidth + 96;
+        const travel = track.scrollWidth - containerWidth + 140;
         return Math.max(200, travel);
       };
 
       const scrollDistance = calculateDistance();
-      const holdBuffer = 350;
+      const holdBuffer = 200;
       const totalPinDuration = scrollDistance + holdBuffer;
 
       const tl = gsap.timeline({

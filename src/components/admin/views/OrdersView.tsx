@@ -603,9 +603,18 @@ export default function OrdersView() {
 
       {/* 5. ORDER DETAIL TIMELINE DRAWER */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-2xl w-full border border-[#DED3C5] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="p-5 border-b border-[#DED3C5] bg-[#F7F3EC] flex items-center justify-between">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Order #${selectedOrder.id} Details`}
+          data-lenis-prevent="true"
+        >
+          <div
+            className="bg-white rounded-2xl max-w-2xl w-full border border-[#DED3C5] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+            data-lenis-prevent="true"
+          >
+            <div className="p-5 border-b border-[#DED3C5] bg-[#F7F3EC] flex items-center justify-between shrink-0">
               <div>
                 <h3 className="font-serif text-lg text-[#372921] font-semibold flex items-center gap-2">
                   <span>Order #{selectedOrder.id}</span>
@@ -626,7 +635,11 @@ export default function OrdersView() {
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto space-y-5 text-xs">
+            <div
+              className="p-6 flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-5 text-xs"
+              data-lenis-prevent="true"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
               {/* Items List */}
               <div className="space-y-2">
                 <span className="font-bold uppercase tracking-wider text-[10.5px] text-[#76695F]">Purchased Pieces</span>

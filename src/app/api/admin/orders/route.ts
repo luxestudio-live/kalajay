@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { FieldValue } from 'firebase-admin/firestore';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { verifyStaffPermission } from '@/lib/serverRbac';
@@ -59,6 +60,151 @@ export async function POST(request: Request) {
     // -------------------------------------------------------------
     // ACTION A: CREATE OFFLINE ATELIER ORDER (with atomic inventory)
     // -------------------------------------------------------------
+    if (action === 'refund') {
+      const authCheck = await verifyStaffPermission(request, body, 'orders.all', 'refund');
+      if (!authCheck.authorized) {
+        return NextResponse.json(
+          { success: false, error: authCheck.error, code: authCheck.code },
+          { status: authCheck.status }
+        );
+      }
+
+      const { orderId, amount, reason, restockInventory = true } = body;
+      if (!orderId) {
+        return NextResponse.json(
+          { success: false, error: 'Mandatory field missing: orderId is required for refund.' },
+          { status: 400 }
+        );
+      }
+
+      const adminDb = getAdminFirestore();
+      if (!adminDb) {
+        return NextResponse.json(
+          { success: false, error: 'Database unavailable for refund processing.' },
+          { status: 500 }
+        );
+      }
+
+      const orderRef = adminDb.collection('orders').doc(orderId);
+      const orderDoc = await orderRef.get();
+
+      if (!orderDoc.exists) {
+        return NextResponse.json(
+          { success: false, error: `Order "${orderId}" not found.` },
+          { status: 404 }
+        );
+      }
+
+      const orderData = orderDoc.data()!;
+      if (orderData.paymentStatus !== 'paid' && orderData.paymentStatus !== 'captured') {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Cannot refund order with payment status "${orderData.paymentStatus}". Only paid orders can be refunded.`,
+          },
+          { status: 400 }
+        );
+      }
+
+      const refundAmountRupees = amount ? Number(amount) : Number(orderData.total);
+      if (isNaN(refundAmountRupees) || refundAmountRupees <= 0) {
+        return NextResponse.json(
+          { success: false, error: 'Refund amount must be a positive number.' },
+          { status: 400 }
+        );
+      }
+
+      if (refundAmountRupees > Number(orderData.total)) {
+        return NextResponse.json(
+          { success: false, error: `Refund amount (₹${refundAmountRupees}) exceeds total order value (₹${orderData.total}).` },
+          { status: 400 }
+        );
+      }
+
+      const isFullRefund = refundAmountRupees >= Number(orderData.total);
+      const newStatus = isFullRefund ? 'refunded' : 'partially_refunded';
+      const staffName = authCheck.staffUser?.name || 'Authorized Staff';
+      const staffId = authCheck.staffUser?.staffId || authCheck.staffUser?.id || 'KJ-ADM-001';
+      const nowIso = new Date().toISOString();
+
+      let gatewayRefundResult: any = null;
+      const razorpayPaymentId = orderData.paymentDetails?.razorpayPaymentId || orderData.razorpayPaymentId;
+
+      if (razorpayPaymentId) {
+        const { createRazorpayRefund } = await import('@/lib/payment/razorpayClient');
+        gatewayRefundResult = await createRazorpayRefund({
+          paymentId: razorpayPaymentId,
+          amountPaise: Math.round(refundAmountRupees * 100),
+          notes: {
+            orderId,
+            reason: reason || 'Customer requested return/refund',
+            initiatedBy: staffName,
+          },
+        });
+      }
+
+      if (restockInventory && Array.isArray(orderData.items)) {
+        for (const it of orderData.items) {
+          const skuCode = it.sku || it.productId;
+          if (skuCode) {
+            const invRef = adminDb.collection('inventory').doc(skuCode);
+            const invDoc = await invRef.get();
+            if (invDoc.exists) {
+              await invRef.update({
+                available: FieldValue.increment(it.quantity || 1),
+                committedSale: FieldValue.increment(-(it.quantity || 1)),
+                updatedAt: nowIso,
+              });
+            }
+          }
+        }
+      }
+
+      const refundTimelineEntry = {
+        title: `Refund Processed (${isFullRefund ? 'Full' : 'Partial'}: ₹${refundAmountRupees})`,
+        timestamp: nowIso,
+        note: `Authorized by ${staffName} (${authCheck.staffUser?.roleId}). Reason: ${reason || 'Customer request'}. Gateway Ref: ${gatewayRefundResult?.id || 'Manual Settlement'}`,
+        staffId,
+        staffName,
+      };
+
+      await orderRef.update({
+        paymentStatus: newStatus,
+        'paymentDetails.currentStatus': newStatus,
+        'paymentDetails.amountRefundedPaise': Math.round(refundAmountRupees * 100),
+        'paymentDetails.refundId': gatewayRefundResult?.id,
+        timeline: FieldValue.arrayUnion(refundTimelineEntry),
+        updatedAt: nowIso,
+      });
+
+      await adminDb.collection('audit_logs').add({
+        id: `aud-ref-${Date.now()}`,
+        action: 'ORDER_REFUND_PROCESSED',
+        orderId,
+        amount: refundAmountRupees,
+        staffId,
+        staffName,
+        timestamp: nowIso,
+        gatewayRefundId: gatewayRefundResult?.id,
+        isMock: gatewayRefundResult?.isMock ?? false,
+      });
+
+      try {
+        dispatchOrderLifecycleNotification({
+          order: { ...orderData, id: orderId, paymentStatus: 'refunded' },
+          event: 'refunded',
+        }).catch(() => {});
+      } catch {}
+
+      return NextResponse.json({
+        success: true,
+        message: `Refund of ₹${refundAmountRupees} processed successfully.`,
+        orderId,
+        refundStatus: newStatus,
+        gatewayRefundId: gatewayRefundResult?.id,
+      });
+    }
+
     if (action === 'offline' || body.orderData || (body.invoiceNumber && !body.orderId)) {
       const orderData: OfflineOrder = body.orderData || body;
 

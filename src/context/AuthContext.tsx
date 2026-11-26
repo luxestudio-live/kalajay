@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import {
   onAuthStateChanged,
+  onIdTokenChanged,
   User as FirebaseUser,
   ConfirmationResult,
 } from 'firebase/auth';
@@ -22,19 +23,9 @@ import {
   savePatronProfile,
   updatePatronProfile,
 } from '@/lib/firestore';
+import { Address } from '@/lib/checkout/addressModel';
 
-export interface Address {
-  id: string;
-  label: string; // 'Home', 'Studio', 'Work'
-  fullName: string;
-  phone: string;
-  street: string;
-  apartment?: string;
-  city: string;
-  state: string;
-  pincode: string;
-  isDefault: boolean;
-}
+export type { Address } from '@/lib/checkout/addressModel';
 
 export interface OrderItem {
   id: string;
@@ -214,11 +205,18 @@ export const INITIAL_USER: User = {
   preferences: {},
 };
 
+export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated' | 'reauthentication-required';
+
 interface AuthContextType {
   user: User | null;
   firebaseUser: FirebaseUser | null;
+  authStatus: AuthStatus;
   isAuthenticated: boolean;
+  isFirebaseAuthenticated: boolean;
+  isCachedSession: boolean;
   isLoading: boolean;
+  getIdToken: (forceRefresh?: boolean) => Promise<string | null>;
+  refreshSession: () => Promise<{ success: boolean; token?: string; error?: string }>;
   loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   loginWithEmail: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signup: (data: { name: string; phone: string; email: string; password?: string; birthday?: string; anniversary?: string }) => Promise<{ success: boolean; error?: string }>;
@@ -226,10 +224,10 @@ interface AuthContextType {
   loginWithOtp: (phone: string, otp: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<User>) => void;
-  addAddress: (address: Omit<Address, 'id'>) => void;
-  updateAddress: (id: string, address: Partial<Address>) => void;
-  deleteAddress: (id: string) => void;
-  setDefaultAddress: (id: string) => void;
+  addAddress: (address: Omit<Address, 'id'>) => Promise<{ success: boolean; address?: Address; error?: string }>;
+  updateAddress: (id: string, address: Partial<Address>) => Promise<{ success: boolean; error?: string }>;
+  deleteAddress: (id: string) => Promise<{ success: boolean; error?: string }>;
+  setDefaultAddress: (id: string) => Promise<{ success: boolean; error?: string }>;
   quickDemoLogin: () => void;
   updateUserPassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
   addPatronOrder: (order: Order) => void;
@@ -266,18 +264,77 @@ function normalizeUser(u: any): User | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [authStatus, setAuthStatus] = useState<AuthStatus>('loading');
   const [isLoading, setIsLoading] = useState(true);
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
 
-  // Initialize and observe Firebase Auth state
+  /**
+   * Retrieves fresh or cached Firebase ID token via native Firebase SDK.
+   * Updates authStatus to 'reauthentication-required' if token renewal is rejected.
+   */
+  const getIdToken = async (forceRefresh: boolean = false): Promise<string | null> => {
+    if (!auth || !auth.currentUser) {
+      return null;
+    }
+    try {
+      const token = await auth.currentUser.getIdToken(forceRefresh);
+      if (token && authStatus !== 'authenticated') {
+        setAuthStatus('authenticated');
+      }
+      return token;
+    } catch (err: any) {
+      console.warn('ID token retrieval failed:', err);
+      if (
+        err?.code === 'auth/user-token-expired' ||
+        err?.code === 'auth/user-disabled' ||
+        err?.code === 'auth/null-user' ||
+        err?.code === 'auth/id-token-revoked'
+      ) {
+        setAuthStatus('reauthentication-required');
+      }
+      return null;
+    }
+  };
+
+  /**
+   * Controlled session refresh. Forces token renewal once without infinite retry loops.
+   */
+  const refreshSession = async (): Promise<{ success: boolean; token?: string; error?: string }> => {
+    if (!auth || !auth.currentUser) {
+      setAuthStatus('unauthenticated');
+      return { success: false, error: 'No active Firebase session to refresh.' };
+    }
+    try {
+      const token = await auth.currentUser.getIdToken(true);
+      setAuthStatus('authenticated');
+      return { success: true, token };
+    } catch (err: any) {
+      setAuthStatus('reauthentication-required');
+      return { success: false, error: err?.message || 'Session renewal failed. Re-authentication required.' };
+    }
+  };
+
+  // Initialize and observe Firebase Auth state with token-refresh listener
   useEffect(() => {
     let unsubscribe: () => void = () => {};
 
     try {
-      if (auth && typeof auth.onAuthStateChanged === 'function') {
-        unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      if (auth && typeof onIdTokenChanged === 'function') {
+        unsubscribe = onIdTokenChanged(auth, async (fbUser) => {
           setFirebaseUser(fbUser);
           if (fbUser) {
+            // Validate token retrieval
+            try {
+              const validToken = await fbUser.getIdToken();
+              if (validToken) {
+                setAuthStatus('authenticated');
+              } else {
+                setAuthStatus('reauthentication-required');
+              }
+            } catch {
+              setAuthStatus('reauthentication-required');
+            }
+
             // Load patron document from Firestore
             try {
               const firestoreProfile = await getPatronProfile(fbUser.uid);
@@ -319,6 +376,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               saveUserSession(fallbackPatron);
             }
           } else {
+            setAuthStatus('unauthenticated');
             const stored = typeof window !== 'undefined' ? localStorage.getItem('kalajay_user_session') : null;
             if (stored) {
               try {
@@ -333,6 +391,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsLoading(false);
         });
       } else {
+        setAuthStatus('unauthenticated');
         const stored = typeof window !== 'undefined' ? localStorage.getItem('kalajay_user_session') : null;
         if (stored) {
           try {
@@ -345,6 +404,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (e) {
       console.warn('Auth initialization warning:', e);
+      setAuthStatus('unauthenticated');
       setIsLoading(false);
     }
 
@@ -632,6 +692,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     saveUserSession(null);
     setFirebaseUser(null);
+    setAuthStatus('unauthenticated');
     setConfirmationResult(null);
     if (typeof window !== 'undefined') {
       try {
@@ -659,57 +720,151 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addAddress = (addressData: Omit<Address, 'id'>) => {
-    if (!user) return;
-    const newAddress: Address = {
-      ...addressData,
-      id: `addr-${Date.now()}`,
-    };
-    let updatedAddresses = [...user.addresses];
-    if (newAddress.isDefault) {
-      updatedAddresses = updatedAddresses.map((a) => ({ ...a, isDefault: false }));
+  const addAddress = async (addressData: Omit<Address, 'id'>): Promise<{ success: boolean; address?: Address; error?: string }> => {
+    if (!firebaseUser) {
+      return {
+        success: false,
+        error: 'Authentication Required: Please sign in or create an account to save delivery destinations to your profile.',
+      };
     }
-    updatedAddresses.push(newAddress);
-    const updatedUser = { ...user, addresses: updatedAddresses };
-    saveUserSession(updatedUser);
-    if (firebaseUser) {
-      updatePatronProfile(firebaseUser.uid, { addresses: updatedAddresses }).catch((e) => console.warn(e));
+
+    try {
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch('/api/patron/address', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          action: 'add',
+          address: addressData,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) {
+        return { success: false, error: data.error || 'Failed to save delivery destination.' };
+      }
+
+      if (user) {
+        const updatedUser = { ...user, addresses: data.addresses };
+        saveUserSession(updatedUser);
+      }
+      return { success: true, address: data.address };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Network error saving delivery destination.' };
     }
   };
 
-  const updateAddress = (id: string, patch: Partial<Address>) => {
-    if (!user) return;
-    let updatedAddresses = user.addresses.map((a) => (a.id === id ? { ...a, ...patch } : a));
-    if (patch.isDefault) {
-      updatedAddresses = updatedAddresses.map((a) => (a.id === id ? a : { ...a, isDefault: false }));
+  const updateAddress = async (id: string, patch: Partial<Address>): Promise<{ success: boolean; error?: string }> => {
+    if (!firebaseUser) {
+      return {
+        success: false,
+        error: 'Authentication Required: Please sign in to update profile addresses.',
+      };
     }
-    const updatedUser = { ...user, addresses: updatedAddresses };
-    saveUserSession(updatedUser);
-    if (firebaseUser) {
-      updatePatronProfile(firebaseUser.uid, { addresses: updatedAddresses }).catch((e) => console.warn(e));
+
+    try {
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch('/api/patron/address', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          action: 'update',
+          address: { id, ...patch },
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) {
+        return { success: false, error: data.error || 'Failed to update delivery destination.' };
+      }
+
+      if (user) {
+        const updatedUser = { ...user, addresses: data.addresses };
+        saveUserSession(updatedUser);
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Network error updating delivery destination.' };
     }
   };
 
-  const deleteAddress = (id: string) => {
-    if (!user) return;
-    const updatedAddresses = user.addresses.filter((a) => a.id !== id);
-    const updatedUser = { ...user, addresses: updatedAddresses };
-    saveUserSession(updatedUser);
-    if (firebaseUser) {
-      updatePatronProfile(firebaseUser.uid, { addresses: updatedAddresses }).catch((e) => console.warn(e));
+  const deleteAddress = async (id: string): Promise<{ success: boolean; error?: string }> => {
+    if (!firebaseUser) {
+      return {
+        success: false,
+        error: 'Authentication Required: Please sign in to remove saved destinations.',
+      };
+    }
+
+    try {
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch('/api/patron/address', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          action: 'delete',
+          addressId: id,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) {
+        return { success: false, error: data.error || 'Failed to delete delivery destination.' };
+      }
+
+      if (user) {
+        const updatedUser = { ...user, addresses: data.addresses };
+        saveUserSession(updatedUser);
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Network error deleting delivery destination.' };
     }
   };
 
-  const setDefaultAddress = (id: string) => {
-    if (!user) return;
-    const updatedAddresses = user.addresses.map((a) => ({
-      ...a,
-      isDefault: a.id === id,
-    }));
-    const updatedUser = { ...user, addresses: updatedAddresses };
-    saveUserSession(updatedUser);
-    if (firebaseUser) {
-      updatePatronProfile(firebaseUser.uid, { addresses: updatedAddresses }).catch((e) => console.warn(e));
+  const setDefaultAddress = async (id: string): Promise<{ success: boolean; error?: string }> => {
+    if (!firebaseUser) {
+      return {
+        success: false,
+        error: 'Authentication Required: Please sign in to manage default destination.',
+      };
+    }
+
+    try {
+      const token = await firebaseUser.getIdToken();
+      const response = await fetch('/api/patron/address', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          action: 'setDefault',
+          addressId: id,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) {
+        return { success: false, error: data.error || 'Failed to set default destination.' };
+      }
+
+      if (user) {
+        const updatedUser = { ...user, addresses: data.addresses };
+        saveUserSession(updatedUser);
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Network error setting default destination.' };
     }
   };
 
@@ -748,8 +903,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         firebaseUser,
-        isAuthenticated: !!user,
-        isLoading,
+        authStatus,
+        isAuthenticated: authStatus === 'authenticated' && Boolean(firebaseUser),
+        isFirebaseAuthenticated: authStatus === 'authenticated' && Boolean(firebaseUser),
+        isCachedSession: Boolean(user && !firebaseUser),
+        isLoading: authStatus === 'loading' || isLoading,
+        getIdToken,
+        refreshSession,
         loginWithGoogle,
         loginWithEmail,
         signup,

@@ -319,7 +319,11 @@ export default function AdminSidebar({
         )}
 
         {/* Scrollable Navigation List */}
-        <div className="flex-1 overflow-y-auto py-3 px-2 space-y-1 scrollbar-thin scrollbar-thumb-[#372921]">
+        <div
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-3 px-2 space-y-1 scrollbar-thin scrollbar-thumb-[#372921]"
+          data-lenis-prevent="true"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           {NAV_GROUPS.map(group => {
             const hasAccess = isModuleAccessible(group.id);
             // Hide navigation link entirely if role lacks permission

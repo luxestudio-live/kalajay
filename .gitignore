@@ -102,3 +102,11 @@ firestore-sync-receipt-*.json
 # Local Netlify folder
 .netlify
 lighthouse-report.html
+
+# Local audits, test matrices, and reports (kept in local only)
+KALAJAY_*.md
+KALAJAY_*.csv
+PRODUCTION_*.md
+*.report.json
+*.report.html
+cart_*.png

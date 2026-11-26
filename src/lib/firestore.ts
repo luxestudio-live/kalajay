@@ -84,16 +84,23 @@ export async function savePatronProfile(uid: string, profile: Partial<User>): Pr
   }
 }
 
-export async function updatePatronProfile(uid: string, data: Partial<User>): Promise<void> {
+export async function updatePatronProfile(uid: string, data: Partial<User>): Promise<{ success: boolean; error?: string }> {
   try {
-    if (!db || !db.type) return;
+    if (!db || !db.type) return { success: false, error: 'Database not initialized.' };
     const userDocRef = doc(db, 'users', uid);
-    await updateDoc(userDocRef, {
-      ...data,
-      updatedAt: serverTimestamp(),
-    });
-  } catch (error) {
+    await setDoc(
+      userDocRef,
+      {
+        id: uid,
+        ...data,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    return { success: true };
+  } catch (error: any) {
     console.error('Error updating patron profile:', error);
+    return { success: false, error: error?.message || 'Failed to update profile in database.' };
   }
 }
 

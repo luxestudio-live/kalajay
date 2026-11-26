@@ -767,11 +767,11 @@ export interface VerificationResult {
   code?: string;
 }
 
-export const tokenVerificationCache = new Map<string, { uid: string; email: string; emailVerified: boolean; expiresAt: number }>();
+export const tokenVerificationCache = new Map<string, { uid: string; email: string; emailVerified: boolean; phoneNumber?: string; expiresAt: number }>();
 
 export async function verifyFirebaseIdToken(
   token: string
-): Promise<{ valid: boolean; uid?: string; email?: string; emailVerified?: boolean; error?: string }> {
+): Promise<{ valid: boolean; uid?: string; email?: string; emailVerified?: boolean; phoneNumber?: string; error?: string }> {
   if (!token || typeof token !== 'string') {
     return { valid: false, error: 'Missing token' };
   }
@@ -784,7 +784,7 @@ export async function verifyFirebaseIdToken(
   const now = Date.now();
   const cached = tokenVerificationCache.get(token);
   if (cached && cached.expiresAt > now) {
-    return { valid: true, uid: cached.uid, email: cached.email, emailVerified: cached.emailVerified };
+    return { valid: true, uid: cached.uid, email: cached.email, emailVerified: cached.emailVerified, phoneNumber: cached.phoneNumber };
   }
 
   const rawApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '';
@@ -810,15 +810,17 @@ export async function verifyFirebaseIdToken(
     const uid = user.localId;
     const email = user.email;
     const emailVerified = Boolean(user.emailVerified);
+    const phoneNumber = user.phoneNumber;
 
     tokenVerificationCache.set(token, {
       uid,
       email,
       emailVerified,
+      phoneNumber,
       expiresAt: now + 5 * 60 * 1000,
     });
 
-    return { valid: true, uid, email, emailVerified };
+    return { valid: true, uid, email, emailVerified, phoneNumber };
   } catch (err: any) {
     return { valid: false, error: err?.message || 'Token verification network error' };
   }

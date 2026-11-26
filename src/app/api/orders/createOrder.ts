@@ -49,6 +49,18 @@ const serverMemoryIdempotencyStore = new Map<
 // Singleflight coordinator for in-flight simultaneous requests
 const inFlightRequests = new Map<string, Promise<any>>();
 
+/**
+ * Generates a cryptographically random 256-bit guest tracking token (Phase 4.1).
+ * Never derived from order ID, email, or predictable inputs.
+ * Plaintext token is returned once for client fragment hand-off;
+ * ONLY the SHA-256 hash is stored in Firestore.
+ */
+function generateRandomGuestAccessToken(): { token: string; tokenHash: string } {
+  const token = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  return { token, tokenHash };
+}
+
 
 export async function POST(request: Request) {
   try {
@@ -444,11 +456,20 @@ export async function POST(request: Request) {
     // In-flight simultaneous concurrency coordination (singleflight pattern)
     const existingFlight = inFlightRequests.get(sanitizedIdempKey);
     if (existingFlight) {
-      const flightResult = await existingFlight;
-      return NextResponse.json({
-        ...flightResult,
-        isIdempotentReplay: true,
-      });
+      try {
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('IN_FLIGHT_TIMEOUT')), 3500)
+        );
+        const flightResult = await Promise.race([existingFlight, timeoutPromise]);
+        if (flightResult) {
+          return NextResponse.json({
+            ...flightResult,
+            isIdempotentReplay: true,
+          });
+        }
+      } catch {
+        inFlightRequests.delete(sanitizedIdempKey);
+      }
     }
 
     let resolveFlight: (val: any) => void = () => {};
@@ -472,6 +493,9 @@ export async function POST(request: Request) {
     // 8. Payment Verification Enforcement (Concern 4)
     const initialPaymentStatus: AdminOrder['paymentStatus'] = 'pending';
     const initialFulfillmentStatus: AdminOrder['fulfillmentStatus'] = 'unfulfilled';
+
+    // Generate random 256-bit guest tracking credential if unauthenticated guest session
+    const guestTokenInfo = !finalUserId ? generateRandomGuestAccessToken() : null;
 
     const orderRecord: AdminOrder = {
       id: generatedOrderNumber,
@@ -512,7 +536,13 @@ export async function POST(request: Request) {
       trackingAwbType: 'internal',
       isInternalTracking: true,
       createdAt: new Date().toISOString(),
-      ...(finalUserId ? { userId: finalUserId } : {}),
+      ...(finalUserId
+        ? { userId: finalUserId, isGuestOrder: false }
+        : {
+            isGuestOrder: true,
+            // Only the cryptographic SHA-256 hash is saved to database (Phase 4.1)
+            guestAccessTokenHash: guestTokenInfo?.tokenHash,
+          }),
     };
 
     const resultPayload = {
@@ -524,6 +554,7 @@ export async function POST(request: Request) {
       shipping: calculatedShipping,
       tax: calculatedTax,
       order: orderRecord,
+      ...(finalUserId ? {} : { guestAccessToken: guestTokenInfo?.token }),
     };
 
     const notifyOrderPlaced = (record: any) => {
@@ -602,6 +633,16 @@ export async function POST(request: Request) {
             }
           }
 
+          // Record atomic 15-minute inventory reservation lease
+          const resRef = adminDb.collection('inventory_reservations').doc(generatedOrderNumber);
+          transaction.set(resRef, {
+            orderId: generatedOrderNumber,
+            items: verifiedOrderItems.map(i => ({ sku: i.sku, quantity: i.quantity })),
+            status: 'active',
+            createdAt: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+          });
+
           // 3. Persist verified order in /orders
           const orderDocRef = adminDb.collection('orders').doc(generatedOrderNumber);
           const cleanOrderData = JSON.parse(
@@ -627,6 +668,16 @@ export async function POST(request: Request) {
           return { isReplay: false, response: resultPayload };
         });
 
+        serverMemoryIdempotencyStore.set(sanitizedIdempKey, {
+          payloadHash,
+          customerEmail: finalCustomerEmail,
+          orderId: generatedOrderNumber,
+          response: txResult.response,
+          timestamp: Date.now(),
+        });
+        resolveFlight(txResult.response);
+        inFlightRequests.delete(sanitizedIdempKey);
+
         if (txResult.isReplay) {
           return NextResponse.json({
             ...txResult.response,
@@ -636,6 +687,8 @@ export async function POST(request: Request) {
         notifyOrderPlaced(orderRecord);
         return NextResponse.json(txResult.response);
       } catch (adminTxErr: any) {
+        resolveFlight(null);
+        inFlightRequests.delete(sanitizedIdempKey);
         if (adminTxErr.message === 'IDEMPOTENCY_PAYLOAD_MISMATCH') {
           return NextResponse.json(
             {

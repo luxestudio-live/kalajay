@@ -183,6 +183,14 @@ html.lenis, html.lenis body {
   overscroll-behavior: contain;
 }
 
+/* Universal Overlay, Modal & Side Drawer Scroll Hardening */
+[role="dialog"] [data-lenis-prevent],
+[role="dialog"] .overflow-y-auto,
+[data-lenis-prevent] {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 .lenis.lenis-stopped {
   overflow: hidden;
 }

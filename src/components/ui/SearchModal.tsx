@@ -21,11 +21,20 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 50);
       document.body.style.overflow = 'hidden';
+      if (typeof window !== 'undefined' && (window as unknown as { __lenis?: { stop: () => void } }).__lenis) {
+        (window as unknown as { __lenis?: { stop: () => void } }).__lenis?.stop();
+      }
     } else {
       document.body.style.overflow = 'unset';
+      if (typeof window !== 'undefined' && (window as unknown as { __lenis?: { start: () => void } }).__lenis) {
+        (window as unknown as { __lenis?: { start: () => void } }).__lenis?.start();
+      }
     }
     return () => {
       document.body.style.overflow = 'unset';
+      if (typeof window !== 'undefined' && (window as unknown as { __lenis?: { start: () => void } }).__lenis) {
+        (window as unknown as { __lenis?: { start: () => void } }).__lenis?.start();
+      }
     };
   }, [isOpen]);
 
@@ -52,7 +61,13 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   }).slice(0, 12);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true" aria-label="Search Collection">
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-contain"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Search Collection"
+      data-lenis-prevent="true"
+    >
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-[#372921]/70 backdrop-blur-md transition-opacity"
@@ -121,7 +136,11 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
           </div>
 
           {/* Results Area */}
-          <div className="max-h-[60vh] overflow-y-auto p-4 sm:p-6 space-y-3">
+          <div
+            className="max-h-[60vh] overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-3"
+            data-lenis-prevent="true"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             <div className="flex items-center justify-between text-xs text-ink-light pb-2">
               <span>
                 {filteredProducts.length} {filteredProducts.length === 1 ? 'piece found' : 'pieces found'}

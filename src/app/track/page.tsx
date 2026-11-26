@@ -20,6 +20,7 @@ import {
 import { BRAND_CONFIG } from '@/data/catalogue';
 import { getFirestoreOrderById } from '@/lib/firestore';
 import { auth } from '@/lib/firebase';
+import { useAuth } from '@/context/AuthContext';
 
 interface SimulatedOrder {
   orderId: string;
@@ -44,6 +45,7 @@ interface SimulatedOrder {
   isInternalTracking?: boolean;
   requiresVerification?: boolean;
   isVerifiedOwner?: boolean;
+  isGuestOrder?: boolean;
 }
 
 const KNOWN_ORDERS: Record<string, SimulatedOrder> = {
@@ -117,6 +119,7 @@ const KNOWN_ORDERS: Record<string, SimulatedOrder> = {
 
 function TrackOrderContent() {
   const searchParams = useSearchParams();
+  const { user, firebaseUser, authStatus, getIdToken } = useAuth();
   const initialOrderId = (searchParams.get('orderId') || searchParams.get('order') || '').trim();
 
   const [query, setQuery] = useState(initialOrderId || 'KJ-8924');
@@ -141,11 +144,52 @@ function TrackOrderContent() {
 
     try {
       let liveDoc: any = null;
+      let activeSessionToken: string | null = null;
+
+      // 0. Safe Token Exchange for Guest Credentials (Phase 4.2)
+      if (typeof window !== 'undefined') {
+        const hash = window.location.hash || '';
+        const matchFragment = hash.match(/token=([^&]+)/);
+        const fragmentToken = matchFragment ? matchFragment[1] : null;
+        const queryToken = searchParams.get('token') || searchParams.get('key');
+        const tokenToExchange = fragmentToken || queryToken;
+
+        if (tokenToExchange) {
+          try {
+            const exRes = await fetch('/api/orders/track/exchange', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ orderId: clean, token: tokenToExchange }),
+            });
+            const exData = await exRes.json().catch(() => ({}));
+            if (exRes.ok && exData.success) {
+              if (exData.trackingSessionToken) {
+                activeSessionToken = exData.trackingSessionToken;
+              }
+              // Scrub credential completely from URL address bar and browser history ONLY after verified exchange (Phase 3)
+              const cleanUrl = window.location.pathname + '?orderId=' + encodeURIComponent(clean);
+              window.history.replaceState(null, '', cleanUrl);
+            } else {
+              console.warn('Tracking exchange rejected or invalid token:', exData?.error);
+            }
+          } catch (exchangeErr) {
+            console.warn('Tracking exchange notice:', exchangeErr);
+          }
+        }
+      }
 
       // 1. Fetch from server tracking API with Auth token & verification parameters
       try {
         const headers: Record<string, string> = {};
-        if (auth?.currentUser) {
+        if (activeSessionToken) {
+          headers['x-tracking-session'] = activeSessionToken;
+        }
+        if (firebaseUser) {
+          try {
+            const token = await getIdToken();
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+          } catch {}
+        } else if (auth?.currentUser) {
           try {
             const token = await auth.currentUser.getIdToken();
             if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -168,11 +212,6 @@ function TrackOrderContent() {
           } else {
             url += `&key=${encodeURIComponent(effectiveExtra.trim())}`;
           }
-        }
-
-        const urlToken = searchParams.get('token') || searchParams.get('key');
-        if (urlToken && !url.includes('&key=') && !url.includes('&token=')) {
-          url += `&token=${encodeURIComponent(urlToken)}`;
         }
 
         const res = await fetch(url, { headers });
@@ -239,6 +278,7 @@ function TrackOrderContent() {
           trackingUrl: liveDoc.trackingUrl || null,
           customerShippingNote: liveDoc.customerShippingNote || null,
           deliveryAttemptCount: liveDoc.deliveryAttemptCount ?? 0,
+          isGuestOrder: Boolean(liveDoc.isGuestOrder),
         });
         setError(false);
         setSearched(true);
@@ -261,11 +301,11 @@ function TrackOrderContent() {
   };
 
   useEffect(() => {
-    if (initialOrderId) {
+    if (initialOrderId && authStatus !== 'loading') {
       setQuery(initialOrderId);
       executeSearch(initialOrderId);
     }
-  }, [initialOrderId]);
+  }, [initialOrderId, authStatus]);
 
   const handleSearch = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -445,6 +485,17 @@ function TrackOrderContent() {
                 <p className="text-xs text-ink-muted mt-1 font-light">
                   Booked on {activeOrder.placedDate} · Destined for <strong className="font-medium text-plum">{activeOrder.city}</strong>
                 </p>
+                {activeOrder.isGuestOrder && (
+                  <div className="mt-2.5 inline-flex flex-wrap items-center gap-2 p-2 px-3 bg-champagne/30 border border-gold/30 rounded-lg text-xs text-plum">
+                    <span>Placed as a Guest Order.</span>
+                    <Link
+                      href={`/account?tab=orders&claim=${encodeURIComponent(activeOrder.orderId)}`}
+                      className="inline-flex items-center gap-1 font-semibold text-rosewood hover:underline text-[11px]"
+                    >
+                      <span>Link to My Portfolio →</span>
+                    </Link>
+                  </div>
+                )}
               </div>
 
               <div className="text-left sm:text-right">

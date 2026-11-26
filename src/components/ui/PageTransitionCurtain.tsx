@@ -6,10 +6,18 @@ import { usePathname } from 'next/navigation';
 export default function PageTransitionCurtain() {
   const pathname = usePathname();
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const mountedRef = useRef(false);
   const prevPathname = useRef(pathname);
 
   useEffect(() => {
-    if (prevPathname.current !== pathname) {
+    // Prevent transition curtain from firing on initial hydration/mount
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      prevPathname.current = pathname;
+      return;
+    }
+
+    if (pathname && prevPathname.current !== pathname) {
       prevPathname.current = pathname;
       setIsTransitioning(true);
 

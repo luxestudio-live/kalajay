@@ -58,23 +58,27 @@ export default function ProcessStepScroll() {
     },
   ];
 
+  const isHoveredRef = useRef(false);
+
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) return;
 
     const mm = gsap.matchMedia();
 
-    // Desktop Pinned Process Documentary Scroll using sticky container
+    // Desktop Natural Scroll Progression: Steps advance smoothly as user traverses the section
+    // Fully natural flow without artificial viewport pinning or dead scroll space
     mm.add('(min-width: 1024px)', () => {
       if (!containerRef.current) return;
 
       const trigger = ScrollTrigger.create({
         trigger: containerRef.current,
-        start: 'top top',
-        end: 'bottom bottom',
-        scrub: 0.8,
+        start: 'top 65%',
+        end: 'bottom 35%',
+        scrub: true,
         invalidateOnRefresh: true,
         onUpdate: (self) => {
+          if (isHoveredRef.current) return;
           const progress = self.progress;
           const stepIndex = Math.min(3, Math.floor(progress * 4));
           setActiveStep(stepIndex);
@@ -99,17 +103,11 @@ export default function ProcessStepScroll() {
   return (
     <section
       ref={containerRef}
-      className="relative w-full bg-[#372921] border-b border-[#DED3C5]/20 lg:h-[200vh]"
+      className="relative w-full bg-[#372921] border-b border-[#DED3C5]/20 py-16 sm:py-20 lg:py-24 overflow-hidden"
     >
-      {/* 
-        Native GPU Sticky Stage:
-        Uses CSS position: sticky top-0 inside a 200vh container.
-        Eliminates GSAP .pin-spacer layout mutations, prevents double-scroll dead space,
-        and cleanly exits into Chapter 05 immediately at the end of Step 04.
-      */}
       <div
         ref={pinWrapperRef}
-        className="bg-[#372921] text-canvas relative overflow-hidden flex flex-col justify-start pt-16 sm:pt-20 lg:pt-20 pb-6 lg:pb-8 h-full min-h-screen lg:h-screen lg:min-h-[580px] lg:sticky lg:top-0"
+        className="bg-[#372921] text-canvas relative overflow-hidden flex flex-col justify-start"
       >
         {/* Background Soft Radiance */}
         <div className="absolute top-1/2 left-1/3 -translate-y-1/2 w-[550px] h-[550px] bg-[#9E5430]/10 rounded-full blur-[140px] pointer-events-none" />
@@ -178,10 +176,20 @@ export default function ProcessStepScroll() {
                     return (
                       <div
                         key={st.num}
-                        onClick={() => setActiveStep(idx)}
-                        onMouseEnter={() => {
-                          // Preview step on desktop hover
+                        onClick={() => {
+                          isHoveredRef.current = true;
                           setActiveStep(idx);
+                        }}
+                        onMouseEnter={() => {
+                          // Preview step on desktop hover and zoom visual frame
+                          isHoveredRef.current = true;
+                          setActiveStep(idx);
+                        }}
+                        onMouseLeave={() => {
+                          // Allow scroll sync to resume after user moves away
+                          setTimeout(() => {
+                            isHoveredRef.current = false;
+                          }, 1500);
                         }}
                         className={`group/step relative rounded-[14px] p-3 transition-all duration-300 cursor-pointer border select-none lg:hover:scale-[1.03] lg:hover:-translate-y-0.5 ${
                           isActive

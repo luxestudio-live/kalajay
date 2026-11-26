@@ -26,10 +26,9 @@ export default function MakersRoute() {
     let animatedCounters = false;
 
     // 1. STATISTICAL COUNTERS: Precise In-Focus Trigger via IntersectionObserver
-    // Guarantees counters roll ONLY when the card is visibly in focus inside the user's viewport
+    // Guarantees counters roll ONLY when the card is clearly centered in view
     if (countersRef.current) {
       const counters = countersRef.current.querySelectorAll('.counter-val');
-      // Set initial state to 0
       counters.forEach((el) => {
         el.textContent = '0';
       });
@@ -46,7 +45,7 @@ export default function MakersRoute() {
                   { textContent: '0' },
                   {
                     textContent: target,
-                    duration: 1.8,
+                    duration: 1.6,
                     snap: { textContent: 1 },
                     ease: 'power2.out',
                   }
@@ -56,17 +55,16 @@ export default function MakersRoute() {
           });
         },
         {
-          // Requires the card to be at least 30% into the visible viewport
-          threshold: 0.3,
-          rootMargin: '0px 0px -10% 0px',
+          threshold: 0.65,
+          rootMargin: '0px 0px -15% 0px',
         }
       );
 
       observer.observe(countersRef.current);
     }
 
-    // 2. ARTISAN TRANSIT: Direct Viewport-Relative Quadratic Bezier Motion
-    // Immune to upstream layout shifts, image lazy-loading, or pin-spacers
+    // 2. ARTISAN TRANSIT: 60FPS RAF-Driven Quadratic Bezier Motion
+    // Perfectly tracks viewport position from Origin 01 to Origin 02
     const path = routeLineRef.current;
     const circle = transitCircleRef.current;
     const routeBox = routeBoxRef.current;
@@ -82,15 +80,14 @@ export default function MakersRoute() {
       circle.setAttribute('cy', '20');
     }
 
-    let ticking = false;
     const updateTransit = () => {
       if (!routeBox || !circle || !path) return;
       const rect = routeBox.getBoundingClientRect();
       const vh = window.innerHeight || 900;
 
-      // Start when box top enters at 75% of viewport; complete when box center reaches 35% of viewport
-      const startY = vh * 0.75;
-      const endY = vh * 0.30;
+      // Start when box top enters at 85% of viewport; complete when box center reaches 15% of viewport
+      const startY = vh * 0.85;
+      const endY = vh * 0.15;
       const progress = (startY - rect.top) / (startY - endY);
       const t = Math.max(0, Math.min(1, progress));
 
@@ -102,33 +99,48 @@ export default function MakersRoute() {
       circle.setAttribute('cx', x.toFixed(2));
       circle.setAttribute('cy', y.toFixed(2));
       path.style.strokeDashoffset = `${(arcLength * (1 - t)).toFixed(2)}`;
-
-      ticking = false;
     };
 
-    const onScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(updateTransit);
-        ticking = true;
+    let rafId: number | null = null;
+    let isVisible = false;
+
+    const loop = () => {
+      if (isVisible) {
+        updateTransit();
+        rafId = requestAnimationFrame(loop);
       }
     };
 
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll, { passive: true });
-    // Also listen to Lenis scroll if available
-    const win = window as any;
-    if (win.__lenis) {
-      win.__lenis.on('scroll', onScroll);
+    let routeObserver: IntersectionObserver | null = null;
+    if (routeBox) {
+      routeObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            isVisible = entry.isIntersecting;
+            if (isVisible) {
+              if (!rafId) rafId = requestAnimationFrame(loop);
+            } else {
+              if (rafId) {
+                cancelAnimationFrame(rafId);
+                rafId = null;
+              }
+            }
+          });
+        },
+        { threshold: 0 }
+      );
+      routeObserver.observe(routeBox);
     }
 
-    // Initial positioning check
+    // Initial update
     updateTransit();
 
     return () => {
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
-      if (win.__lenis) {
-        win.__lenis.off('scroll', onScroll);
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+      }
+      if (routeObserver) {
+        routeObserver.disconnect();
       }
     };
   }, []);

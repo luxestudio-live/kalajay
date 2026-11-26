@@ -57,6 +57,27 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
     setMobileShopExpanded(false);
   }, [pathname]);
 
+  // Lock body scroll and pause Lenis while mobile menu drawer is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+      if (typeof window !== 'undefined' && (window as unknown as { __lenis?: { stop: () => void } }).__lenis) {
+        (window as unknown as { __lenis?: { stop: () => void } }).__lenis?.stop();
+      }
+    } else {
+      document.body.style.overflow = 'unset';
+      if (typeof window !== 'undefined' && (window as unknown as { __lenis?: { start: () => void } }).__lenis) {
+        (window as unknown as { __lenis?: { start: () => void } }).__lenis?.start();
+      }
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+      if (typeof window !== 'undefined' && (window as unknown as { __lenis?: { start: () => void } }).__lenis) {
+        (window as unknown as { __lenis?: { start: () => void } }).__lenis?.start();
+      }
+    };
+  }, [mobileMenuOpen]);
+
   return (
     <>
       {/* Top Luxury Marquee Ticker - continuously moves from right to left */}
@@ -282,7 +303,14 @@ export default function Navbar({ onOpenSearch }: NavbarProps) {
           />
 
           {/* Drawer content */}
-          <div className="fixed inset-y-0 left-0 w-full max-w-xs bg-canvas shadow-2xl p-6 flex flex-col justify-between overflow-y-auto animate-fade-in border-r border-border-subtle">
+          <div
+            className="fixed inset-y-0 left-0 w-full max-w-xs h-full max-h-screen h-[100dvh] bg-canvas shadow-2xl p-6 flex flex-col justify-between overflow-y-auto overscroll-contain animate-fade-in border-r border-border-subtle min-h-0"
+            data-lenis-prevent="true"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation Menu"
+          >
             <div>
               <div className="flex items-center justify-between pb-5 border-b border-border-subtle">
                 <Link

@@ -80,6 +80,28 @@ export function ShopContent() {
     setCurrentPage(1);
   }, [selectedCategory, selectedColor, searchQuery, sortOrder, onlyInStock]);
 
+  // Lock body scroll and pause Lenis when Quick View or Filter Sheet is open
+  useEffect(() => {
+    const isAnyOverlayOpen = Boolean(quickViewProduct || isFilterSheetOpen);
+    if (isAnyOverlayOpen) {
+      document.body.style.overflow = 'hidden';
+      if (typeof window !== 'undefined' && (window as unknown as { __lenis?: { stop: () => void } }).__lenis) {
+        (window as unknown as { __lenis?: { stop: () => void } }).__lenis?.stop();
+      }
+    } else {
+      document.body.style.overflow = 'unset';
+      if (typeof window !== 'undefined' && (window as unknown as { __lenis?: { start: () => void } }).__lenis) {
+        (window as unknown as { __lenis?: { start: () => void } }).__lenis?.start();
+      }
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+      if (typeof window !== 'undefined' && (window as unknown as { __lenis?: { start: () => void } }).__lenis) {
+        (window as unknown as { __lenis?: { start: () => void } }).__lenis?.start();
+      }
+    };
+  }, [quickViewProduct, isFilterSheetOpen]);
+
   const colorSwatches = [
     { label: 'Pearl', hex: '#FAF7F2', border: '#D8CCBD' },
     { label: 'Rose Pink', hex: '#F3D9D6', border: '#E8CCD0' },
@@ -638,7 +660,14 @@ export function ShopContent() {
             onClick={() => setQuickViewProduct(null)}
           />
 
-          <div className="relative bg-canvas w-full max-w-2xl rounded-image border border-border-gold p-6 sm:p-8 shadow-2xl z-10 animate-fade-in max-h-[90vh] overflow-y-auto">
+          <div
+            className="relative bg-canvas w-full max-w-2xl rounded-image border border-border-gold p-6 sm:p-8 shadow-2xl z-10 animate-fade-in max-h-[90vh] overflow-y-auto overscroll-contain"
+            data-lenis-prevent="true"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+            role="dialog"
+            aria-modal="true"
+            aria-label={quickViewProduct.name}
+          >
             <button
               type="button"
               onClick={() => setQuickViewProduct(null)}
@@ -752,7 +781,14 @@ export function ShopContent() {
             className="fixed inset-0 bg-plum/60 backdrop-blur-xs"
             onClick={() => setIsFilterSheetOpen(false)}
           />
-          <div className="fixed inset-x-0 bottom-0 bg-canvas rounded-t-image p-6 border-t border-border-gold shadow-2xl max-h-[80vh] overflow-y-auto animate-fade-up">
+          <div
+            className="fixed inset-x-0 bottom-0 bg-canvas rounded-t-image p-6 border-t border-border-gold shadow-2xl max-h-[80vh] overflow-y-auto overscroll-contain animate-fade-up"
+            data-lenis-prevent="true"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Filter Creations"
+          >
             <div className="flex items-center justify-between pb-4 border-b border-border-subtle">
               <span className="font-serif text-lg text-plum">Filter Creations</span>
               <button
